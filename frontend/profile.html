@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile — Fuzz</title>
+    <link rel="icon" type="image/png" href="image/logo.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/urlbar.css">
+    <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/toast.css">
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/footer.css">
+</head>
+<body>
+
+    <div class="urlbar">
+        <button class="urlbar-refresh" id="urlbar-refresh"><i class="fa-solid fa-rotate-right"></i></button>
+        <i class="fa-solid fa-lock urlbar-lock"></i>
+        <input type="text" class="urlbar-input" id="urlbar-input" readonly>
+        <button class="urlbar-copy" id="urlbar-copy"><i class="fa-regular fa-copy"></i></button>
+    </div>
+
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">
+            <img src="image/logo.png" alt="Fuzz" class="navbar-logo">
+            <span class="navbar-title">Fuzz</span>
+        </a>
+        <ul class="navbar-links">
+            <li><a href="store.html" data-i18n="nav_store">Store</a></li>
+            <li><a href="library.html" data-i18n="nav_library">Library</a></li>
+            <li><a href="wishlist.html" data-i18n="nav_wishlist">Wishlist</a></li>
+        </ul>
+        <div class="navbar-actions">
+            <button class="navbar-icon" id="btn-cart"><i class="fa-solid fa-cart-shopping"></i><span class="cart-badge" id="cart-badge">0</span></button>
+            <div class="navbar-profile" id="navbar-profile">
+                <img src="image/logo.png" alt="Profile" class="navbar-avatar">
+                <i class="fa-solid fa-caret-down"></i>
+            </div>
+        </div>
+        <button class="navbar-toggle" id="navbar-toggle"><i class="fa-solid fa-bars"></i></button>
+    </nav>
+
+    <main class="store" style="max-width:800px;margin-left:auto;margin-right:auto;">
+        <div id="profile-content" class="card" style="padding:32px;">
+            <div style="display:flex;gap:24px;align-items:center;margin-bottom:24px;">
+                <img id="profile-avatar" src="image/logo.png" alt="Avatar"
+                     style="width:96px;height:96px;border-radius:50%;object-fit:cover;">
+                <div>
+                    <h1 id="profile-name" style="font-size:28px;">Guest</h1>
+                    <p id="profile-email" class="text-muted">Not logged in</p>
+                </div>
+            </div>
+
+            <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;">
+                <button class="btn-primary" id="btn-google-login" style="padding:0 24px;">
+                    <i class="fa-brands fa-google"></i>
+                    <span data-i18n="auth_google">Sign in with Google</span>
+                </button>
+                <button class="btn-ghost" id="btn-qr-show" style="padding:0 24px;">
+                    <i class="fa-solid fa-qrcode"></i>
+                    <span data-i18n="auth_qr_title">Scan QR to log in</span>
+                </button>
+            </div>
+
+            <div id="qr-container" style="margin-top:20px;"></div>
+
+            <hr style="border:none;border-top:1px solid var(--color-border);margin:24px 0;">
+
+            <h3 style="margin-bottom:12px;"><i class="fa-solid fa-language"></i> <span data-i18n="profile_language">Language</span></h3>
+            <div class="lang-switcher" id="lang-switcher" style="display:flex;gap:8px;"></div>
+        </div>
+    </main>
+
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <script src="js/lang.js"></script>
+    <script src="js/toast.js"></script>
+    <script src="js/urlbar.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/qr-login.js"></script>
+    <script src="js/main.js"></script>
+
+    <script>
+        // Profilni to'ldirish
+        document.addEventListener("DOMContentLoaded", () => {
+            const user = FuzzAuth.getUser();
+            if (user) {
+                document.getElementById("profile-avatar").src = user.avatar || "image/logo.png";
+                document.getElementById("profile-name").textContent = user.name;
+                document.getElementById("profile-email").textContent = user.email;
+                document.getElementById("btn-google-login").style.display = "none";
+            }
+
+            document.getElementById("btn-google-login").addEventListener("click", () => {
+                FuzzAuth.loginWithGoogle();
+            });
+
+            document.getElementById("btn-qr-show").addEventListener("click", () => {
+                FuzzQR.renderQRCode(document.getElementById("qr-container"));
+            });
+
+            // Til switcher
+            FuzzLang.buildLangSwitcher(document.getElementById("lang-switcher"));
+        });
+    </script>
+</body>
+</html>

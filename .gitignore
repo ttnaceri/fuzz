@@ -1,0 +1,71 @@
+# ============================================================
+# FUZZ — .gitignore (Root)
+# ============================================================
+
+# ---------- 1. Maxfiy ma'lumotlar (SECRETS) ----------
+# Frontend'dagi config fayli (SuperAdmin paroli, API kalitlar)
+config.js
+.env
+.env.local
+.env.*.local
+
+# Foydalanuvchi ma'lumotlari (agar backend bo'lsa)
+data/myData.json
+backend.json
+
+# ---------- 2. O'yin fayllari (GAMES) ----------
+# Katta hajmdagi arxivlar va HTML o'yinlar (GitHub 100MB limitiga tushmasligi uchun)
+game/
+games/
+*.7z
+*.rar
+*.zip
+*.tar
+*.gz
+*.iso
+
+# FAQAT ma'lumot fayllari (games.json) GitHub'da qoladi
+!frontend/data/games.json
+!frontend/data/bundles.json
+
+# ---------- 3. Node.js (Agar kelajakda ishlatilsa) ----------
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---------- 4. Build va Kesh (CACHE) ----------
+dist/
+build/
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+
+# ---------- 5. Operatsion tizim fayllari (OS) ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- 6. Tahrirlovchi sozlamalari (EDITOR) ----------
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# ---------- 7. Loglar va Xatolar (LOGS) ----------
+*.log
+logs/
+error.log
+
+# ---------- 8. Zaxira nusxalar (BACKUPS) ----------
+*.bak
+*.backup
+*.old
+
+# ---------- 9. Vaqtinchalik fayllar (TEMP) ----------
+*.tmp
+*.temp

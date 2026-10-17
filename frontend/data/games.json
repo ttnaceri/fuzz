@@ -1,0 +1,50 @@
+[
+    {
+        "id": "g1",
+        "title": "Ravenfield",
+        "genre": "Action",
+        "price": 0.00,
+        "discount": 100,
+        "rating": 4.7,
+        "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/636480/capsule_616x353.jpg?t=1791381747",
+        "description": "Single-player military sandbox with bots.",
+        "company": "SteelRaven7",
+        "file": "game/Ravenfield.7z"
+    },
+    {
+        "id": "g2",
+        "title": "Left 4 Dead 2",
+        "genre": "Zombie",
+        "price": 0.00,
+        "discount": 100,
+        "rating": 4.3,
+        "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQpLgJa9UnhIHkEq1Mq6q752SAJSgJBAiP75IuOamoB9Q&s",
+        "description": "Co-op zombie survival shooter.",
+        "company": "Valve",
+        "file": "game/left4dead2installer.exe"
+    },
+    {
+        "id": "g3",
+        "title": "Call Of Duty Modern Warfare 2",
+        "genre": "Shooter",
+        "price": 0,
+        "discount": 0,
+        "rating": 4.9,
+        "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNDBrfyghgXG0YSf6rpRE6awQo8dABPHH2Y1nQeG_DFQ&s",
+        "description": "Classic FPS.",
+        "company": "Infinity Ward",
+        "file": "game/Call Of Duty Modern Warfare 2.rar"
+    },
+    {
+        "id": "g4",
+        "title": "Let For Dead I",
+        "genre": "Zombie Shooter",
+        "price": 0.00,
+        "discount": 100,
+        "rating": 4.1,
+        "image": "image/letForDead-I.png",
+        "description": "Defend your base against waves of enemies.",
+        "company": "UPDATE Inc.",
+        "file": "letForDead-I.rar"
+    }
+]

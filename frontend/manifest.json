@@ -1,0 +1,61 @@
+{
+    "name": "Fuzz — Game Platform",
+    "short_name": "Fuzz",
+    "description": "Play, buy, and mod HTML games — all in one place.",
+    "start_url": "./index.html",
+    "scope": "./",
+    "display": "standalone",
+    "orientation": "any",
+    "background_color": "#1a0a08",
+    "theme_color": "#5f0800",
+    "lang": "en",
+    "dir": "ltr",
+    "categories": ["games", "entertainment", "shopping"],
+    "icons": [
+        {
+            "src": "image/logo.png",
+            "sizes": "192x192",
+            "type": "image/logo.png",
+            "purpose": "any"
+        },
+        {
+            "src": "image/logo.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "image/logo.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "image/logo.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Store",
+            "short_name": "Store",
+            "url": "./store.html",
+            "icons": [{ "src": "image/logo.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Library",
+            "short_name": "Library",
+            "url": "./library.html",
+            "icons": [{ "src": "image/logo.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Wishlist",
+            "short_name": "Wishlist",
+            "url": "./wishlist.html",
+            "icons": [{ "src": "image/logo.png", "sizes": "192x192" }]
+        }
+    ],
+    "prefer_related_applications": false
+}

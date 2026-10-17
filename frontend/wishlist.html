@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wishlist — Fuzz</title>
+    <link rel="icon" type="image/png" href="image/logo.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/urlbar.css">
+    <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/store.css">
+    <link rel="stylesheet" href="css/toast.css">
+    <link rel="stylesheet" href="css/footer.css">
+</head>
+<body>
+
+    <div class="urlbar">
+        <button class="urlbar-refresh" id="urlbar-refresh"><i class="fa-solid fa-rotate-right"></i></button>
+        <i class="fa-solid fa-lock urlbar-lock"></i>
+        <input type="text" class="urlbar-input" id="urlbar-input" readonly>
+        <button class="urlbar-copy" id="urlbar-copy"><i class="fa-regular fa-copy"></i></button>
+    </div>
+
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">
+            <img src="image/logo.png" alt="Fuzz" class="navbar-logo">
+            <span class="navbar-title">Fuzz</span>
+        </a>
+        <ul class="navbar-links">
+            <li><a href="store.html" data-i18n="nav_store">Store</a></li>
+            <li><a href="library.html" data-i18n="nav_library">Library</a></li>
+            <li><a href="wishlist.html" data-i18n="nav_wishlist">Wishlist</a></li>
+        </ul>
+        <div class="navbar-actions">
+            <button class="navbar-icon" id="btn-cart"><i class="fa-solid fa-cart-shopping"></i><span class="cart-badge" id="cart-badge">0</span></button>
+            <div class="navbar-profile" id="navbar-profile">
+                <img src="image/logo.png" alt="Profile" class="navbar-avatar">
+                <i class="fa-solid fa-caret-down"></i>
+            </div>
+        </div>
+        <button class="navbar-toggle" id="navbar-toggle"><i class="fa-solid fa-bars"></i></button>
+    </nav>
+
+    <main class="store">
+        <h1 data-i18n="nav_wishlist" style="margin-bottom:24px;">Wishlist</h1>
+        <section class="game-grid" id="game-grid"></section>
+    </main>
+
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <script src="js/lang.js"></script>
+    <script src="js/toast.js"></script>
+    <script src="js/urlbar.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/main.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            await FuzzStore.load();
+            const wishlist = JSON.parse(localStorage.getItem("fuzz_wishlist") || "[]");
+            const grid = document.getElementById("game-grid");
+
+            if (wishlist.length === 0) {
+                grid.innerHTML = '<p class="text-muted" style="padding:40px;text-align:center;">Your wishlist is empty.</p>';
+                return;
+            }
+
+            // Faqat wishlistdagi o'yinlarni ko'rsatish
+            const originalGames = FuzzStore.games;
+            const filtered = originalGames.filter(g => wishlist.includes(g.id));
+
+            filtered.forEach(game => {
+                const card = document.createElement("div");
+                card.className = "game-card card";
+                const final = FuzzStore.finalPrice(game);
+                card.innerHTML = `
+                    <img class="game-card-image" src="${game.image}" alt="${game.title}">
+                    <div class="game-card-body">
+                        <h3 class="game-card-title">${game.title}</h3>
+                        <p class="text-muted">${game.genre}</p>
+                        <div class="game-card-footer">
+                            <span class="game-card-price">${FuzzStore.formatPrice(final)}</span>
+                            <span class="game-card-rating text-warning"><i class="fa-solid fa-star"></i> ${game.rating}</span>
+                        </div>
+                    </div>
+                    <div class="game-card-actions">
+                        <button class="btn-primary" onclick="FuzzStore.addToCart('${game.id}')">
+                            <i class="fa-solid fa-cart-plus"></i> <span data-i18n="game_add_cart">Add to Cart</span>
+                        </button>
+                        <button class="btn-ghost" onclick="FuzzStore.toggleWishlist('${game.id}');location.reload();">
+                            <i class="fa-solid fa-heart"></i>
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            if (window.FuzzLang) FuzzLang.applyTranslations();
+        });
+    </script>
+</body>
+</html>

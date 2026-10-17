@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 — Fuzz</title>
+    <link rel="icon" type="image/png" href="image/logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/footer.css">
+    <style>
+        .err-wrap {
+            min-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 60px 20px;
+            text-align: center;
+        }
+        .err-code {
+            font-size: 120px;
+            font-weight: 800;
+            color: var(--color-primary-light);
+            line-height: 1;
+        }
+        .err-wrap h1 { font-size: 32px; }
+        .err-wrap p  { color: var(--color-text-muted); max-width: 400px; }
+        .err-wrap .btn-primary {
+            padding: 0 32px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            height: 42px;
+            border-radius: 8px;
+            color: var(--color-text);
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar" style="position:static;">
+        <a href="index.html" class="navbar-brand">
+            <img src="image/logo.png" alt="Fuzz" class="navbar-logo">
+            <span class="navbar-title">Fuzz</span>
+        </a>
+    </nav>
+
+    <div class="err-wrap">
+        <div class="err-code">404</div>
+        <img src="image/logo.png" alt="Fuzz" style="width:80px;height:80px;">
+        <h1 data-i18n="err404_title">Page Not Found</h1>
+        <p data-i18n="err404_text">The page you are looking for doesn't exist.</p>
+        <a href="index.html" class="btn-primary" data-i18n="err404_home">Return Home</a>
+    </div>
+
+    <script src="js/lang.js"></script>
+    <script src="js/toast.js"></script>
+</body>
+</html>

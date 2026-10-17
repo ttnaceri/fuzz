@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library — Fuzz</title>
+
+    <link rel="icon" type="image/png" href="image/logo.png">
+    <script src="config.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/urlbar.css">
+    <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/library.css">
+    <link rel="stylesheet" href="css/store.css"> <!-- Grid uchun -->
+    <link rel="stylesheet" href="css/toast.css">
+    <link rel="stylesheet" href="css/footer.css">
+</head>
+<body>
+
+    <div class="urlbar">
+        <button class="urlbar-refresh" id="urlbar-refresh"><i class="fa-solid fa-rotate-right"></i></button>
+        <i class="fa-solid fa-lock urlbar-lock"></i>
+        <input type="text" class="urlbar-input" id="urlbar-input" readonly>
+        <button class="urlbar-copy" id="urlbar-copy"><i class="fa-regular fa-copy"></i></button>
+    </div>
+
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">
+            <img src="image/logo.png" alt="Fuzz" class="navbar-logo">
+            <span class="navbar-title">Fuzz</span>
+        </a>
+        <ul class="navbar-links">
+            <li><a href="store.html" data-i18n="nav_store">Store</a></li>
+            <li><a href="library.html" data-i18n="nav_library">Library</a></li>
+            <li><a href="wishlist.html" data-i18n="nav_wishlist">Wishlist</a></li>
+            <li><a href="workshop.html" data-i18n="nav_workshop">Workshop</a></li>
+        </ul>
+        <div class="navbar-actions">
+            <a href="#" class="btn-download-fuzz" id="btn-download-fuzz" data-i18n="btn_download_fuzz">
+                <i class="fa-solid fa-download"></i> <span data-i18n="btn_download_fuzz">Download Fuzz</span>
+            </a>
+            <button class="navbar-icon" id="btn-cart">
+                <i class="fa-solid fa-cart-shopping"></i>
+                <span class="cart-badge" id="cart-badge" data-count="0">0</span>
+            </button>
+            <div class="navbar-profile" id="navbar-profile">
+                <img src="image/logo.png" alt="Profile" class="navbar-avatar">
+                <i class="fa-solid fa-caret-down"></i>
+            </div>
+        </div>
+        <button class="navbar-toggle" id="navbar-toggle"><i class="fa-solid fa-bars"></i></button>
+    </nav>
+
+    <main class="library-page">
+        <!-- Chap: O'yinlar ro'yxati -->
+        <aside class="library-sidebar" id="library-sidebar">
+            <h2 data-i18n="nav_library">Library</h2>
+            <!-- JS to'ldiradi -->
+        </aside>
+
+        <!-- O'ng: Tanlangan o'yin yoki Grid -->
+        <div class="library-content">
+            <h1 data-i18n="profile_owned">Owned games</h1>
+            <section class="game-grid" id="game-grid"></section>
+        </div>
+    </main>
+
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <script src="js/lang.js"></script>
+    <script src="js/toast.js"></script>
+    <script src="js/urlbar.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/main.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            await FuzzStore.load();
+            
+            const grid = document.getElementById("game-grid");
+            const sidebar = document.getElementById("library-sidebar");
+
+            function renderLibrary() {
+                const owned = FuzzStore.owned;
+                grid.innerHTML = "";
+                sidebar.innerHTML = `<h2 data-i18n="nav_library">Library</h2>`;
+
+                if (owned.length === 0) {
+                    grid.innerHTML = '<p class="text-muted" style="padding:40px;text-align:center;grid-column:1/-1;">No games in your library yet.</p>';
+                    return;
+                }
+
+                owned.forEach(id => {
+                    const game = FuzzStore.getGame(id);
+                    if (!game) return;
+
+                    // Sidebar item
+                    const sideItem = document.createElement("div");
+                    sideItem.className = "library-item";
+                    sideItem.innerHTML = `<img src="${game.image}" alt="${game.title}"> <span>${game.title}</span>`;
+                    sidebar.appendChild(sideItem);
+
+                    // Grid card
+                    const card = document.createElement("div");
+                    card.className = "game-card card";
+                    card.innerHTML = `
+                        <img class="game-card-image" src="${game.image}" alt="${game.title}" loading="lazy">
+                        <div class="game-card-body">
+                            <h3 class="game-card-title">${game.title}</h3>
+                            <p class="text-muted" style="font-size:13px;margin-top:4px;">${game.genre}</p>
+                        </div>
+                        <div class="game-card-actions" style="opacity:1;transform:none;position:static;padding:12px;">
+                            <button class="btn-primary" onclick="FuzzStore.downloadGame('${game.id}')" style="width:100%;">
+                                <i class="fa-solid fa-download"></i> Install
+                            </button>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+
+            renderLibrary();
+            window.addEventListener("fuzz:library-updated", renderLibrary);
+        });
+    </script>
+</body>
+</html>

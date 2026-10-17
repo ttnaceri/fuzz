@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings — Fuzz</title>
+    <link rel="icon" type="image/png" href="image/logo.png">
+    <script src="config.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/urlbar.css">
+    <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/settings.css">
+    <link rel="stylesheet" href="css/toast.css">
+</head>
+<body>
+
+    <div class="urlbar">
+        <button class="urlbar-refresh" id="urlbar-refresh"><i class="fa-solid fa-rotate-right"></i></button>
+        <i class="fa-solid fa-lock urlbar-lock"></i>
+        <input type="text" class="urlbar-input" id="urlbar-input" readonly value="https://fuzz.store/settings/">
+        <button class="urlbar-copy" id="urlbar-copy"><i class="fa-regular fa-copy"></i></button>
+    </div>
+
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">
+            <img src="image/logo.png" alt="Fuzz" class="navbar-logo">
+            <span class="navbar-title">Fuzz</span>
+        </a>
+        <ul class="navbar-links">
+            <li><a href="store.html" data-i18n="nav_store">Store</a></li>
+            <li><a href="library.html" data-i18n="nav_library">Library</a></li>
+        </ul>
+        <div class="navbar-actions">
+            <a href="#" class="btn-download-fuzz" id="btn-download-fuzz"><i class="fa-solid fa-download"></i> Download Fuzz</a>
+            <button class="navbar-icon" id="btn-cart"><i class="fa-solid fa-cart-shopping"></i><span class="cart-badge" id="cart-badge">0</span></button>
+            <div class="navbar-profile" id="navbar-profile">
+                <img src="image/logo.png" alt="Profile" class="navbar-avatar">
+                <i class="fa-solid fa-caret-down"></i>
+            </div>
+        </div>
+    </nav>
+
+    <main class="settings-page">
+        <div class="settings-header">
+            <h1 data-i18n="settings_title">Settings</h1>
+        </div>
+
+        <div class="settings-section card">
+            <h2><i class="fa-solid fa-gear"></i> <span data-i18n="settings_general">General</span></h2>
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <strong data-i18n="profile_language">Language</strong>
+                </div>
+                <div class="settings-row-control lang-switcher" id="lang-switcher"></div>
+            </div>
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <strong data-i18n="settings_sound">Sound effects</strong>
+                </div>
+                <div class="settings-row-control">
+                    <input type="checkbox" id="setting-sound" style="width:20px;height:20px;cursor:pointer;">
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section card">
+            <h2><i class="fa-solid fa-file-import"></i> <span data-i18n="settings_import">Import / Export</span></h2>
+            <div class="settings-io-row">
+                <button class="btn-primary" id="btn-export"><i class="fa-solid fa-download"></i> <span data-i18n="settings_export">Export Data</span></button>
+                <button class="btn-ghost" id="btn-import"><i class="fa-solid fa-upload"></i> <span data-i18n="settings_import">Import Data</span></button>
+                <input type="file" id="file-import" accept=".json" style="display:none;">
+            </div>
+        </div>
+
+        <div class="settings-danger-zone card">
+            <h2><i class="fa-solid fa-triangle-exclamation text-danger"></i> <span data-i18n="settings_reset">Reset All Data</span></h2>
+            <p data-i18n="settings_reset_warn">This action cannot be undone. All your data will be permanently deleted.</p>
+            <p style="font-size:12px;margin-bottom:8px;" data-i18n="settings_reset_confirm_label">Type "I am sure to reset my all datas" to confirm:</p>
+            <input type="text" class="settings-reset-input" id="reset-input" placeholder="I am sure to reset my all datas" data-i18n-placeholder="settings_reset_placeholder">
+            <button class="settings-reset-btn btn-danger" id="btn-reset" disabled data-i18n="settings_reset">Reset All Data</button>
+        </div>
+    </main>
+
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <script src="js/lang.js"></script>
+    <script src="js/toast.js"></script>
+    <script src="js/urlbar.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/main.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Language Switcher
+            FuzzLang.buildLangSwitcher(document.getElementById("lang-switcher"));
+
+            // Reset Input Logic
+            const resetInput = document.getElementById("reset-input");
+            const resetBtn = document.getElementById("btn-reset");
+            const requiredText = "I am sure to reset my all datas";
+
+            resetInput.addEventListener("input", (e) => {
+                resetBtn.disabled = e.target.value !== requiredText;
+            });
+
+            // Reset Action
+            resetBtn.addEventListener("click", () => {
+                localStorage.clear();
+                FuzzToast.success("All data has been reset.");
+                setTimeout(() => window.location.href = "index.html", 1500);
+            });
+
+            // Export Data
+            document.getElementById("btn-export").addEventListener("click", () => {
+                const data = {};
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    data[key] = localStorage.getItem(key);
+                }
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "fuzz_data_backup.json";
+                a.click();
+                URL.revokeObjectURL(url);
+                FuzzToast.success("Data exported successfully.");
+            });
+
+            // Import Data
+            const fileInput = document.getElementById("file-import");
+            document.getElementById("btn-import").addEventListener("click", () => fileInput.click());
+            fileInput.addEventListener("change", (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const data = JSON.parse(ev.target.result);
+                        Object.keys(data).forEach(key => localStorage.setItem(key, data[key]));
+                        FuzzToast.success("Data imported successfully.");
+                        setTimeout(() => window.location.reload(), 1500);
+                    } catch (err) {
+                        FuzzToast.error("Invalid file format.");
+                    }
+                };
+                reader.readAsText(file);
+            });
+        });
+    </script>
+</body>
+</html>

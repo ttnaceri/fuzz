@@ -1,0 +1,86 @@
+/* ============================================================
+   FUZZ — toast.css
+   FAQAT LAYOUT.
+   ============================================================ */
+
+.toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 9000;
+    pointer-events: none;
+    max-width: 360px;
+    width: calc(100% - 48px);
+}
+
+.toast {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    pointer-events: auto;
+    animation: toast-in 0.3s ease forwards;
+    will-change: transform, opacity;
+}
+
+.toast.hide {
+    animation: toast-out 0.3s ease forwards;
+}
+
+.toast-icon {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px;
+}
+
+.toast-message {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.toast-close {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-size: 13px;
+}
+
+@keyframes toast-in {
+    from { transform: translateX(120%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes toast-out {
+    from { transform: translateX(0);    opacity: 1; }
+    to   { transform: translateX(120%); opacity: 0; }
+}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 640px) {
+    .toast-container {
+        bottom: 14px;
+        right: 14px;
+        left: 14px;
+        width: auto;
+        max-width: none;
+    }
+    .toast {
+        padding: 12px 14px;
+    }
+    .toast-message {
+        font-size: 13px;
+    }
+}

@@ -1,0 +1,152 @@
+/* ============================================================
+   FUZZ — footer.css
+   FAQAT LAYOUT.
+   ============================================================ */
+
+.footer {
+    padding: 48px 32px 20px;
+    margin-top: 40px;
+}
+
+.footer-top {
+    display: grid;
+    grid-template-columns: 1fr 3fr;
+    gap: 48px;
+    padding-bottom: 32px;
+}
+
+.footer-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.footer-logo {
+    width: 120px;
+    height: auto;
+    object-fit: contain;
+}
+
+.footer-logo-secondary {
+    width: 90px;
+    height: auto;
+    object-fit: contain;
+}
+
+.footer-links {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 28px;
+}
+
+.footer-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.footer-col h4 {
+    font-size: 15px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.footer-col a {
+    font-size: 14px;
+    padding: 3px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: opacity 0.15s ease;
+}
+
+.footer-col a:hover {
+    opacity: 0.75;
+}
+
+.footer-col a i {
+    width: 16px;
+    text-align: center;
+}
+
+.footer-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 20px;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.footer-bottom p {
+    font-size: 13px;
+}
+
+.footer-note {
+    font-size: 12px;
+}
+
+/* ---------- RESPONSIVE — TABLET ---------- */
+@media (max-width: 1024px) {
+    .footer {
+        padding: 36px 20px 18px;
+    }
+    .footer-top {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+    .footer-brand {
+        flex-direction: row;
+        align-items: center;
+        gap: 20px;
+    }
+    .footer-links {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+}
+
+/* ---------- RESPONSIVE — TELEFON ---------- */
+@media (max-width: 640px) {
+    .footer {
+        padding: 28px 14px 16px;
+        margin-top: 24px;
+    }
+    .footer-top {
+        gap: 24px;
+        padding-bottom: 20px;
+    }
+    .footer-brand {
+        justify-content: center;
+    }
+    .footer-logo {
+        width: 90px;
+    }
+    .footer-logo-secondary {
+        width: 70px;
+    }
+    .footer-links {
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+    }
+    .footer-col h4 {
+        font-size: 13px;
+    }
+    .footer-col a {
+        font-size: 13px;
+    }
+    .footer-bottom {
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+    }
+}
+
+/* ---------- KICHIK TELEFON ---------- */
+@media (max-width: 380px) {
+    .footer-links {
+        grid-template-columns: 1fr;
+    }
+}

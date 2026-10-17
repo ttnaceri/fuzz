@@ -1,0 +1,112 @@
+/* ============================================================
+   FUZZ — auth.css
+   FAQAT LAYOUT.
+   ============================================================ */
+
+.auth-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 8000;
+    padding: 20px;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.auth-modal.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.auth-box {
+    width: 100%;
+    max-width: 400px;
+    padding: 32px 28px;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.auth-box h2 {
+    font-size: 24px;
+    text-align: center;
+}
+
+.auth-box input {
+    padding: 0 14px;
+}
+
+.auth-box .btn-primary,
+.auth-box .btn-ghost {
+    width: 100%;
+    padding: 0 16px;
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+}
+
+.google-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 0 16px;
+    cursor: pointer;
+}
+
+.google-btn i {
+    font-size: 16px;
+}
+
+/* ---------- QR login blok ---------- */
+.qr-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 10px;
+}
+
+.qr-image {
+    width: 180px;
+    height: 180px;
+}
+
+.qr-scanner {
+    width: 100%;
+    max-width: 320px;
+    aspect-ratio: 1;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 640px) {
+    .auth-box {
+        padding: 24px 18px;
+        gap: 14px;
+    }
+    .auth-box h2 {
+        font-size: 20px;
+    }
+    .qr-image {
+        width: 150px;
+        height: 150px;
+    }
+}

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game — Fuzz</title>
+
+    <link rel="icon" type="image/png" href="image/logo.png">
+    <script src="config.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/urlbar.css">
+    <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/game.css">
+    <link rel="stylesheet" href="css/toast.css">
+    <link rel="stylesheet" href="css/footer.css">
+</head>
+<body>
+
+    <!-- URL BAR -->
+    <div class="urlbar">
+        <button class="urlbar-refresh" id="urlbar-refresh"><i class="fa-solid fa-rotate-right"></i></button>
+        <i class="fa-solid fa-lock urlbar-lock"></i>
+        <input type="text" class="urlbar-input" id="urlbar-input" readonly>
+        <button class="urlbar-copy" id="urlbar-copy"><i class="fa-regular fa-copy"></i></button>
+    </div>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">
+            <img src="image/logo.png" alt="Fuzz" class="navbar-logo">
+            <span class="navbar-title">Fuzz</span>
+        </a>
+        <ul class="navbar-links">
+            <li><a href="store.html" data-i18n="nav_store">Store</a></li>
+            <li><a href="library.html" data-i18n="nav_library">Library</a></li>
+            <li><a href="wishlist.html" data-i18n="nav_wishlist">Wishlist</a></li>
+            <li><a href="workshop.html" data-i18n="nav_workshop">Workshop</a></li>
+        </ul>
+        <div class="navbar-actions">
+            <a href="#" class="btn-download-fuzz" id="btn-download-fuzz" data-i18n="btn_download_fuzz">
+                <i class="fa-solid fa-download"></i> <span data-i18n="btn_download_fuzz">Download Fuzz</span>
+            </a>
+            <button class="navbar-icon" id="btn-cart">
+                <i class="fa-solid fa-cart-shopping"></i>
+                <span class="cart-badge" id="cart-badge" data-count="0">0</span>
+            </button>
+            <div class="navbar-profile" id="navbar-profile">
+                <img src="image/logo.png" alt="Profile" class="navbar-avatar">
+                <i class="fa-solid fa-caret-down"></i>
+            </div>
+        </div>
+        <button class="navbar-toggle" id="navbar-toggle"><i class="fa-solid fa-bars"></i></button>
+    </nav>
+
+    <!-- MAIN (Steam game layout) -->
+    <main class="game-page">
+        <div id="game-content" class="game-main">
+            <!-- JS to'ldiradi -->
+        </div>
+        <aside class="game-sidebar" id="game-sidebar">
+            <!-- JS to'ldiradi -->
+        </aside>
+    </main>
+
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <script src="js/lang.js"></script>
+    <script src="js/toast.js"></script>
+    <script src="js/urlbar.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/main.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            const params = new URLSearchParams(location.search);
+            const id = params.get("id");
+
+            await FuzzStore.load();
+            const game = FuzzStore.getGame(id);
+
+            const mainContent = document.getElementById("game-content");
+            const sidebar = document.getElementById("game-sidebar");
+
+            if (!game) {
+                mainContent.innerHTML = `<h1>Game not found</h1><a href="store.html" class="btn-primary" style="padding:10px 20px;">Back to Store</a>`;
+                sidebar.style.display = "none";
+                return;
+            }
+
+            const final = FuzzStore.finalPrice(game);
+            const discounted = game.discount > 0;
+            const isOwned = FuzzStore.owned.includes(game.id);
+            const isFree = final === 0;
+
+            document.title = `${game.title} — Fuzz`;
+
+            // Asosiy media qismi
+            mainContent.innerHTML = `
+                <img class="game-hero-image" src="${game.image}" alt="${game.title}">
+                <div class="game-title-bar">
+                    <h1>${game.title}</h1>
+                </div>
+                <div class="game-description-box card">
+                    <h2>About This Game</h2>
+                    <p class="text-muted">${game.description || "No description available."}</p>
+                </div>
+                <div class="game-news-section card">
+                    <h2>News</h2>
+                    <p class="text-muted">No recent news for this game.</p>
+                </div>
+            `;
+
+            // O'ng sticky panel (Sotib olish / Yuklash)
+            sidebar.innerHTML = `
+                <div class="game-purchase-box card">
+                    <div class="game-purchase-title">${isOwned ? 'In Your Library' : 'Purchase'}</div>
+                    
+                    ${!isOwned ? `
+                        <div class="game-purchase-price">
+                            ${discounted ? `<span class="price-old">$${game.price.toFixed(2)}</span>` : ''}
+                            <span class="price-main ${isFree ? 'text-success' : ''}">${FuzzStore.formatPrice(final)}</span>
+                        </div>
+                    ` : ''}
+
+                    <div class="game-purchase-actions">
+                        ${isOwned
+                            ? `<button class="btn-primary" onclick="FuzzStore.downloadGame('${game.id}')">
+                                   <i class="fa-solid fa-download"></i> Install / Download
+                               </button>`
+                            : `<button class="btn-primary" onclick="FuzzStore.buyGame('${game.id}')">
+                                   ${isFree ? '<i class="fa-solid fa-play"></i> Play for Free' : '<i class="fa-solid fa-cart-plus"></i> Add to Cart'}
+                               </button>`}
+                        
+                        <button class="btn-ghost" onclick="FuzzStore.toggleWishlist('${game.id}')">
+                            <i class="fa-regular fa-heart"></i> Wishlist
+                        </button>
+                    </div>
+                </div>
+
+                <div class="game-info-list card">
+                    <div class="game-info-row"><span>Genre</span><span>${game.genre}</span></div>
+                    <div class="game-info-row"><span>Developer</span><span>${game.company || "UPDATE Inc."}</span></div>
+                    <div class="game-info-row"><span>Rating</span><span class="text-warning"><i class="fa-solid fa-star"></i> ${game.rating}</span></div>
+                </div>
+            `;
+
+            document.getElementById("urlbar-input").value = `https://fuzz.store/app/${game.id}/`;
+        });
+    </script>
+</body>
+</html>

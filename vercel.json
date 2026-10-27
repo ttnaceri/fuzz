@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/game/(.*)", "destination": "/game/$1" },
+    { "source": "/image/(.*)", "destination": "/image/$1" },
+    { "source": "/sound/(.*)", "destination": "/sound/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

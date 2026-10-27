@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.env.local
+
+# 16GB o'yinlarni GitHub'ga yubormaslik uchun:
+game/*.rar
+game/*.7z
+game/*.zip
+game/*.exe

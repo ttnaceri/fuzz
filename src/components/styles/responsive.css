@@ -1,0 +1,37 @@
+@media (max-width: 960px) {
+  .game-details {
+    grid-template-columns: 1fr;
+  }
+  .header__nav {
+    display: none;
+  }
+  .sidebar {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 0 0.75rem;
+  }
+  .hero {
+    padding: 2rem 1.25rem;
+  }
+  .hero h1 {
+    font-size: 1.75rem;
+  }
+  .game-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+  .searchbar {
+    min-width: 140px;
+  }
+  .admin-content {
+    padding: 1rem;
+  }
+  .toast-host {
+    left: 12px;
+    right: 12px;
+    max-width: none;
+  }
+}

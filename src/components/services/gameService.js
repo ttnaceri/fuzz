@@ -7,26 +7,8 @@ let cachePromise = null;
 /**
  * Zaxira o'yin: Faqat backend ishlamay qolganda ko'rinadi.
  */
-const FALLBACK_GAMES = [
-  {
-    id: 'let-for-dead-i',
-    title: 'Let For Dead I',
-    description: 'Brauzerda ishlaydigan HTML5 o\'yini. Zombi apokalipsisidan omon qoling!',
-    genre: 'Survival',
-    genres: ['Survival', 'Horror', 'HTML5', 'Co-op'],
-    price: 0, // Zaxiradagi narx
-    currency: 'USD',
-    image: '/image/games/let-for-dead-i.jpg',
-    cover: '/image/games/let-for-dead-i.jpg',
-    downloadUrl: 'https://itch.io/',
-    available: true,
-    availability: 'available',
-    isHtmlGame: true,
-    developer: 'Update Inc.',
-    publisher: 'Update Inc.',
-    releaseDate: '2026-01-01',
-  },
-];
+// Zaxira o'yinlar butunlay o'chirildi (Backenddan olinadi)
+const FALLBACK_GAMES = [];
 
 function normalizeGame(g) {
   return {

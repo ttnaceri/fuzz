@@ -5,64 +5,26 @@ let cache = null;
 let cachePromise = null;
 
 /**
- * Local fallback — a hard copy of the three mandatory games, used if the
- * JSON fetch fails for any reason.
+ * Zaxira o'yin (Faqat Let For Dead I)
  */
 const FALLBACK_GAMES = [
   {
-    id: 'call-of-duty-modern-warfare-2',
-    title: 'Call of Duty: Modern Warfare 2',
-    description:
-      'The legendary FPS campaign and multiplayer experience.',
-    genre: 'FPS',
-    genres: ['FPS', 'Action', 'Shooter'],
-    price: 0,
-    currency: 'USD',
-    image: '/image/games/modern-warfare-2.jpg',
-    cover: '/image/games/modern-warfare-2.jpg',
-    downloadFile: 'CallOfDutyModernWarfare2.rar',
-    downloadUrl: '/game/CallOfDutyModernWarfare2.rar',
-    available: false,
-    availability: 'unavailable',
-    developer: 'Infinity Ward',
-    publisher: 'Activision',
-    releaseDate: '2009-11-10',
-  },
-  {
     id: 'let-for-dead-i',
     title: 'Let For Dead I',
-    description: 'Survive the zombie apocalypse alone or with friends.',
+    description: 'Brauzerda ishlaydigan HTML5 o\'yini. Zombi apokalipsisidan omon qoling!',
     genre: 'Survival',
-    genres: ['Survival', 'Horror', 'Co-op'],
+    genres: ['Survival', 'Horror', 'HTML5', 'Co-op'],
     price: 0,
     currency: 'USD',
     image: '/image/games/let-for-dead-i.jpg',
     cover: '/image/games/let-for-dead-i.jpg',
-    downloadFile: 'letForDead-I.rar',
-    downloadUrl: '/game/letForDead-I.rar',
-    available: false,
-    availability: 'unavailable',
-    developer: 'Valve',
-    publisher: 'Valve',
-    releaseDate: '2008-11-17',
-  },
-  {
-    id: 'ravenfield',
-    title: 'Ravenfield',
-    description: 'Single-player FPS with large-scale battles.',
-    genre: 'FPS',
-    genres: ['FPS', 'Sandbox', 'Action'],
-    price: 0,
-    currency: 'USD',
-    image: '/image/games/ravenfield.jpg',
-    cover: '/image/games/ravenfield.jpg',
-    downloadFile: 'Ravenfield.7z',
-    downloadUrl: '/game/Ravenfield.7z',
-    available: false,
-    availability: 'unavailable',
-    developer: 'SteelRaven7',
-    publisher: 'SteelRaven7',
-    releaseDate: '2017-05-18',
+    downloadUrl: 'https://ttnaceri.github.io/letForDead-I/splash.html',
+    available: true,
+    availability: 'available',
+    isHtmlGame: true,
+    developer: 'Update Inc.',
+    publisher: 'Update Inc.',
+    releaseDate: '2026-01-01',
   },
 ];
 
@@ -78,7 +40,8 @@ function normalizeLocalGame(g) {
 
 async function fetchLocalManifest(signal) {
   try {
-    const res = await fetch(config.localManifestUrl, { signal });
+    // Keshni chetlab o'tish uchun vaqt qo'shamiz (?t=...)
+    const res = await fetch(`${config.localManifestUrl}?t=${Date.now()}`, { signal, cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (!data || !Array.isArray(data.games)) {
@@ -87,10 +50,7 @@ async function fetchLocalManifest(signal) {
     return data.games.map(normalizeLocalGame);
   } catch (err) {
     if (err.name === 'AbortError') throw err;
-    console.warn(
-      '[gameService] Local manifest unavailable, using fallback:',
-      err.message
-    );
+    console.warn('[gameService] Local manifest unavailable, using fallback:', err.message);
     return FALLBACK_GAMES.map(normalizeLocalGame);
   }
 }
@@ -118,13 +78,8 @@ export async function getAllGames({ signal } = {}) {
         : Promise.resolve([]),
     ]);
 
-    const localGames =
-      local.status === 'fulfilled' ? local.value : FALLBACK_GAMES.map(normalizeLocalGame);
+    const localGames = local.status === 'fulfilled' ? local.value : FALLBACK_GAMES.map(normalizeLocalGame);
     const remoteGames = remote.status === 'fulfilled' ? remote.value : [];
-
-    if (remote.status === 'rejected') {
-      console.warn('[gameService] Remote games unavailable:', remote.reason?.message);
-    }
 
     const merged = mergeUnique(localGames, remoteGames);
     cache = merged;
@@ -140,14 +95,11 @@ export async function getGameById(id, { signal } = {}) {
   const found = all.find((g) => String(g.id) === String(id));
   if (found) return found;
 
-  // Try remote individually
   if (api.isConfigured()) {
     try {
       const remote = await api.get(`/games/${encodeURIComponent(id)}`, { signal });
       if (remote) return normalizeLocalGame(remote);
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
   }
   return null;
 }

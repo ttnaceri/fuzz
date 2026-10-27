@@ -12,7 +12,6 @@ export default function AdminGames() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { success, error: toastError } = useToast();
 
-  // Form state
   const [form, setForm] = useState({
     title: '', description: '', genre: 'Action', price: 0, 
     image: '', downloadUrl: '', isHtmlGame: true
@@ -83,7 +82,6 @@ export default function AdminGames() {
         </table>
       )}
 
-      {/* O'yin qo'shish Modali */}
       <Modal open={isModalOpen} title="Yangi o'yin qo'shish" onClose={() => setIsModalOpen(false)}>
         <form onSubmit={handleAddGame} className="flex flex-col gap-2">
           <div className="form-group">
@@ -108,7 +106,7 @@ export default function AdminGames() {
             <input className="form-input" value={form.image} onChange={e => setForm({...form, image: e.target.value})} />
           </div>
           <div className="form-group">
-            <label className="form-label">Yuklash/O'ynash Havolasi (HTML o'yin uchun link)</label>
+            <label className="form-label">Yuklash/O'ynash Havolasi</label>
             <input required className="form-input" value={form.downloadUrl} onChange={e => setForm({...form, downloadUrl: e.target.value})} />
           </div>
           <div className="form-group flex items-center gap-1">

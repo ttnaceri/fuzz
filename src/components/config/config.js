@@ -1,20 +1,15 @@
-/**
- * Centralized application configuration.
- * Never store secrets, API keys, or passwords here — this file is public.
- */
 export const config = {
   appName: 'Fuzz',
   appVersion: '1.0.0',
-  // Replace with your real backend base URL.
-  // Leave empty to run fully local (three mandatory games still load).
-  apiBaseUrl: '',
-  apiPrefix: '/api',
+  
+  // To'liq manzil (oxirida hech qanday / bo'lmasligi kerak)
+  apiBaseUrl: 'https://my-backend.updbackend.workers.dev/fuzz',
+  
+  // Bo'sh qoldiramiz, chunki papka nomi tepada bor
+  apiPrefix: '', 
+  
   requestTimeout: 15000,
   defaultPageSize: 20,
-  // Local manifest — always available
   localManifestUrl: '/game/downloads.json',
-  // Sound (optional)
   soundEnabled: false,
 };
-
-export default config;

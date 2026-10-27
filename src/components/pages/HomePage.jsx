@@ -4,18 +4,21 @@ import GameGrid from '../common/GameGrid.jsx';
 import Loading from '../common/Loading.jsx';
 import ErrorState from '../common/ErrorState.jsx';
 import { useCart } from '../context/useCart.js';
+import { useSound } from '../hooks/useSound.js';
 
 export default function HomePage() {
   const { games, loading, error, reload } = useGames();
   const { addItem } = useCart();
+  const { playNotification } = useSound();
 
   const handleAdd = (game) => {
     addItem(game);
+    playNotification();
   };
 
   return (
     <div className="page">
-      <section className="hero">
+      <section className="hero" style={{ background: 'linear-gradient(135deg, #8a1200 0%, #3d0500 100%)' }}>
         <div className="hero__content">
           <h1>Welcome to Fuzz</h1>
           <p>Discover PC games, manage your library, and join the community.</p>
@@ -37,7 +40,7 @@ export default function HomePage() {
           />
         )}
         {!loading && !error && (
-          <GameGrid games={games} onAddToCart={handleAdd} />
+          <GameGrid games={games} onAddToCart={handleAdd} emptyMessage="Hozircha o'yinlar yo'q." />
         )}
       </section>
 

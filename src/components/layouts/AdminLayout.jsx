@@ -10,6 +10,7 @@ const ADMIN_LINKS = [
   { to: '/admin/categories', label: 'Categories', icon: 'fa-tags' },
   { to: '/admin/settings', label: 'Settings', icon: 'fa-gear' },
   { to: '/admin/logs', label: 'Logs', icon: 'fa-list' },
+  { to: '/admin/roles', label: 'Roles', icon: 'fa-key' }, // Yangi qo'shildi
 ];
 
 export default function AdminLayout() {

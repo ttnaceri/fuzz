@@ -2,11 +2,11 @@ import { Link } from 'react-router-dom';
 
 export default function Footer() {
   return (
-    <footer style={{ borderTop: '1px solid var(--color-border)', background: 'var(--color-bg)', marginTop: 'auto', padding: '3rem 0 2rem' }}>
+    <footer style={{ borderTop: '1px solid var(--color-border)', background: 'var(--color-bg)', padding: '3rem 0 2rem' }}>
       <div className="container">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '2rem' }}>
           
-          {/* 1-ustun: Logo va Ma'lumot */}
+          {/* 1-ustun: Logo va Copyright */}
           <div style={{ gridColumn: 'span 2' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
               <img src="/image/logo.png" alt="Fuzz Logo" style={{ height: 40 }} onError={(e) => e.currentTarget.style.display = 'none'} />
@@ -19,7 +19,7 @@ export default function Footer() {
               © {new Date().getFullYear()} Update Inc. All rights reserved. All trademarks are property of their respective owners in the US and other countries.
               VAT included in all prices where applicable.
             </p>
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', fontSize: '1.5rem', color: 'var(--color-text-muted)' }}>
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', fontSize: '1.3rem', color: 'var(--color-text-muted)' }}>
               <a href="#" aria-label="YouTube"><i className="fa-brands fa-youtube" /></a>
               <a href="#" aria-label="Bluesky"><i className="fa-brands fa-bluesky" /></a>
               <a href="#" aria-label="Facebook"><i className="fa-brands fa-facebook" /></a>

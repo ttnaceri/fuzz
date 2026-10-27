@@ -4,6 +4,7 @@ import AdminLayout from './layouts/AdminLayout.jsx';
 import AuthLayout from './layouts/AuthLayout.jsx';
 import ProtectedRoute from './common/ProtectedRoute.jsx';
 
+// Asosiy sahifalar
 import HomePage from './pages/HomePage.jsx';
 import StorePage from './pages/StorePage.jsx';
 import CategoriesPage from './pages/CategoriesPage.jsx';
@@ -37,6 +38,7 @@ import AboutPage from './pages/AboutPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 
+// Admin sahifalari
 import AdminDashboard from './admin/AdminDashboard.jsx';
 import AdminGames from './admin/AdminGames.jsx';
 import AdminUsers from './admin/AdminUsers.jsx';
@@ -46,6 +48,7 @@ import AdminReviews from './admin/AdminReviews.jsx';
 import AdminCategories from './admin/AdminCategories.jsx';
 import AdminSettings from './admin/AdminSettings.jsx';
 import AdminLogs from './admin/AdminLogs.jsx';
+import AdminRoles from './admin/AdminRoles.jsx'; // Yangi qo'shildi
 
 export const router = createBrowserRouter([
   {
@@ -116,7 +119,7 @@ export const router = createBrowserRouter([
       { path: 'categories', element: <AdminCategories /> },
       { path: 'settings', element: <AdminSettings /> },
       { path: 'logs', element: <AdminLogs /> },
-      { path: 'roles', element: <AdminRoles /> },
+      { path: 'roles', element: <AdminRoles /> }, // Yangi qo'shildi
     ],
   },
 ]);

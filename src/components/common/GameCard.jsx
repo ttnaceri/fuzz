@@ -15,7 +15,7 @@ export default function GameCard({ game, onAddToCart }) {
             alt={game.title}
             loading="lazy"
             onError={(e) => {
-              e.currentTarget.style.display = 'none';
+              e.currentTarget.src = 'https://via.placeholder.com/400x225?text=No+Image';
             }}
           />
         </Link>
@@ -27,25 +27,32 @@ export default function GameCard({ game, onAddToCart }) {
           <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>
             {game.genre || (game.genres && game.genres[0]) || 'Game'}
           </span>
-          <span className="game-card__price">{priceLabel}</span>
+          <span className="game-card__price">{game.isHtmlGame ? 'Web Game' : priceLabel}</span>
         </div>
         {isUnavailable && (
           <div className="badge badge-error" style={{ alignSelf: 'flex-start', marginTop: 4 }}>
-            Download unavailable
+            Mavjud emas
           </div>
         )}
         <div className="game-card__actions">
           <Link to={`/game/${game.id}`} className="btn btn-secondary btn-sm" style={{ flex: 1 }}>
-            <i className="fa-solid fa-circle-info" /> Details
+            <i className="fa-solid fa-circle-info" /> Batafsil
           </Link>
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={() => onAddToCart?.(game)}
-            disabled={isUnavailable}
-            title={isUnavailable ? 'Unavailable' : 'Add to cart'}
-          >
-            <i className="fa-solid fa-cart-plus" />
-          </button>
+          {!game.isHtmlGame && (
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => onAddToCart?.(game)}
+              disabled={isUnavailable}
+              title={isUnavailable ? 'Unavailable' : 'Add to cart'}
+            >
+              <i className="fa-solid fa-cart-plus" />
+            </button>
+          )}
+          {game.isHtmlGame && (
+            <a href={game.downloadUrl} target="_blank" rel="noreferrer" className="btn btn-primary btn-sm">
+              <i className="fa-solid fa-play" />
+            </a>
+          )}
         </div>
       </div>
     </article>

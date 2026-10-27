@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 /**
- * Vite plugin: root-level `game`, `image`, `sound` papkalarini
- * production build ichiga ko'chirish (public/ ga ko'chirmasdan).
+ * Root-level `game`, `image`, `sound` papkalarini
+ * production build ichiga ko'chirish (faqat lokal build uchun).
  */
 function copyRootAssets() {
   const rootAssets = ['game', 'image', 'sound'];
@@ -13,12 +13,17 @@ function copyRootAssets() {
     name: 'copy-root-assets',
     apply: 'build',
     closeBundle() {
+      // Vercel'da ishlayotgan bo'lsa, 16GB fayllarni nusxalamaslik uchun to'xtatamiz
+      if (process.env.VERCEL) {
+        console.log('[copy-root-assets] Vercel aniqlanди. 16GB fayllar nusxalanmaydi.');
+        return;
+      }
+
       const outDir = path.resolve(process.cwd(), 'dist');
       for (const dir of rootAssets) {
         const src = path.resolve(process.cwd(), dir);
         const dest = path.join(outDir, dir);
         if (!fs.existsSync(src)) {
-          console.warn(`[copy-root-assets] Missing: ${src}`);
           continue;
         }
         fs.cpSync(src, dest, { recursive: true });
@@ -73,6 +78,7 @@ function serveRootAssets() {
 
 export default defineConfig({
   plugins: [react(), serveRootAssets(), copyRootAssets()],
+  base: '/', // Vercel va GitHub uchun to'g'ri asosiy yo'l
   server: {
     port: 5173,
     open: false,

@@ -5,7 +5,7 @@ let cache = null;
 let cachePromise = null;
 
 /**
- * Zaxira o'yin (Faqat Let For Dead I)
+ * Zaxira o'yin: Faqat backend ishlamay qolganda ko'rinadi.
  */
 const FALLBACK_GAMES = [
   {
@@ -14,11 +14,11 @@ const FALLBACK_GAMES = [
     description: 'Brauzerda ishlaydigan HTML5 o\'yini. Zombi apokalipsisidan omon qoling!',
     genre: 'Survival',
     genres: ['Survival', 'Horror', 'HTML5', 'Co-op'],
-    price: 0,
+    price: 0, // Zaxiradagi narx
     currency: 'USD',
     image: '/image/games/let-for-dead-i.jpg',
     cover: '/image/games/let-for-dead-i.jpg',
-    downloadUrl: 'https://ttnaceri.github.io/letForDead-I/splash.html',
+    downloadUrl: 'https://itch.io/',
     available: true,
     availability: 'available',
     isHtmlGame: true,
@@ -28,7 +28,7 @@ const FALLBACK_GAMES = [
   },
 ];
 
-function normalizeLocalGame(g) {
+function normalizeGame(g) {
   return {
     ...g,
     cover: g.cover || g.image,
@@ -40,27 +40,28 @@ function normalizeLocalGame(g) {
 
 async function fetchLocalManifest(signal) {
   try {
-    // Keshni chetlab o'tish uchun vaqt qo'shamiz (?t=...)
     const res = await fetch(`${config.localManifestUrl}?t=${Date.now()}`, { signal, cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    if (!data || !Array.isArray(data.games)) {
-      throw new Error('Invalid manifest structure');
-    }
-    return data.games.map(normalizeLocalGame);
+    if (!data || !Array.isArray(data.games)) throw new Error('Invalid manifest structure');
+    return data.games.map(normalizeGame);
   } catch (err) {
     if (err.name === 'AbortError') throw err;
-    console.warn('[gameService] Local manifest unavailable, using fallback:', err.message);
-    return FALLBACK_GAMES.map(normalizeLocalGame);
+    console.warn('[gameService] Local manifest unavailable:', err.message);
+    return [];
   }
 }
 
 function mergeUnique(local, remote) {
   const map = new Map();
+  // 1. Lokal o'yinlarni qo'shamiz (agar bo'lsa)
   for (const g of local) map.set(g.id, g);
+  
+  // 2. Backenddan kelgan o'yinlarni qo'shamiz. 
+  // Agar ID to'g'ri kelsa, backenddagi ma'lumot (narx) ustunlik qiladi.
   for (const g of remote || []) {
-    if (g && g.id && !map.has(g.id)) {
-      map.set(g.id, normalizeLocalGame(g));
+    if (g && g.id) {
+      map.set(g.id, normalizeGame(g));
     }
   }
   return Array.from(map.values());
@@ -73,13 +74,27 @@ export async function getAllGames({ signal } = {}) {
   cachePromise = (async () => {
     const [local, remote] = await Promise.allSettled([
       fetchLocalManifest(signal),
+      // Backend so'rovi
       api.isConfigured()
         ? api.get('/games', { signal }).then((r) => r?.games || r || [])
-        : Promise.resolve([]),
+        : Promise.reject(new Error('Backend not configured')),
     ]);
 
-    const localGames = local.status === 'fulfilled' ? local.value : FALLBACK_GAMES.map(normalizeLocalGame);
-    const remoteGames = remote.status === 'fulfilled' ? remote.value : [];
+    const localGames = local.status === 'fulfilled' ? local.value : [];
+    let remoteGames = [];
+    
+    if (remote.status === 'fulfilled') {
+      remoteGames = remote.value;
+    } else {
+      console.warn('[gameService] Backend unavailable, using fallback:', remote.reason?.message);
+      // Backend ishlamasa, zaxira o'yinni beramiz
+      remoteGames = FALLBACK_GAMES.map(normalizeGame);
+    }
+
+    // Agar backenddan umuman o'yin kelmasa va lokal ham bo'sh bo'lsa, zaxirani ko'rsatamiz
+    if (remoteGames.length === 0 && localGames.length === 0) {
+      remoteGames = FALLBACK_GAMES.map(normalizeGame);
+    }
 
     const merged = mergeUnique(localGames, remoteGames);
     cache = merged;
@@ -98,10 +113,13 @@ export async function getGameById(id, { signal } = {}) {
   if (api.isConfigured()) {
     try {
       const remote = await api.get(`/games/${encodeURIComponent(id)}`, { signal });
-      if (remote) return normalizeLocalGame(remote);
+      if (remote) return normalizeGame(remote);
     } catch { /* ignore */ }
   }
-  return null;
+  
+  // Agar hech qayerdan topilmasa, zaxiradan qidiramiz
+  const fallback = FALLBACK_GAMES.find((g) => String(g.id) === String(id));
+  return fallback ? normalizeGame(fallback) : null;
 }
 
 export function clearCache() {

@@ -1,27 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "updated": "2026-10-27",
-  "games": [
-    {
-      "id": "let-for-dead-i",
-      "title": "Let For Dead I",
-      "slug": "let-for-dead-i",
-      "description": "Brauzerda ishlaydigan HTML5 o'yini. Zombi apokalipsisidan omon qoling!",
-      "genre": "Survival",
-      "genres": ["Survival", "Horror", "HTML5", "Co-op"],
-      "price": 0,
-      "currency": "USD",
-      "image": "/image/games/let-for-dead-i.jpg",
-      "cover": "/image/games/let-for-dead-i.jpg",
-      "downloadFile": "index.html",
-      "downloadUrl": "https://ttnaceri.github.io/letForDead-I/splash.html", 
-      "available": true,
-      "availability": "available",
-      "isHtmlGame": true,
-      "developer": "Update Inc.",
-      "publisher": "Update Inc.",
-      "releaseDate": "2026-01-01",
-      "tags": ["Survival", "HTML5", "Zombies"]
-    }
-  ]
+  "games": []
 }

@@ -5,27 +5,38 @@ import path from 'node:path';
 
 /**
  * Root-level `game`, `image`, `sound` papkalarini
- * production build ichiga ko'chirish (faqat lokal build uchun).
+ * production build ichiga ko'chirish.
  */
 function copyRootAssets() {
-  const rootAssets = ['game', 'image', 'sound'];
   return {
     name: 'copy-root-assets',
     apply: 'build',
     closeBundle() {
-      // Vercel'da ishlayotgan bo'lsa, 16GB fayllarni nusxalamaslik uchun to'xtatamiz
+      const outDir = path.resolve(process.cwd(), 'dist');
+      
+      // Vercel'da bo'lsak, 16GB'lik game papkasini ko'chirmaymiz.
+      // Lekin image va sound doim ko'chirilishi shart!
+      let dirsToCopy = ['game', 'image', 'sound'];
+      
       if (process.env.VERCEL) {
-        console.log('[copy-root-assets] Vercel aniqlanди. 16GB fayllar nusxalanmaydi.');
-        return;
+        dirsToCopy = ['image', 'sound']; // Vercel uchun faqat shular
+        console.log('[copy-root-assets] Vercel aniqlanди. Faqat image va sound nusxalanadi.');
       }
 
-      const outDir = path.resolve(process.cwd(), 'dist');
-      for (const dir of rootAssets) {
+      for (const dir of dirsToCopy) {
         const src = path.resolve(process.cwd(), dir);
         const dest = path.join(outDir, dir);
+        
         if (!fs.existsSync(src)) {
+          console.log(`[copy-root-assets] Skipped: ${dir} (topilmadi)`);
           continue;
         }
+        
+        // Agar dist ichida eski papka bo'lsa, uni tozalab, yangisini ko'chiramiz
+        if (fs.existsSync(dest)) {
+          fs.rmSync(dest, { recursive: true, force: true });
+        }
+        
         fs.cpSync(src, dest, { recursive: true });
         console.log(`[copy-root-assets] Copied ${dir} -> dist/${dir}`);
       }
@@ -78,7 +89,7 @@ function serveRootAssets() {
 
 export default defineConfig({
   plugins: [react(), serveRootAssets(), copyRootAssets()],
-  base: '/', // Vercel va GitHub uchun to'g'ri asosiy yo'l
+  base: '/',
   server: {
     port: 5173,
     open: false,

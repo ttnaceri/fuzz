@@ -1,6 +1,5 @@
 import { handleUpdate, handlePreCheckout, sendMessage } from './bot/telegram.js';
 
-// ES Modules formati: export default obyekt qaytarish orqali ishlaydi
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -20,7 +19,6 @@ export default {
     if (url.pathname === '/fuzz/telegram/webhook' && request.method === 'POST') {
       try {
         const update = await request.json();
-        // env ni funksiyalarga uzatamiz (D1 bazasi va Bot tokeni uchun)
         if (update.message) ctx.waitUntil(handleUpdate(update, env));
         else if (update.pre_checkout_query) ctx.waitUntil(handlePreCheckout(update, env));
         return new Response('OK', { status: 200, headers: corsHeaders });
@@ -45,7 +43,6 @@ export default {
             });
           }
 
-          // Botga xabar yuboramiz
           const botResponse = await sendMessage(
             env, telegramId, 
             `👋 Salom! Fuzz saytida ro'yxatdan o'tish uchun quyidagi tugmani bosing.`,
@@ -65,8 +62,6 @@ export default {
 
         // B) RO'YXATDAN O'TISHNI YAKUNLASH
         if (apiPath === '/auth/register-complete' && request.method === 'POST') {
-          const body = await request.json();
-          // Hozircha muvaffaqiyatli javob
           return new Response(JSON.stringify({ success: true, message: 'Created' }), { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
           });
@@ -80,6 +75,13 @@ export default {
           
           await sendMessage(env, telegramId, `🔐 Parolni tiklash kodi: <code>${code}</code>`);
           
+          return new Response(JSON.stringify({ success: true }), { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          });
+        }
+
+        // D) YANGI PAROLNI SAQLASH
+        if (apiPath === '/auth/reset-password' && request.method === 'POST') {
           return new Response(JSON.stringify({ success: true }), { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
           });

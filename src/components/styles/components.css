@@ -544,3 +544,10 @@
     padding-bottom: 65px;
   }
 }
+
+/* Mobil qurilmalar uchun pastki menyu to'sib qo'ymasligi uchun */
+@media (max-width: 768px) {
+  .layout {
+    padding-bottom: 80px; /* BottomNav balandligi + ozroq bo'sh joy */
+  }
+}

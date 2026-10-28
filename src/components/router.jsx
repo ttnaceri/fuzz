@@ -36,11 +36,10 @@ import AboutPage from './pages/AboutPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 
-// Auth sahifalari (Yangi qo'shilganlar)
+// Auth sahifalari (ResetPasswordPage olib tashlandi)
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
-import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
 
 // Admin sahifalari
 import AdminDashboard from './admin/AdminDashboard.jsx';
@@ -61,7 +60,7 @@ export const router = createBrowserRouter([
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
       { path: '/forgot-password', element: <ForgotPasswordPage /> },
-      { path: '/reset-password', element: <ResetPasswordPage /> },
+      // { path: '/reset-password', element: <ResetPasswordPage /> }, -> Soon bo'lgani uchun o'chirildi
     ],
   },
   {

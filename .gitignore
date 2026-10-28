@@ -8,3 +8,6 @@ game/*.rar
 game/*.7z
 game/*.zip
 game/*.exe
+
+# Maxfiy konfiguratsiya fayli
+src/components/config/config.js

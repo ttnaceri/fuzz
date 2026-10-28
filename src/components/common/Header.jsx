@@ -11,15 +11,24 @@ export default function Header() {
   const { count } = useCart();
   const { info } = useToast();
   const [lang, setLang] = useState('UZ');
+  
   const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isStandalone, setIsStandalone] = useState(false);
 
-  // PWA Install funksiyasini ushlab qolish
   useEffect(() => {
+    // 1. PWA (App) rejimida ishlayotganini tekshirish
+    // Agar ilova telefonga o'rnatilgan bo'lsa, brauzer menyusi ko'rinmaydi
+    const isApp = window.matchMedia('(display-mode: standalone)').matches || 
+                  window.navigator.standalone === true;
+    setIsStandalone(isApp);
+
+    // 2. O'rnatish oynasini ushlab qolish (faqat brauzerda ishlaydi)
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, []);
 
@@ -46,14 +55,16 @@ export default function Header() {
         <SearchBar />
         
         <div className="header__actions">
-          {/* App Install Tugmasi */}
-          <button 
-            onClick={handleInstallApp} 
-            className="btn btn-secondary btn-sm d-none d-sm-flex" 
-            title="Install App"
-          >
-            <i className="fa-solid fa-download" /> <span className="d-none d-md-inline">App Install</span>
-          </button>
+          {/* App Install Tugmasi - Faqatgina brauzerda bo'lsa ko'rinadi */}
+          {!isStandalone && (
+            <button 
+              onClick={handleInstallApp} 
+              className="btn btn-secondary btn-sm d-none d-sm-flex" 
+              title="Install App"
+            >
+              <i className="fa-solid fa-download" /> <span className="d-none d-md-inline">App Install</span>
+            </button>
+          )}
 
           <button 
             onClick={() => setLang((prev) => (prev === 'UZ' ? 'EN' : 'UZ'))} 

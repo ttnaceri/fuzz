@@ -1,82 +1,97 @@
-// ==========================================
-// FUZZ: TELEGRAM AUTH API
-// ==========================================
+import { handleUpdate, handlePreCheckout, sendMessage } from './bot/telegram.js';
 
-// 1. Ro'yxatdan o'tishni boshlash (register-init)
-app.post('/fuzz/auth/register-init', async (c) => {
-  try {
-    const body = await c.req.json();
-    const { telegramId, firstName, username } = body;
+// ES Modules formati: export default obyekt qaytarish orqali ishlaydi
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    
+    // CORS sozlamalari
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*', 
+      'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept',
+    };
 
-    if (!telegramId) {
-      return c.json({ error: 'telegramId is required' }, 400);
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: corsHeaders });
     }
 
-    // Bazada foydalanuvchi borligini tekshirish
-    const existingUser = await c.env.DB.prepare(
-      'SELECT * FROM telegram_users WHERE telegram_id = ?'
-    ).bind(telegramId).first();
-
-    if (existingUser) {
-      return c.json({ 
-        message: 'User already exists', 
-        status: existingUser.status,
-        user: existingUser 
-      });
+    // 1. TELEGRAM WEBHOOK
+    if (url.pathname === '/fuzz/telegram/webhook' && request.method === 'POST') {
+      try {
+        const update = await request.json();
+        // env ni funksiyalarga uzatamiz (D1 bazasi va Bot tokeni uchun)
+        if (update.message) ctx.waitUntil(handleUpdate(update, env));
+        else if (update.pre_checkout_query) ctx.waitUntil(handlePreCheckout(update, env));
+        return new Response('OK', { status: 200, headers: corsHeaders });
+      } catch (err) {
+        return new Response('Webhook Error', { status: 500, headers: corsHeaders });
+      }
     }
 
-    // Yangi foydalanuvchi yaratish
-    await c.env.DB.prepare(
-      'INSERT INTO telegram_users (telegram_id, first_name, username) VALUES (?, ?, ?)'
-    ).bind(telegramId, firstName || '', username || '').run();
+    // 2. API ENDPOINTLAR
+    if (url.pathname.startsWith('/fuzz/')) {
+      const apiPath = url.pathname.replace('/fuzz', '');
+      
+      try {
+        // A) RO'YXATDAN O'TISHNI BOSHLASH
+        if (apiPath === '/auth/register-init' && request.method === 'POST') {
+          const body = await request.json();
+          const { telegramId } = body;
+          
+          if (!telegramId) {
+            return new Response(JSON.stringify({ error: 'Telegram ID kiritilmadi' }), { 
+              status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
+          }
 
-    return c.json({ 
-      message: 'Registration initialized successfully', 
-      status: 'pending' 
-    }, 201);
+          // Botga xabar yuboramiz
+          const botResponse = await sendMessage(
+            env, telegramId, 
+            `👋 Salom! Fuzz saytida ro'yxatdan o'tish uchun quyidagi tugmani bosing.`,
+            { inline_keyboard: [[ { text: "✅ Tasdiqlash (App)", web_app: { url: `https://fuzz-tau.vercel.app/register?tgId=${telegramId}` } } ]] }
+          );
 
-  } catch (error) {
-    return c.json({ error: 'Internal server error', details: error.message }, 500);
+          if (!botResponse.ok) {
+            return new Response(JSON.stringify({ error: `Bot xato: ${botResponse.description || 'Xabar yuborilmadi'}` }), { 
+              status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
+          }
+
+          return new Response(JSON.stringify({ success: true }), { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          });
+        }
+
+        // B) RO'YXATDAN O'TISHNI YAKUNLASH
+        if (apiPath === '/auth/register-complete' && request.method === 'POST') {
+          const body = await request.json();
+          // Hozircha muvaffaqiyatli javob
+          return new Response(JSON.stringify({ success: true, message: 'Created' }), { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          });
+        }
+
+        // C) PAROLNI TIKLASH UCHUN KOD
+        if (apiPath === '/auth/forgot-password' && request.method === 'POST') {
+          const body = await request.json();
+          const { telegramId } = body;
+          const code = Math.floor(10000 + Math.random() * 90000).toString();
+          
+          await sendMessage(env, telegramId, `🔐 Parolni tiklash kodi: <code>${code}</code>`);
+          
+          return new Response(JSON.stringify({ success: true }), { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          });
+        }
+
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message }), { 
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      }
+    }
+
+    return new Response('Not Found', { status: 404, headers: corsHeaders });
   }
-});
-
-// 2. Telegram bot orqali tasdiqlash holatini tekshirish (Sizning loglaringizda ko'ringan)
-app.get('/fuzz/auth/verify-status', async (c) => {
-  const telegramId = c.req.query('telegramId');
-
-  if (!telegramId) {
-    return c.json({ error: 'telegramId is required' }, 400);
-  }
-
-  const user = await c.env.DB.prepare(
-    'SELECT status FROM telegram_users WHERE telegram_id = ?'
-  ).bind(telegramId).first();
-
-  if (!user) {
-    return c.json({ error: 'User not found' }, 404);
-  }
-
-  return c.json({ telegramId, status: user.status });
-});
-
-// 3. Bot tomonidan foydalanuvchini tasdiqlash (Admin uchun)
-app.post('/fuzz/auth/verify', async (c) => {
-  const body = await c.req.json();
-  const { telegramId, action } = body; // action: 'approve' yoki 'block'
-
-  if (!telegramId || !action) {
-    return c.json({ error: 'Missing parameters' }, 400);
-  }
-
-  const status = action === 'approve' ? 'active' : 'blocked';
-
-  const result = await c.env.DB.prepare(
-    'UPDATE telegram_users SET status = ? WHERE telegram_id = ?'
-  ).bind(status, telegramId).run();
-
-  if (result.meta.changes === 0) {
-    return c.json({ error: 'User not found' }, 404);
-  }
-
-  return c.json({ message: `User status updated to ${status}` });
-});
+};

@@ -27,6 +27,7 @@ export async function handleUpdate(update, env) {
     await sendMessage(env, chatId, `👋 Salom, <b>${firstName}</b>!\n\nFuzz botiga xush kelibsiz.\nSizning ID ingiz: <code>${chatId}</code>`);
     return;
   }
+  
   await sendMessage(env, chatId, `Iltimos, saytdan foydalaning.`);
 }
 

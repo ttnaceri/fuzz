@@ -1,13 +1,75 @@
+# ==========================================
+# 1. NODE.JS VA KUTUBXONALAR
+# ==========================================
 node_modules/
+.pnp
+.pnp.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ==========================================
+# 2. BUILD VA DIST (Vercel, Vite)
+# ==========================================
 dist/
+dist-ssr/
+build/
+out/
+.vite/
+
+# ==========================================
+# 3. MAXFIY MA'LUMOTLAR (Tokenlar, Parollar)
+# ==========================================
 .env
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
+src/components/config/config.js
 
-# 16GB o'yinlarni GitHub'ga yubormaslik uchun:
+# ==========================================
+# 4. CLOUDFLARE WRANGLER (softBackend uchun)
+# ==========================================
+# Wrangler kesh va maxfiy sozlamalari
+.wrangler/
+.wrangler-cache/
+.dev.vars
+wrangler-account.json
+# Agar wrangler.jsonc ichida maxfiy tokenlar bo'lsa (lekin biz uni yuboramiz, shuning uchun izohda)
+# .wrangler.jsonc 
+
+# ==========================================
+# 5. KATTA O'YIN FAYLLARI (16 GB GitHub'ga sig'maydi)
+# ==========================================
+# Faqat game/downloads.json qoladi, qolgan arxivlar yuborilmaydi
 game/*.rar
 game/*.7z
 game/*.zip
 game/*.exe
+game/*.tar
+game/*.gz
 
-# Maxfiy konfiguratsiya fayli
-src/components/config/config.js
+# ==========================================
+# 6. VS CODE VA TIZIM FAYLLARI
+# ==========================================
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+# ==========================================
+# 7. OPERATSION TIZIM (OS)
+# ==========================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==========================================
+# 8. VAQTINCHALIK FAYLLAR VA LOGLAR
+# ==========================================
+.cache/
+.temp/
+.tmp/
+*.log

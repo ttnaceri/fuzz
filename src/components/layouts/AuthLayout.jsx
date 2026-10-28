@@ -1,16 +1,12 @@
-import { Outlet, Link } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
+import Header from '../common/Header.jsx';
 
 export default function AuthLayout() {
   return (
     <div className="layout">
-      <header className="header">
-        <div className="container header__inner">
-          <Link to="/" className="header__brand">
-            <img src="/image/logo.png" alt="Fuzz" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-            <span>Fuzz</span>
-          </Link>
-        </div>
-      </header>
+      {/* Header qo'shildi */}
+      <Header />
+      
       <main className="auth-page">
         <Outlet />
       </main>

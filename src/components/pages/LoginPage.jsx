@@ -1,62 +1,101 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { config } from '../config/config.js';
 import useToast from '../hooks/useToast.js';
+import useAuth from '../hooks/useAuth.js';
+import { validateLoginForm } from '../utils/validators.js';
 
 export default function LoginPage() {
-  const [qrToken, setQrToken] = useState('fuzz_login_token_' + Math.random().toString(36).substring(7));
-  const { info } = useToast();
-  
+  const [qrToken] = useState('fuzz_login_token_' + Math.random().toString(36).substring(7));
+  const { info, success, error: toastError } = useToast();
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Forma holati
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+
   const qrUrl = `${config.telegram?.botUrl || 'https://t.me/Bot'}?start=${qrToken}`;
 
-  // Email formasi bosilganda chiqadigan ogohlantirish
-  const handleSoon = (e) => {
+  // Email va parol orqali kirish
+  const handleLogin = async (e) => {
     e.preventDefault();
-    info("Email va Parol orqali kirish tez kunda ishga tushadi!");
+    
+    // Validatsiya
+    const v = validateLoginForm(form);
+    setErrors(v.errors);
+    if (!v.valid) return;
+
+    setLoading(true);
+    try {
+      await login(form);
+      success('Tizimga muvaffaqiyatli kirdingiz!');
+      // Agar oldingi sahifa bo'lsa o'shanga, aks holda account ga
+      navigate(location.state?.from || '/account', { replace: true });
+    } catch (err) {
+      toastError(err.message || 'Email yoki parol xato!');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Parolni tiklash (Hozircha faqat toast)
+  const handleForgotPassword = () => {
+    if (!form.email) {
+      info("Iltimos, avval email manzilingizni kiriting.");
+      return;
+    }
+    info(`Parolni tiklash havolasi ${form.email} manziliga yuborildi (Tez kunda ishlaydi).`);
   };
 
   return (
     <div className="auth-card" style={{ maxWidth: '800px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
       
-      {/* Chap tomon: Email Login (Soon) */}
+      {/* Chap tomon: Email Login */}
       <div>
         <h1 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Sign in <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>Soon</span>
+          Sign in
         </h1>
         
-        <form onSubmit={handleSoon}>
+        <form onSubmit={handleLogin} noValidate>
           <div className="form-group">
             <label className="form-label">Email</label>
             <input 
               type="email" 
               className="form-input" 
               placeholder="example@mail.com" 
-              // Endi disabled emas, yozish mumkin
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
             />
+            {errors.email && <div className="form-error">{errors.email}</div>}
           </div>
+          
           <div className="form-group">
             <label className="form-label">Password</label>
             <input 
               type="password" 
               className="form-input" 
               placeholder="********" 
-              // Endi disabled emas
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
             />
+            {errors.password && <div className="form-error">{errors.password}</div>}
           </div>
           
-          {/* Tugma endi faol va bosilganda toast chiqaradi */}
-          <button type="submit" className="btn btn-primary btn-block">
-            Sign in
+          <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
+            {loading ? 'Kirish...' : 'Sign in'}
           </button>
         </form>
         
         <div className="auth-card__footer">
           <button 
-            onClick={handleSoon} 
+            onClick={handleForgotPassword} 
             style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: 0 }}
           >
-            Forgot password? (Soon)
+            Forgot password?
           </button>
         </div>
       </div>

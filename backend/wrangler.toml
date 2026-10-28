@@ -1,4 +1,4 @@
-name = "my-backend" # Bu yerda aynan shu yozilgan bo'lishi kerak
+name = "fuzz-api"
 main = "src/index.js"
 compatibility_date = "2023-10-01"
 

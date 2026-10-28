@@ -4,58 +4,47 @@ import GameGrid from '../common/GameGrid.jsx';
 import Loading from '../common/Loading.jsx';
 import ErrorState from '../common/ErrorState.jsx';
 import { useCart } from '../context/useCart.js';
-import { useSound } from '../hooks/useSound.js';
+import { useLanguage } from '../context/useLanguage.js';
 
 export default function HomePage() {
   const { games, loading, error, reload } = useGames();
   const { addItem } = useCart();
-  const { playNotification } = useSound();
-
-  const handleAdd = (game) => {
-    addItem(game);
-    playNotification();
-  };
+  const { t } = useLanguage();
 
   return (
     <div className="page">
-      <section className="hero" style={{ background: 'linear-gradient(135deg, #8a1200 0%, #3d0500 100%)' }}>
+      <section className="hero">
         <div className="hero__content">
-          <h1>Welcome to Fuzz</h1>
-          <p>Discover PC games, manage your library, and join the community.</p>
-          <Link to="/store" className="btn btn-primary">Browse Store</Link>
+          <h1>{t('home.welcome')}</h1>
+          <p>{t('home.subtitle')}</p>
+          <Link to="/store" className="btn btn-primary">{t('home.browseBtn')}</Link>
         </div>
       </section>
 
       <section className="section">
         <div className="section__header">
-          <h2 className="section__title">Featured Games</h2>
-          <Link to="/store" className="text-muted">View all →</Link>
+          <h2 className="section__title">{t('home.featured')}</h2>
+          <Link to="/store" className="text-muted">{t('home.viewAll')} →</Link>
         </div>
-        {loading && <Loading label="Loading games…" />}
-        {error && !loading && (
-          <ErrorState
-            title="Could not load games"
-            message={error.message}
-            onRetry={reload}
-          />
-        )}
+        {loading && <Loading />}
+        {error && !loading && <ErrorState message={error.message} onRetry={reload} />}
         {!loading && !error && (
-          <GameGrid games={games} onAddToCart={handleAdd} emptyMessage="Hozircha o'yinlar yo'q." />
+          <GameGrid games={games} onAddToCart={addItem} emptyMessage={t('home.noGames')} />
         )}
       </section>
 
       <section className="section">
         <div className="section__header">
-          <h2 className="section__title">Quick links</h2>
+          <h2 className="section__title">{t('home.quickLinks')}</h2>
         </div>
         <div className="game-grid">
           {[
-            { to: '/new-releases', icon: 'fa-star', label: 'New Releases' },
-            { to: '/special-offers', icon: 'fa-tags', label: 'Special Offers' },
-            { to: '/free-games', icon: 'fa-gift', label: 'Free Games' },
-            { to: '/top-sellers', icon: 'fa-trophy', label: 'Top Sellers' },
-            { to: '/categories', icon: 'fa-layer-group', label: 'Categories' },
-            { to: '/community', icon: 'fa-users', label: 'Community' },
+            { to: '/new-releases', icon: 'fa-star', label: t('home.newReleases') },
+            { to: '/special-offers', icon: 'fa-tags', label: t('home.specialOffers') },
+            { to: '/free-games', icon: 'fa-gift', label: t('home.freeGames') },
+            { to: '/top-sellers', icon: 'fa-trophy', label: t('home.topSellers') },
+            { to: '/categories', icon: 'fa-layer-group', label: t('home.categories') },
+            { to: '/community', icon: 'fa-users', label: t('home.community') },
           ].map((l) => (
             <Link key={l.to} to={l.to} className="card" style={{ padding: '1.5rem', textAlign: 'center' }}>
               <i className={`fa-solid ${l.icon}`} style={{ fontSize: '2rem', marginBottom: '0.5rem', color: 'var(--color-primary)' }} />

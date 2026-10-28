@@ -1,15 +1,18 @@
 import { NavLink } from 'react-router-dom';
-
-const LINKS = [
-  { to: '/', label: 'Home', end: true },
-  { to: '/store', label: 'Store' },
-  { to: '/new-releases', label: 'New' },
-  { to: '/special-offers', label: 'Offers' },
-  { to: '/free-games', label: 'Free' },
-  { to: '/library', label: 'Library' },
-];
+import { useLanguage } from '../context/useLanguage.js';
 
 export default function Navigation() {
+  const { t } = useLanguage();
+
+  const LINKS = [
+    { to: '/', label: t('nav.home'), end: true },
+    { to: '/store', label: t('nav.store') },
+    { to: '/new-releases', label: t('nav.new') },
+    { to: '/special-offers', label: t('nav.offers') },
+    { to: '/free-games', label: t('nav.free') },
+    { to: '/library', label: t('nav.library') },
+  ];
+
   return (
     <nav className="header__nav">
       {LINKS.map((l) => (

@@ -23,8 +23,6 @@ import ProfilePage from './pages/ProfilePage.jsx';
 import AccountPage from './pages/AccountPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import SecurityPage from './pages/SecurityPage.jsx';
-import LoginPage from './pages/LoginPage.jsx';
-import RegisterPage from './pages/RegisterPage.jsx';
 import CommunityPage from './pages/CommunityPage.jsx';
 import DiscussionsPage from './pages/DiscussionsPage.jsx';
 import ActivityPage from './pages/ActivityPage.jsx';
@@ -38,6 +36,12 @@ import AboutPage from './pages/AboutPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 
+// Auth sahifalari (Yangi qo'shilganlar)
+import LoginPage from './pages/LoginPage.jsx';
+import RegisterPage from './pages/RegisterPage.jsx';
+import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
+import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
+
 // Admin sahifalari
 import AdminDashboard from './admin/AdminDashboard.jsx';
 import AdminGames from './admin/AdminGames.jsx';
@@ -48,7 +52,7 @@ import AdminReviews from './admin/AdminReviews.jsx';
 import AdminCategories from './admin/AdminCategories.jsx';
 import AdminSettings from './admin/AdminSettings.jsx';
 import AdminLogs from './admin/AdminLogs.jsx';
-import AdminRoles from './admin/AdminRoles.jsx'; // Yangi qo'shildi
+import AdminRoles from './admin/AdminRoles.jsx';
 
 export const router = createBrowserRouter([
   {
@@ -56,6 +60,8 @@ export const router = createBrowserRouter([
     children: [
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
+      { path: '/forgot-password', element: <ForgotPasswordPage /> },
+      { path: '/reset-password', element: <ResetPasswordPage /> },
     ],
   },
   {
@@ -76,22 +82,10 @@ export const router = createBrowserRouter([
       { path: 'wishlist', element: <WishlistPage /> },
       { path: 'cart', element: <CartPage /> },
       { path: 'purchases', element: <PurchasesPage /> },
-      {
-        path: 'profile',
-        element: <ProtectedRoute><ProfilePage /></ProtectedRoute>,
-      },
-      {
-        path: 'account',
-        element: <ProtectedRoute><AccountPage /></ProtectedRoute>,
-      },
-      {
-        path: 'settings',
-        element: <ProtectedRoute><SettingsPage /></ProtectedRoute>,
-      },
-      {
-        path: 'security',
-        element: <ProtectedRoute><SecurityPage /></ProtectedRoute>,
-      },
+      { path: 'profile', element: <ProtectedRoute><ProfilePage /></ProtectedRoute> },
+      { path: 'account', element: <ProtectedRoute><AccountPage /></ProtectedRoute> },
+      { path: 'settings', element: <ProtectedRoute><SettingsPage /></ProtectedRoute> },
+      { path: 'security', element: <ProtectedRoute><SecurityPage /></ProtectedRoute> },
       { path: 'community', element: <CommunityPage /> },
       { path: 'discussions', element: <DiscussionsPage /> },
       { path: 'activity', element: <ActivityPage /> },
@@ -119,7 +113,7 @@ export const router = createBrowserRouter([
       { path: 'categories', element: <AdminCategories /> },
       { path: 'settings', element: <AdminSettings /> },
       { path: 'logs', element: <AdminLogs /> },
-      { path: 'roles', element: <AdminRoles /> }, // Yangi qo'shildi
+      { path: 'roles', element: <AdminRoles /> },
     ],
   },
 ]);

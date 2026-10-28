@@ -1,8 +1,5 @@
 import { config } from '../config/config.js';
 
-/**
- * Reusable fetch wrapper with timeout, AbortController, error normalization.
- */
 export class ApiError extends Error {
   constructor(message, { status = 0, code = 'API_ERROR', details = null } = {}) {
     super(message);
@@ -14,14 +11,11 @@ export class ApiError extends Error {
 }
 
 function buildUrl(path, params) {
-  const base = config.apiBaseUrl ? config.apiBaseUrl.replace(/\/+$/, '') : '';
-  const prefix = config.apiPrefix || '';
+  // Manzilni to'g'ridan-to'g'ri qotirib qo'yamiz, adashmaslik uchun
+  const baseUrl = 'https://my-backend.updbackend.workers.dev/fuzz';
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  let url = `${base}${prefix}${cleanPath}`;
-  if (!base) {
-    // No backend — return null to signal "unavailable".
-    return null;
-  }
+  let url = `${baseUrl}${cleanPath}`;
+  
   if (params && typeof params === 'object') {
     const usp = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => {
@@ -33,87 +27,65 @@ function buildUrl(path, params) {
   return url;
 }
 
-async function request(method, path, { params, body, signal, headers = {}, credentials = 'include' } = {}) {
+async function request(method, path, { params, body, signal, headers = {} } = {}) {
   const url = buildUrl(path, params);
-  if (!url) {
-    throw new ApiError('Backend is not configured', {
-      status: 0,
-      code: 'NO_BACKEND',
-    });
-  }
-
+  
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), config.requestTimeout);
+  const timeout = setTimeout(() => controller.abort(), 15000); // 15 soniya kutadi
 
-  // Link external signal
   if (signal) {
     if (signal.aborted) controller.abort();
     else signal.addEventListener('abort', () => controller.abort(), { once: true });
   }
 
-  const finalHeaders = { Accept: 'application/json', ...headers };
+  const finalHeaders = { 
+    'Accept': 'application/json',
+    ...headers 
+  };
+  
   let finalBody;
   if (body !== undefined) {
-    if (body instanceof FormData) {
-      finalBody = body;
-    } else {
-      finalHeaders['Content-Type'] = 'application/json';
-      finalBody = JSON.stringify(body);
-    }
+    finalHeaders['Content-Type'] = 'application/json';
+    finalBody = JSON.stringify(body);
   }
 
-  let res;
   try {
-    res = await fetch(url, {
+    const res = await fetch(url, {
       method,
       headers: finalHeaders,
       body: finalBody,
-      credentials,
+      credentials: 'include', // CORS uchun ruxsat
       signal: controller.signal,
     });
+    
+    clearTimeout(timeout);
+
+    if (res.status === 204) return null;
+    
+    const text = await res.text();
+    let data = null;
+    if (text) {
+      try { data = JSON.parse(text); } 
+      catch { 
+        if (!res.ok) throw new ApiError(`Server xatosi: ${res.status}`, { status: res.status, details: text });
+        return text; 
+      }
+    }
+
+    if (!res.ok) {
+      const message = data?.error || data?.message || `Xatolik yuz berdi (${res.status})`;
+      throw new ApiError(message, { status: res.status, details: data });
+    }
+    return data;
+
   } catch (err) {
     clearTimeout(timeout);
     if (err.name === 'AbortError') {
-      throw new ApiError('Request aborted or timed out', {
-        code: 'TIMEOUT',
-      });
+      throw new ApiError('Server bilan aloqa vaqti tugadi. Qayta urinib ko\'ring.', { code: 'TIMEOUT' });
     }
-    throw new ApiError('Network error', {
-      code: 'NETWORK_ERROR',
-      details: err.message,
-    });
+    if (err instanceof ApiError) throw err;
+    throw new ApiError('Tarmoq xatosi. Internetni tekshiring yoki server ishlamayapti.', { code: 'NETWORK_ERROR', details: err.message });
   }
-  clearTimeout(timeout);
-
-  if (res.status === 204) return null;
-
-  const text = await res.text();
-  let data = null;
-  if (text) {
-    try {
-      data = JSON.parse(text);
-    } catch {
-      if (!res.ok) {
-        throw new ApiError(`HTTP ${res.status}`, {
-          status: res.status,
-          code: 'INVALID_JSON',
-          details: text.slice(0, 200),
-        });
-      }
-      return text;
-    }
-  }
-
-  if (!res.ok) {
-    const message =
-      (data && (data.message || data.error)) || `HTTP ${res.status}`;
-    throw new ApiError(message, {
-      status: res.status,
-      code: 'HTTP_ERROR',
-      details: data,
-    });
-  }
-  return data;
 }
 
 export const api = {
@@ -121,6 +93,6 @@ export const api = {
   post: (path, body, opts) => request('POST', path, { ...opts, body }),
   patch: (path, body, opts) => request('PATCH', path, { ...opts, body }),
   delete: (path, opts) => request('DELETE', path, opts),
-  isConfigured: () => Boolean(config.apiBaseUrl),
+  isConfigured: () => true,
   buildUrl,
 };

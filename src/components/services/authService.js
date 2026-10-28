@@ -1,16 +1,9 @@
 import { api } from './api.js';
 
 export const authService = {
-  async login({ email, password }) {
-    return api.post('/auth/login', { email, password });
-  },
-  async register({ username, email, password }) {
-    return api.post('/auth/register', { username, email, password });
-  },
-  async logout() {
-    return api.post('/auth/logout', {});
-  },
-  async me() {
-    return api.get('/users/me');
-  },
+  async registerInit(telegramId) { return api.post('/auth/register-init', { telegramId }); },
+  async checkVerifyStatus(telegramId) { return api.get(`/auth/verify-status?telegramId=${telegramId}`); },
+  async registerComplete(data) { return api.post('/auth/register-complete', data); },
+  async forgotPassword(telegramId) { return api.post('/auth/forgot-password', { telegramId }); },
+  async resetPassword(data) { return api.post('/auth/reset-password', data); },
 };

@@ -11,7 +11,7 @@ export class ApiError extends Error {
 }
 
 function buildUrl(path, params) {
-  // Manzilni to'g'ridan-to'g'ri qotirib qo'yamiz, adashmaslik uchun
+  // Backend manzili qat'iy belgilangan
   const baseUrl = 'https://my-backend.updbackend.workers.dev/fuzz';
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   let url = `${baseUrl}${cleanPath}`;
@@ -30,8 +30,9 @@ function buildUrl(path, params) {
 async function request(method, path, { params, body, signal, headers = {} } = {}) {
   const url = buildUrl(path, params);
   
+  // 15 soniyalik vaqt chegarasi (timeout)
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000); // 15 soniya kutadi
+  const timeout = setTimeout(() => controller.abort(), 15000); 
 
   if (signal) {
     if (signal.aborted) controller.abort();
@@ -54,7 +55,8 @@ async function request(method, path, { params, body, signal, headers = {} } = {}
       method,
       headers: finalHeaders,
       body: finalBody,
-      credentials: 'include', // CORS uchun ruxsat
+      // ENG MUHIM O'ZGARISH: CORS xatosini oldini olish uchun 'omit'
+      credentials: 'omit', 
       signal: controller.signal,
     });
     
@@ -64,9 +66,11 @@ async function request(method, path, { params, body, signal, headers = {} } = {}
     
     const text = await res.text();
     let data = null;
+    
     if (text) {
-      try { data = JSON.parse(text); } 
-      catch { 
+      try { 
+        data = JSON.parse(text); 
+      } catch { 
         if (!res.ok) throw new ApiError(`Server xatosi: ${res.status}`, { status: res.status, details: text });
         return text; 
       }
@@ -76,14 +80,18 @@ async function request(method, path, { params, body, signal, headers = {} } = {}
       const message = data?.error || data?.message || `Xatolik yuz berdi (${res.status})`;
       throw new ApiError(message, { status: res.status, details: data });
     }
+    
     return data;
 
   } catch (err) {
     clearTimeout(timeout);
+    
     if (err.name === 'AbortError') {
       throw new ApiError('Server bilan aloqa vaqti tugadi. Qayta urinib ko\'ring.', { code: 'TIMEOUT' });
     }
+    
     if (err instanceof ApiError) throw err;
+    
     throw new ApiError('Tarmoq xatosi. Internetni tekshiring yoki server ishlamayapti.', { code: 'NETWORK_ERROR', details: err.message });
   }
 }

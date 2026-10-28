@@ -4,17 +4,20 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     
-    // CORS: Hamma joydan kelgan so'rovni qabul qilamiz (Telegram WebApp uchun shart)
+    // ENG MUHIM QISM: CORS Sozlamalari
+    // Hamma domenlarga ruxsat beramiz (xatoni yo'qotish uchun)
     const corsHeaders = {
-      'Access-Control-Allow-Origin': request.headers.get('Origin') || '*',
+      'Access-Control-Allow-Origin': '*', 
       'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept',
     };
 
-    // Preflight
+    // Preflight (OPTIONS) so'roviga darhol javob qaytarish
     if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
+      return new Response(null, { 
+        status: 204,
+        headers: corsHeaders 
+      });
     }
 
     // 1. TELEGRAM WEBHOOK
@@ -23,9 +26,9 @@ export default {
         const update = await request.json();
         if (update.message) ctx.waitUntil(handleUpdate(update, env));
         else if (update.pre_checkout_query) ctx.waitUntil(handlePreCheckout(update, env));
-        return new Response('OK', { status: 200 });
+        return new Response('OK', { status: 200, headers: corsHeaders });
       } catch (err) {
-        return new Response('Webhook Error', { status: 500 });
+        return new Response('Webhook Error', { status: 500, headers: corsHeaders });
       }
     }
 
@@ -34,7 +37,7 @@ export default {
       const apiPath = url.pathname.replace('/fuzz', '');
       
       try {
-        // A) RO'YXATDAN O'TISHNI BOSHLASH
+        // RO'YXATDAN O'TISHNI BOSHLASH
         if (apiPath === '/auth/register-init' && request.method === 'POST') {
           const body = await request.json();
           const { telegramId } = body;
@@ -62,16 +65,14 @@ export default {
           });
         }
 
-        // B) RO'YXATDAN O'TISHNI YAKUNLASH
+        // RO'YXATDAN O'TISHNI YAKUNLASH
         if (apiPath === '/auth/register-complete' && request.method === 'POST') {
-          const body = await request.json();
-          // Bu yerda baza logikasi bo'ladi. Hozircha muvaffaqiyat qaytaramiz.
           return new Response(JSON.stringify({ success: true, message: 'Created' }), { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
           });
         }
 
-        // C) PAROLNI TIKLASH UCHUN KOD
+        // PAROLNI TIKLASH UCHUN KOD
         if (apiPath === '/auth/forgot-password' && request.method === 'POST') {
           const body = await request.json();
           const { telegramId } = body;
@@ -84,7 +85,7 @@ export default {
           });
         }
 
-        // D) YANGI PAROLNI SAQLASH
+        // YANGI PAROLNI SAQLASH
         if (apiPath === '/auth/reset-password' && request.method === 'POST') {
           return new Response(JSON.stringify({ success: true }), { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

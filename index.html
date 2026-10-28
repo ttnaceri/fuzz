@@ -3,10 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/image/logo.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="description" content="Fuzz — Professional PC Gaming Platform" />
+    
+    <!-- PWA uchun meta teglar -->
     <meta name="theme-color" content="#8a1200" />
-    <title>Fuzz — Gaming Platform </title>
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- iOS qurilmalar uchun PWA qo'llab-quvvatlash -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Fuzz" />
+    <link rel="apple-touch-icon" href="/image/logo.png" />
+
+    <title>Fuzz — PC Gaming Platform</title>
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
@@ -18,6 +28,16 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/components/main.jsx"></script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- Service Worker ro'yxatdan o'tkazish (PWA o'rnatish ishlashi uchun) -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch((err) => {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+        });
+      }
+    </script>
   </body>
 </html>

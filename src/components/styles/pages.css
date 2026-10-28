@@ -207,3 +207,187 @@
   font-weight: 800;
   margin-top: 0.3rem;
 }
+
+/* =========================================
+   COMPACT LOGIN MODAL (FUZZ)
+   ========================================= */
+
+.fuzz-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75); /* Orqa fonni qoraytirish */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+  animation: fadeIn 200ms ease;
+}
+
+.fuzz-login-modal {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 650px; /* Kichik hajm (650px) */
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+  animation: popIn 250ms ease;
+}
+
+/* Yopish tugmasi */
+.fuzz-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: var(--t-fast);
+  z-index: 10;
+}
+
+.fuzz-modal-close:hover {
+  background: var(--color-bg-alt);
+  color: var(--color-text);
+}
+
+/* Sarlavha */
+.fuzz-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  padding: 1.2rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-alt);
+}
+
+.fuzz-modal-header img {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+}
+
+.fuzz-modal-header h2 {
+  color: var(--color-text);
+  margin: 0;
+  font-size: 1.2rem;
+  letter-spacing: 2px;
+}
+
+/* Tana qismi */
+.fuzz-modal-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 1.5rem 2rem;
+  gap: 1.5rem;
+}
+
+.fuzz-title {
+  color: var(--color-primary);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 1rem;
+  font-weight: 700;
+}
+
+.fuzz-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  margin-bottom: 1.2rem;
+  color: var(--color-text-muted);
+}
+
+.fuzz-links {
+  margin-top: 0.8rem;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.fuzz-link {
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.fuzz-link:hover {
+  color: var(--color-text);
+}
+
+/* QR Kod qismi */
+.fuzz-qr-side {
+  border-left: 1px solid var(--color-border);
+  padding-left: 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.fuzz-qr-box {
+  background: #fff;
+  padding: 0.5rem;
+  border-radius: var(--radius-md);
+  margin: 0.5rem 0;
+}
+
+.fuzz-qr-text {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+/* Pastki qism */
+.fuzz-modal-footer {
+  background: var(--color-bg-alt);
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+}
+
+.fuzz-modal-footer a {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.fuzz-modal-footer a:hover {
+  text-decoration: underline;
+}
+
+/* Mobil moslashuv */
+@media (max-width: 600px) {
+  .fuzz-modal-body {
+    grid-template-columns: 1fr;
+    padding: 1.5rem;
+  }
+  .fuzz-qr-side {
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+    padding-left: 0;
+    padding-top: 1.5rem;
+  }
+  .fuzz-modal-footer {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+}

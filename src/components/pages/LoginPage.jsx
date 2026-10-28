@@ -2,30 +2,62 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { config } from '../config/config.js';
+import useToast from '../hooks/useToast.js';
 
 export default function LoginPage() {
   const [qrToken, setQrToken] = useState('fuzz_login_token_' + Math.random().toString(36).substring(7));
+  const { info } = useToast();
+  
   const qrUrl = `${config.telegram?.botUrl || 'https://t.me/Bot'}?start=${qrToken}`;
+
+  // Email formasi bosilganda chiqadigan ogohlantirish
+  const handleSoon = (e) => {
+    e.preventDefault();
+    info("Email va Parol orqali kirish tez kunda ishga tushadi!");
+  };
 
   return (
     <div className="auth-card" style={{ maxWidth: '800px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
       
       {/* Chap tomon: Email Login (Soon) */}
-      <div style={{ opacity: 0.5, pointerEvents: 'none' }}>
+      <div>
         <h1 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           Sign in <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>Soon</span>
         </h1>
-        <div className="form-group">
-          <label className="form-label">Email</label>
-          <input type="email" className="form-input" placeholder="example@mail.com" disabled />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Password</label>
-          <input type="password" className="form-input" placeholder="********" disabled />
-        </div>
-        <button className="btn btn-primary btn-block" disabled>Sign in</button>
+        
+        <form onSubmit={handleSoon}>
+          <div className="form-group">
+            <label className="form-label">Email</label>
+            <input 
+              type="email" 
+              className="form-input" 
+              placeholder="example@mail.com" 
+              // Endi disabled emas, yozish mumkin
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <input 
+              type="password" 
+              className="form-input" 
+              placeholder="********" 
+              // Endi disabled emas
+            />
+          </div>
+          
+          {/* Tugma endi faol va bosilganda toast chiqaradi */}
+          <button type="submit" className="btn btn-primary btn-block">
+            Sign in
+          </button>
+        </form>
+        
         <div className="auth-card__footer">
-          <span className="text-muted">Forgot password? (Soon)</span>
+          <button 
+            onClick={handleSoon} 
+            style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: 0 }}
+          >
+            Forgot password? (Soon)
+          </button>
         </div>
       </div>
 

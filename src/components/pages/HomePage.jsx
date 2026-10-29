@@ -11,6 +11,10 @@ export default function HomePage() {
   const { addItem } = useCart();
   const { t } = useLanguage();
 
+  const handleAdd = (game) => {
+    addItem(game);
+  };
+
   return (
     <div className="page">
       <section className="hero">
@@ -26,10 +30,21 @@ export default function HomePage() {
           <h2 className="section__title">{t('home.featured')}</h2>
           <Link to="/store" className="text-muted">{t('home.viewAll')} →</Link>
         </div>
-        {loading && <Loading />}
-        {error && !loading && <ErrorState message={error.message} onRetry={reload} />}
-        {!loading && !error && (
-          <GameGrid games={games} onAddToCart={addItem} emptyMessage={t('home.noGames')} />
+        {loading && <Loading label="Loading games..." />}
+        {error && !loading && (
+          <ErrorState
+            title="Could not load games"
+            message={error.message}
+            onRetry={reload}
+          />
+        )}
+        {!loading && !error && games.length > 0 && (
+          <GameGrid games={games} onAddToCart={handleAdd} />
+        )}
+        {!loading && !error && games.length === 0 && (
+          <div className="state">
+            <p>{t('home.noGames')}</p>
+          </div>
         )}
       </section>
 

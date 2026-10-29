@@ -4,7 +4,7 @@ import AdminLayout from './layouts/AdminLayout.jsx';
 import AuthLayout from './layouts/AuthLayout.jsx';
 import ProtectedRoute from './common/ProtectedRoute.jsx';
 
-// Asosiy sahifalar
+// Sahifalar
 import HomePage from './pages/HomePage.jsx';
 import StorePage from './pages/StorePage.jsx';
 import CategoriesPage from './pages/CategoriesPage.jsx';
@@ -23,6 +23,8 @@ import ProfilePage from './pages/ProfilePage.jsx';
 import AccountPage from './pages/AccountPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import SecurityPage from './pages/SecurityPage.jsx';
+import LoginPage from './pages/LoginPage.jsx';
+import RegisterPage from './pages/RegisterPage.jsx';
 import CommunityPage from './pages/CommunityPage.jsx';
 import DiscussionsPage from './pages/DiscussionsPage.jsx';
 import ActivityPage from './pages/ActivityPage.jsx';
@@ -36,12 +38,12 @@ import AboutPage from './pages/AboutPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 
-// Auth sahifalari (ResetPasswordPage olib tashlandi)
-import LoginPage from './pages/LoginPage.jsx';
-import RegisterPage from './pages/RegisterPage.jsx';
-import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
+// YANGI WALLET SAHIFALARI
+import WalletHistoryPage from './pages/WalletHistoryPage.jsx';
+import WalletTopUpPage from './pages/WalletTopUpPage.jsx';
+import WalletRefundPage from './pages/WalletRefundPage.jsx';
 
-// Admin sahifalari
+// Admin
 import AdminDashboard from './admin/AdminDashboard.jsx';
 import AdminGames from './admin/AdminGames.jsx';
 import AdminUsers from './admin/AdminUsers.jsx';
@@ -51,7 +53,6 @@ import AdminReviews from './admin/AdminReviews.jsx';
 import AdminCategories from './admin/AdminCategories.jsx';
 import AdminSettings from './admin/AdminSettings.jsx';
 import AdminLogs from './admin/AdminLogs.jsx';
-import AdminRoles from './admin/AdminRoles.jsx';
 
 export const router = createBrowserRouter([
   {
@@ -59,8 +60,6 @@ export const router = createBrowserRouter([
     children: [
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
-      { path: '/forgot-password', element: <ForgotPasswordPage /> },
-      // { path: '/reset-password', element: <ResetPasswordPage /> }, -> Soon bo'lgani uchun o'chirildi
     ],
   },
   {
@@ -81,6 +80,12 @@ export const router = createBrowserRouter([
       { path: 'wishlist', element: <WishlistPage /> },
       { path: 'cart', element: <CartPage /> },
       { path: 'purchases', element: <PurchasesPage /> },
+      
+      // WALLET ROUTES
+      { path: 'wallet/history', element: <WalletHistoryPage /> },
+      { path: 'wallet/topup', element: <WalletTopUpPage /> },
+      { path: 'wallet/refund', element: <WalletRefundPage /> },
+
       { path: 'profile', element: <ProtectedRoute><ProfilePage /></ProtectedRoute> },
       { path: 'account', element: <ProtectedRoute><AccountPage /></ProtectedRoute> },
       { path: 'settings', element: <ProtectedRoute><SettingsPage /></ProtectedRoute> },
@@ -112,7 +117,6 @@ export const router = createBrowserRouter([
       { path: 'categories', element: <AdminCategories /> },
       { path: 'settings', element: <AdminSettings /> },
       { path: 'logs', element: <AdminLogs /> },
-      { path: 'roles', element: <AdminRoles /> },
     ],
   },
 ]);

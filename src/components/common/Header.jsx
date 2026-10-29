@@ -2,33 +2,33 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import useAuth from '../hooks/useAuth.js';
 import { useCart } from '../context/useCart.js';
+import { useLanguage } from '../context/useLanguage.js';
 import Navigation from './Navigation.jsx';
 import SearchBar from './SearchBar.jsx';
 import useToast from '../hooks/useToast.js';
 
 export default function Header() {
-  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const { count } = useCart();
+  const { t } = useLanguage();
   const { info } = useToast();
-  const [lang, setLang] = useState('UZ');
   
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [isStandalone, setIsStandalone] = useState(false);
+  const [showInstall, setShowInstall] = useState(false);
 
   useEffect(() => {
-    // 1. PWA (App) rejimida ishlayotganini tekshirish
-    // Agar ilova telefonga o'rnatilgan bo'lsa, brauzer menyusi ko'rinmaydi
-    const isApp = window.matchMedia('(display-mode: standalone)').matches || 
-                  window.navigator.standalone === true;
-    setIsStandalone(isApp);
+    const isTelegram = typeof window !== 'undefined' && window.Telegram?.WebApp?.initData;
+    const isStandalone = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches;
+    
+    if (!isTelegram && !isStandalone) {
+      setShowInstall(true);
+    }
 
-    // 2. O'rnatish oynasini ushlab qolish (faqat brauzerda ishlaydi)
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, []);
 
@@ -36,45 +36,35 @@ export default function Header() {
     if (deferredPrompt) {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setDeferredPrompt(null);
-      }
+      if (outcome === 'accepted') setDeferredPrompt(null);
     } else {
-      info("Ilovani o'rnatish uchun brauzeringiz menyusidan 'Add to Home Screen' ni tanlang.");
+      info("Brauzer menyusidan 'Add to Home Screen' ni tanlang.");
     }
   };
 
   return (
     <header className="header">
       <div className="container header__inner">
-        <Link to="/" className="header__brand">
+        <Link to="/" className="header__brand" style={{ whiteSpace: 'nowrap' }}>
           <img src="/image/logo.png" alt="Fuzz logo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           <span>Fuzz</span>
         </Link>
+        
         <Navigation />
+        
+        <div style={{ flex: 1, minWidth: '20px' }}></div>
+
         <SearchBar />
         
-        <div className="header__actions">
-          {/* App Install Tugmasi - Faqatgina brauzerda bo'lsa ko'rinadi */}
-          {!isStandalone && (
-            <button 
-              onClick={handleInstallApp} 
-              className="btn btn-secondary btn-sm d-none d-sm-flex" 
-              title="Install App"
-            >
-              <i className="fa-solid fa-download" /> <span className="d-none d-md-inline">App Install</span>
+        <div className="header__actions" style={{ marginLeft: '1rem', display: 'flex', alignItems: 'center' }}>
+          
+          {showInstall && (
+            <button onClick={handleInstallApp} className="btn btn-secondary btn-sm" title="Install App" style={{ marginRight: '0.5rem' }}>
+              <i className="fa-solid fa-download" />
             </button>
           )}
 
-          <button 
-            onClick={() => setLang((prev) => (prev === 'UZ' ? 'EN' : 'UZ'))} 
-            className="btn btn-ghost btn-sm" 
-            style={{ fontWeight: 'bold' }}
-          >
-            {lang}
-          </button>
-
-          <Link to="/cart" className="header__icon-btn">
+          <Link to="/cart" className="header__icon-btn" style={{ position: 'relative' }}>
             <i className="fa-solid fa-cart-shopping" />
             {count > 0 && <span className="header__badge">{count}</span>}
           </Link>
@@ -82,16 +72,14 @@ export default function Header() {
           {isAuthenticated ? (
             <>
               <Link to="/account" className="btn btn-ghost btn-sm">
-                <i className="fa-solid fa-user" /> <span className="d-none d-md-inline">{user?.username || 'Account'}</span>
+                <i className="fa-solid fa-user" />
               </Link>
               <button className="btn btn-ghost btn-sm" onClick={logout}>
                 <i className="fa-solid fa-right-from-bracket" />
               </button>
             </>
           ) : (
-            <>
-              <Link to="/login" className="btn btn-ghost btn-sm">Login</Link>
-            </>
+            <Link to="/login" className="btn btn-ghost btn-sm" style={{ whiteSpace: 'nowrap' }}>{t('auth.login')}</Link>
           )}
         </div>
       </div>

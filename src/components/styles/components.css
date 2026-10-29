@@ -551,3 +551,77 @@
     padding-bottom: 80px; /* BottomNav balandligi + ozroq bo'sh joy */
   }
 }
+
+/* Navbar Dropdown menyulari */
+.nav-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.nav-dropdown-btn {
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: block;
+}
+
+.nav-dropdown:hover .nav-dropdown-btn {
+  background: var(--color-card);
+  color: var(--color-text);
+}
+
+.nav-dropdown-content {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #3d4452; /* Rasmda ko'rsatilgan fon */
+  min-width: 200px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  z-index: 1000;
+  flex-direction: column;
+  padding: 0.5rem 0;
+  border-radius: 4px;
+}
+
+.nav-dropdown:hover .nav-dropdown-content {
+  display: flex;
+}
+
+.nav-dropdown-content a {
+  padding: 0.6rem 1rem;
+  color: #fff;
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.nav-dropdown-content a:hover {
+  background: #4b5363;
+  color: #fff;
+}
+
+/* Wallet tugmasi (Header ichidagi navbarda) */
+.nav-wallet {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius-md);
+  color: var(--color-success);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: default;
+}
+
+.nav-wallet:hover {
+  background: var(--color-card);
+}
+
+.nav-wallet:hover {
+  background: var(--color-card);
+  color: var(--color-text);
+}

@@ -4,17 +4,22 @@ import { translations } from '../locales/translations.js';
 export const LanguageContext = createContext(null);
 
 export function LanguageProvider({ children }) {
-  const [lang, setLang] = useState(() => {
-    return localStorage.getItem('fuzz_lang') || 'en';
+  const [lang, setLangState] = useState(() => {
+    return localStorage.getItem('fuzz_lang') || 'uz'; // Standart til O'zbekcha
   });
 
   useEffect(() => {
     localStorage.setItem('fuzz_lang', lang);
-    // HTML tegiga lang atributini qo'shish (SEO va ekran o'quvchilar uchun)
     document.documentElement.lang = lang;
   }, [lang]);
 
-  // Tarjima qilish funksiyasi (t = translate)
+  const setLang = (newLang) => {
+    if (['en', 'uz', 'ru'].includes(newLang)) {
+      setLangState(newLang);
+    }
+  };
+
+  // Tarjima funksiyasi
   const t = (key) => {
     const keys = key.split('.');
     let value = translations[lang];
@@ -23,8 +28,13 @@ export function LanguageProvider({ children }) {
       if (value && value[k]) {
         value = value[k];
       } else {
-        // Agar tarjima topilmasa, ingliz tilidagisini qaytaradi yoki kalitni o'zini
-        return translations['en']?.[keys[0]]?.[keys[1]] || key;
+        // Fallback to English if missing
+        let fallback = translations['en'];
+        for (const fk of keys) {
+          if (fallback && fallback[fk]) fallback = fallback[fk];
+          else return key;
+        }
+        return fallback;
       }
     }
     return value;

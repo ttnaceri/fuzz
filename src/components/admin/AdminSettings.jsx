@@ -1,8 +1,10 @@
 export default function AdminSettings() {
   return (
     <div>
-      <div className="admin-header"><h1>Settings</h1></div>
-      <div className="unavailable-notice">Platform settings require backend support.</div>
+      <h1 style={{ color: '#f5eeee', marginBottom: '1.5rem' }}>Platforma Sozlamalari</h1>
+      <div style={{ padding: '1rem', backgroundColor: '#241411', borderRadius: '8px', border: '1px solid #48201a', color: '#b9a6a2' }}>
+        Sozlamalar bo'limi.
+      </div>
     </div>
   );
 }

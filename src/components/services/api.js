@@ -11,9 +11,14 @@ export class ApiError extends Error {
 }
 
 function buildUrl(path, params) {
-  const baseUrl = 'https://my-backend.updbackend.workers.dev/fuzz'; // Manzil to'g'rilandi
+  const base = config.apiBaseUrl ? config.apiBaseUrl.replace(/\/+$/, '') : '';
+  const prefix = config.apiPrefix || '';
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  let url = `${baseUrl}${cleanPath}`;
+  let url = `${base}${prefix}${cleanPath}`;
+  
+  if (!base) {
+    throw new ApiError('Backend URL manzili sozlanmagan!', { code: 'NO_BACKEND' });
+  }
   
   if (params && typeof params === 'object') {
     const usp = new URLSearchParams();
@@ -26,62 +31,56 @@ function buildUrl(path, params) {
   return url;
 }
 
-async function request(method, path, { params, body, signal, headers = {} } = {}) {
+async function request(method, path, { params, body, headers = {} } = {}) {
   const url = buildUrl(path, params);
-  
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000); 
-
-  if (signal) {
-    if (signal.aborted) controller.abort();
-    else signal.addEventListener('abort', () => controller.abort(), { once: true });
-  }
+  const timeout = setTimeout(() => controller.abort(), config.requestTimeout || 15000);
 
   const finalHeaders = { 'Accept': 'application/json', ...headers };
-  
   let finalBody;
+  
   if (body !== undefined) {
     finalHeaders['Content-Type'] = 'application/json';
     finalBody = JSON.stringify(body);
   }
 
   try {
+    console.log(`[API] ${method} ${url}`, body ? body : ''); // Debug uchun
+    
     const res = await fetch(url, {
       method,
       headers: finalHeaders,
       body: finalBody,
-      credentials: 'omit', // CORS uchun eng yaxshi yechim
       signal: controller.signal,
+      // credentials: 'omit', // Agar CORS muammosi bo'lsa shu yerni ochish kerak
     });
-    
-    clearTimeout(timeout);
 
-    if (res.status === 204) return null;
-    
+    clearTimeout(timeout);
     const text = await res.text();
     let data = null;
-    
-    if (text) {
-      try { data = JSON.parse(text); } 
-      catch { 
-        if (!res.ok) throw new ApiError(`Server xatosi: ${res.status}`, { status: res.status, details: text });
-        return text; 
-      }
+
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = text;
     }
 
     if (!res.ok) {
-      const message = data?.error || data?.message || `Xatolik yuz berdi (${res.status})`;
-      throw new ApiError(message, { status: res.status, details: data });
+      const errorMsg = data?.error || data?.message || `HTTP xato: ${res.status}`;
+      throw new ApiError(errorMsg, { status: res.status, details: data });
     }
+
     return data;
 
   } catch (err) {
     clearTimeout(timeout);
     if (err.name === 'AbortError') {
-      throw new ApiError('Server bilan aloqa vaqti tugadi.', { code: 'TIMEOUT' });
+      throw new ApiError('So\'rov vaqti tugadi (Timeout)', { code: 'TIMEOUT' });
     }
     if (err instanceof ApiError) throw err;
-    throw new ApiError('Tarmoq xatosi.', { code: 'NETWORK_ERROR', details: err.message });
+    
+    console.error("[API Network Error]", err);
+    throw new ApiError('Internet aloqasi yo\'q yoki server javob bermayapti', { code: 'NETWORK_ERROR', details: err.message });
   }
 }
 
@@ -90,6 +89,5 @@ export const api = {
   post: (path, body, opts) => request('POST', path, { ...opts, body }),
   patch: (path, body, opts) => request('PATCH', path, { ...opts, body }),
   delete: (path, opts) => request('DELETE', path, opts),
-  isConfigured: () => true,
-  buildUrl,
+  isConfigured: () => Boolean(config.apiBaseUrl),
 };

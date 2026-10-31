@@ -1,13 +1,10 @@
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useLanguage } from '../context/useLanguage.js';
-import useAuth from '../hooks/useAuth.js';
 
 export default function Navigation() {
   const { t } = useLanguage();
-  const { isAuthenticated } = useAuth();
-  
-  const [balance, setBalance] = useState(0.00); 
+  const [balance] = useState();
   const [rate, setRate] = useState(12500);
 
   useEffect(() => {
@@ -26,7 +23,7 @@ export default function Navigation() {
       <div className="nav-dropdown">
         <NavLink to="/store" className="nav-dropdown-btn" style={{ whiteSpace: 'nowrap' }}>{t('nav.store')}</NavLink>
         <div className="nav-dropdown-content">
-          <NavLink to="/store">{t('store.title')}</NavLink>
+          <NavLink to="/store">{t('store.title') || 'Store'}</NavLink>
           <NavLink to="/new-releases">{t('home.newReleases')}</NavLink>
           <NavLink to="/top-sellers">{t('home.topSellers')}</NavLink>
         </div>
@@ -41,7 +38,7 @@ export default function Navigation() {
         </div>
       </div>
 
-      {/* WALLET */}
+      {/* WALLET DROPDOWN */}
       <div className="nav-dropdown">
         <div className="nav-dropdown-btn" style={{ cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <i className="fa-solid fa-wallet" style={{ fontSize: '0.9rem' }}></i>

@@ -1,4 +1,6 @@
-/* Buttons */
+/* =========================================
+   1. BUTTONS
+   ========================================= */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -11,6 +13,7 @@
   transition: var(--t-fast);
   border: 1px solid transparent;
   white-space: nowrap;
+  cursor: pointer;
 }
 .btn:disabled {
   opacity: 0.6;
@@ -51,7 +54,9 @@
   width: 100%;
 }
 
-/* Card */
+/* =========================================
+   2. CARD
+   ========================================= */
 .card {
   background: var(--color-card);
   border: 1px solid var(--color-border);
@@ -65,7 +70,9 @@
   box-shadow: var(--shadow-md);
 }
 
-/* Form */
+/* =========================================
+   3. FORMS
+   ========================================= */
 .form-group {
   margin-bottom: 1rem;
 }
@@ -83,6 +90,8 @@
   border-radius: var(--radius-md);
   color: var(--color-text);
   transition: var(--t-fast);
+  position: relative;
+  z-index: 10; /* Input to'silish muammosini tuzatish */
 }
 .form-input:focus {
   outline: none;
@@ -95,7 +104,9 @@
   margin-top: 0.3rem;
 }
 
-/* Badge */
+/* =========================================
+   4. BADGES
+   ========================================= */
 .badge {
   display: inline-block;
   padding: 0.15rem 0.55rem;
@@ -118,7 +129,9 @@
   color: var(--color-error);
 }
 
-/* GameCard */
+/* =========================================
+   5. GAME CARD & GRID
+   ========================================= */
 .game-card {
   display: flex;
   flex-direction: column;
@@ -189,15 +202,15 @@
   gap: 0.5rem;
   margin-top: 0.5rem;
 }
-
-/* GameGrid */
 .game-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 1.25rem;
 }
 
-/* Header */
+/* =========================================
+   6. HEADER & NAVBAR
+   ========================================= */
 .header {
   position: sticky;
   top: 0;
@@ -280,7 +293,73 @@
   justify-content: center;
 }
 
-/* Sidebar */
+/* Navbar Dropdown menyulari */
+.nav-dropdown {
+  position: relative;
+  display: inline-block;
+}
+.nav-dropdown-btn {
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: block;
+}
+.nav-dropdown:hover .nav-dropdown-btn {
+  background: var(--color-card);
+  color: var(--color-text);
+}
+.nav-dropdown-content {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #3d4452;
+  min-width: 200px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  z-index: 1000;
+  flex-direction: column;
+  padding: 0.5rem 0;
+  border-radius: 4px;
+}
+.nav-dropdown:hover .nav-dropdown-content {
+  display: flex;
+}
+.nav-dropdown-content a {
+  padding: 0.6rem 1rem;
+  color: #fff;
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.nav-dropdown-content a:hover {
+  background: #4b5363;
+  color: #fff;
+}
+
+/* Wallet (Navbar ichida) */
+.nav-wallet {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius-md);
+  color: var(--color-success);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.nav-wallet:hover {
+  background: var(--color-card);
+  color: var(--color-text);
+}
+
+/* =========================================
+   7. SIDEBAR
+   ========================================= */
 .sidebar {
   width: 220px;
   flex-shrink: 0;
@@ -307,7 +386,9 @@
   color: var(--color-text);
 }
 
-/* Search bar */
+/* =========================================
+   8. SEARCH BAR
+   ========================================= */
 .searchbar {
   display: flex;
   align-items: center;
@@ -332,7 +413,9 @@
   font-size: 0.9rem;
 }
 
-/* Modal */
+/* =========================================
+   9. MODAL
+   ========================================= */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -381,7 +464,9 @@
   to { transform: scale(1); opacity: 1; }
 }
 
-/* Toast */
+/* =========================================
+   10. TOAST
+   ========================================= */
 .toast-host {
   position: fixed;
   top: calc(var(--header-height) + 12px);
@@ -417,7 +502,9 @@
   to { transform: translateX(0); opacity: 1; }
 }
 
-/* Loading / Empty / Error */
+/* =========================================
+   11. STATES (Loading / Empty / Error)
+   ========================================= */
 .state {
   display: flex;
   flex-direction: column;
@@ -441,7 +528,9 @@
   to { transform: rotate(360deg); }
 }
 
-/* Pagination */
+/* =========================================
+   12. PAGINATION
+   ========================================= */
 .pagination {
   display: flex;
   gap: 0.3rem;
@@ -467,13 +556,9 @@
   cursor: not-allowed;
 }
 
-/* Input to'silish muammosini tuzatish */
-.form-input {
-  position: relative;
-  z-index: 10;
-}
-
-/* Mobil pastki navigatsiya (Bottom Nav) */
+/* =========================================
+   13. MOBILE BOTTOM NAV
+   ========================================= */
 .bottom-nav {
   display: none; /* Kompyuterda ko'rinmaydi */
 }
@@ -491,7 +576,7 @@
     z-index: 1000;
     justify-content: space-around;
     align-items: center;
-    padding-bottom: env(safe-area-inset-bottom); /* iPhone uchun */
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   .bottom-nav__item {
@@ -541,87 +626,6 @@
   
   /* Layoutga pastdan joy ochish */
   .layout {
-    padding-bottom: 65px;
+    padding-bottom: 80px; 
   }
-}
-
-/* Mobil qurilmalar uchun pastki menyu to'sib qo'ymasligi uchun */
-@media (max-width: 768px) {
-  .layout {
-    padding-bottom: 80px; /* BottomNav balandligi + ozroq bo'sh joy */
-  }
-}
-
-/* Navbar Dropdown menyulari */
-.nav-dropdown {
-  position: relative;
-  display: inline-block;
-}
-
-.nav-dropdown-btn {
-  padding: 0.45rem 0.75rem;
-  border-radius: var(--radius-md);
-  color: var(--color-text-muted);
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-  display: block;
-}
-
-.nav-dropdown:hover .nav-dropdown-btn {
-  background: var(--color-card);
-  color: var(--color-text);
-}
-
-.nav-dropdown-content {
-  display: none;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  background: #3d4452; /* Rasmda ko'rsatilgan fon */
-  min-width: 200px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-  z-index: 1000;
-  flex-direction: column;
-  padding: 0.5rem 0;
-  border-radius: 4px;
-}
-
-.nav-dropdown:hover .nav-dropdown-content {
-  display: flex;
-}
-
-.nav-dropdown-content a {
-  padding: 0.6rem 1rem;
-  color: #fff;
-  font-size: 0.85rem;
-  text-decoration: none;
-  transition: background 0.2s;
-}
-
-.nav-dropdown-content a:hover {
-  background: #4b5363;
-  color: #fff;
-}
-
-/* Wallet tugmasi (Header ichidagi navbarda) */
-.nav-wallet {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.45rem 0.75rem;
-  border-radius: var(--radius-md);
-  color: var(--color-success);
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: default;
-}
-
-.nav-wallet:hover {
-  background: var(--color-card);
-}
-
-.nav-wallet:hover {
-  background: var(--color-card);
-  color: var(--color-text);
 }

@@ -19,6 +19,7 @@ export default function HomePage() {
     <div className="page">
       <section className="hero">
         <div className="hero__content">
+          {/* Bu yerda t() ishlatiladi va xato bo'lsa translations.js dan oladi */}
           <h1>{t('home.welcome')}</h1>
           <p>{t('home.subtitle')}</p>
           <Link to="/store" className="btn btn-primary">{t('home.browseBtn')}</Link>
@@ -30,7 +31,9 @@ export default function HomePage() {
           <h2 className="section__title">{t('home.featured')}</h2>
           <Link to="/store" className="text-muted">{t('home.viewAll')} →</Link>
         </div>
+        
         {loading && <Loading label="Loading games..." />}
+        
         {error && !loading && (
           <ErrorState
             title="Could not load games"
@@ -38,9 +41,11 @@ export default function HomePage() {
             onRetry={reload}
           />
         )}
+        
         {!loading && !error && games.length > 0 && (
           <GameGrid games={games} onAddToCart={handleAdd} />
         )}
+        
         {!loading && !error && games.length === 0 && (
           <div className="state">
             <p>{t('home.noGames')}</p>

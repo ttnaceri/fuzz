@@ -5,7 +5,7 @@ export const LanguageContext = createContext(null);
 
 export function LanguageProvider({ children }) {
   const [lang, setLangState] = useState(() => {
-    return localStorage.getItem('fuzz_lang') || 'uz'; // Standart til O'zbekcha
+    return localStorage.getItem('fuzz_lang') || 'uz';
   });
 
   useEffect(() => {
@@ -19,7 +19,7 @@ export function LanguageProvider({ children }) {
     }
   };
 
-  // Tarjima funksiyasi
+  // Xatolarga chidamli tarjima funksiyasi
   const t = (key) => {
     const keys = key.split('.');
     let value = translations[lang];
@@ -28,11 +28,11 @@ export function LanguageProvider({ children }) {
       if (value && value[k]) {
         value = value[k];
       } else {
-        // Fallback to English if missing
+        // Agar joriy tilda topilmasa, Ingliz tilidan qidiradi
         let fallback = translations['en'];
         for (const fk of keys) {
           if (fallback && fallback[fk]) fallback = fallback[fk];
-          else return key;
+          else return key; 
         }
         return fallback;
       }

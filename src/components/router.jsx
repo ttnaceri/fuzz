@@ -49,6 +49,10 @@ import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
 import ResetPasswordCodePage from './pages/ResetPasswordCodePage.jsx';
 import ChangePasswordPage from './pages/ChangePasswordPage.jsx';
 
+// --- COMPANY PAGES ---
+import CompaniesPage from './pages/CompaniesPage.jsx';
+import CompanyDetailsPage from './pages/CompanyDetailsPage.jsx';
+
 // --- ADMIN PAGES ---
 import AdminDashboard from './admin/AdminDashboard.jsx';
 import AdminGames from './admin/AdminGames.jsx';
@@ -71,6 +75,10 @@ import AdminRoles from './admin/AdminRoles.jsx';
 import AdminPermissions from './admin/AdminPermissions.jsx';
 import AdminNewGame from './admin/AdminNewGame.jsx';
 import AdminBundles from './admin/AdminBundles.jsx';
+import AdminEvents from './admin/AdminEvents.jsx';
+import AdminAllGames from './admin/AdminAllGames.jsx';
+import AdminCompanies from './admin/AdminCompanies.jsx';
+import AdminNewCompany from './admin/AdminNewCompany.jsx';
 
 // --- FOOTER PAGES ---
 import FooterAboutPage from '../footer/AboutPage.jsx';
@@ -85,14 +93,7 @@ import FooterRefundsPage from '../footer/RefundsPage.jsx';
 import FooterTermsOfServicePage from '../footer/TermsOfServicePage.jsx';
 import FooterCookiePreferencesPage from '../footer/CookiePreferencesPage.jsx';
 
-// COMPANY //
-import AdminCompanies from './admin/AdminCompanies.jsx';
-import AdminNewCompany from './admin/AdminNewCompany.jsx';
-import CompaniesPage from './pages/CompaniesPage.jsx';
-import CompanyDetailsPage from './pages/CompanyDetailsPage.jsx';
-
 export const router = createBrowserRouter([
-  // 1. AUTHENTICATION ROUTES (Login, Register, Reset)
   {
     element: <AuthLayout />,
     children: [
@@ -104,8 +105,6 @@ export const router = createBrowserRouter([
       { path: '/reset-password/change', element: <ChangePasswordPage /> },
     ],
   },
-
-  // 2. MAIN APPLICATION ROUTES (Public & Users)
   {
     path: '/',
     element: <MainLayout />,
@@ -120,9 +119,8 @@ export const router = createBrowserRouter([
       { path: 'search', element: <SearchPage /> },
       { path: 'game/:id', element: <GameDetailsPage /> },
       { path: 'companies', element: <CompaniesPage /> },
-{ path: 'company/:id', element: <CompanyDetailsPage /> },
+      { path: 'company/:id', element: <CompanyDetailsPage /> },
       
-      // User Routes
       { path: 'library', element: <ProtectedRoute><LibraryPage /></ProtectedRoute> },
       { path: 'downloads', element: <ProtectedRoute><DownloadsPage /></ProtectedRoute> },
       { path: 'wishlist', element: <ProtectedRoute><WishlistPage /></ProtectedRoute> },
@@ -133,12 +131,10 @@ export const router = createBrowserRouter([
       { path: 'settings', element: <ProtectedRoute><SettingsPage /></ProtectedRoute> },
       { path: 'security', element: <ProtectedRoute><SecurityPage /></ProtectedRoute> },
       
-      // Wallet Routes
       { path: 'wallet/history', element: <ProtectedRoute><WalletHistoryPage /></ProtectedRoute> },
       { path: 'wallet/topup', element: <ProtectedRoute><WalletTopUpPage /></ProtectedRoute> },
       { path: 'wallet/refund', element: <ProtectedRoute><WalletRefundPage /></ProtectedRoute> },
 
-      // Community Routes
       { path: 'community', element: <CommunityPage /> },
       { path: 'discussions', element: <DiscussionsPage /> },
       { path: 'activity', element: <ActivityPage /> },
@@ -151,7 +147,6 @@ export const router = createBrowserRouter([
       { path: 'about', element: <AboutPage /> },
       { path: 'notifications', element: <NotificationsPage /> },
       
-      // Footer Routes
       { path: 'footer/about', element: <FooterAboutPage /> },
       { path: 'footer/jobs', element: <FooterJobsPage /> },
       { path: 'footer/steamworks', element: <FooterSteamworksPage /> },
@@ -164,12 +159,9 @@ export const router = createBrowserRouter([
       { path: 'footer/terms', element: <FooterTermsOfServicePage /> },
       { path: 'footer/cookies', element: <FooterCookiePreferencesPage /> },
 
-      // 404
       { path: '*', element: <NotFoundPage /> },
     ],
   },
-
-  // 3. ADMIN ROUTES
   {
     path: '/admin',
     element: (
@@ -198,7 +190,9 @@ export const router = createBrowserRouter([
       { path: 'roles', element: <AdminRoles /> },
       { path: 'permissions', element: <AdminPermissions /> },
       { path: 'new-game', element: <AdminNewGame /> },
+      { path: 'all-games', element: <AdminAllGames /> },
       { path: 'bundles', element: <AdminBundles /> },
+      { path: 'events', element: <AdminEvents /> },
       { path: 'companies', element: <AdminCompanies /> },
       { path: 'new-company', element: <AdminNewCompany /> },
     ],

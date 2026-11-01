@@ -8,7 +8,6 @@ export default function CompanyDetailsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Kompaniya ID si bo'yicha o'yinlarni olish
     api.get(`/api/games?companyId=${id}`)
       .then(data => {
         setGames(data.games || []);

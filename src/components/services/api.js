@@ -12,9 +12,8 @@ export class ApiError extends Error {
 
 function buildUrl(path, params) {
   const base = config.apiBaseUrl ? config.apiBaseUrl.replace(/\/+$/, '') : '';
-  const prefix = config.apiPrefix || '';
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  let url = `${base}${prefix}${cleanPath}`;
+  let url = `${base}${cleanPath}`;
   
   if (!base) {
     throw new ApiError('Backend URL manzili sozlanmagan!', { code: 'NO_BACKEND' });
@@ -45,14 +44,13 @@ async function request(method, path, { params, body, headers = {} } = {}) {
   }
 
   try {
-    console.log(`[API] ${method} ${url}`, body ? body : ''); // Debug uchun
+    console.log(`[API] ${method} ${url}`, body ? body : '');
     
     const res = await fetch(url, {
       method,
       headers: finalHeaders,
       body: finalBody,
       signal: controller.signal,
-      // credentials: 'omit', // Agar CORS muammosi bo'lsa shu yerni ochish kerak
     });
 
     clearTimeout(timeout);

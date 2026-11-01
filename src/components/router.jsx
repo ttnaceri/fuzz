@@ -4,7 +4,7 @@ import AdminLayout from './layouts/AdminLayout.jsx';
 import AuthLayout from './layouts/AuthLayout.jsx';
 import ProtectedRoute from './common/ProtectedRoute.jsx';
 
-// --- PUBLIC & USER PAGES ---
+// --- PUBLIC PAGES ---
 import HomePage from './pages/HomePage.jsx';
 import StorePage from './pages/StorePage.jsx';
 import CategoriesPage from './pages/CategoriesPage.jsx';
@@ -36,7 +36,7 @@ import AboutPage from './pages/AboutPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 
-// Wallet Pages (Fixed 404s)
+// --- WALLET PAGES ---
 import WalletHistoryPage from './pages/WalletHistoryPage.jsx';
 import WalletTopUpPage from './pages/WalletTopUpPage.jsx';
 import WalletRefundPage from './pages/WalletRefundPage.jsx';
@@ -86,6 +86,7 @@ import FooterTermsOfServicePage from '../footer/TermsOfServicePage.jsx';
 import FooterCookiePreferencesPage from '../footer/CookiePreferencesPage.jsx';
 
 export const router = createBrowserRouter([
+  // 1. AUTHENTICATION ROUTES (Login, Register, Reset)
   {
     element: <AuthLayout />,
     children: [
@@ -97,6 +98,8 @@ export const router = createBrowserRouter([
       { path: '/reset-password/change', element: <ChangePasswordPage /> },
     ],
   },
+
+  // 2. MAIN APPLICATION ROUTES (Public & Users)
   {
     path: '/',
     element: <MainLayout />,
@@ -111,7 +114,7 @@ export const router = createBrowserRouter([
       { path: 'search', element: <SearchPage /> },
       { path: 'game/:id', element: <GameDetailsPage /> },
       
-      // Protected User Routes
+      // User Routes
       { path: 'library', element: <ProtectedRoute><LibraryPage /></ProtectedRoute> },
       { path: 'downloads', element: <ProtectedRoute><DownloadsPage /></ProtectedRoute> },
       { path: 'wishlist', element: <ProtectedRoute><WishlistPage /></ProtectedRoute> },
@@ -122,11 +125,12 @@ export const router = createBrowserRouter([
       { path: 'settings', element: <ProtectedRoute><SettingsPage /></ProtectedRoute> },
       { path: 'security', element: <ProtectedRoute><SecurityPage /></ProtectedRoute> },
       
-      // Wallet Routes (Fixed 404)
+      // Wallet Routes
       { path: 'wallet/history', element: <ProtectedRoute><WalletHistoryPage /></ProtectedRoute> },
       { path: 'wallet/topup', element: <ProtectedRoute><WalletTopUpPage /></ProtectedRoute> },
       { path: 'wallet/refund', element: <ProtectedRoute><WalletRefundPage /></ProtectedRoute> },
 
+      // Community Routes
       { path: 'community', element: <CommunityPage /> },
       { path: 'discussions', element: <DiscussionsPage /> },
       { path: 'activity', element: <ActivityPage /> },
@@ -152,9 +156,12 @@ export const router = createBrowserRouter([
       { path: 'footer/terms', element: <FooterTermsOfServicePage /> },
       { path: 'footer/cookies', element: <FooterCookiePreferencesPage /> },
 
+      // 404
       { path: '*', element: <NotFoundPage /> },
     ],
   },
+
+  // 3. ADMIN ROUTES
   {
     path: '/admin',
     element: (

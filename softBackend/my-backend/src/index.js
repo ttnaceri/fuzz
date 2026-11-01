@@ -1,119 +1,196 @@
-import { Hono } from 'hono';
-import { cors } from 'hono/cors';
+import { createBrowserRouter } from 'react-router-dom';
+import MainLayout from './layouts/MainLayout.jsx';
+import AdminLayout from './layouts/AdminLayout.jsx';
+import AuthLayout from './layouts/AuthLayout.jsx';
+import ProtectedRoute from './common/ProtectedRoute.jsx';
 
-const app = new Hono();
+// --- PUBLIC PAGES ---
+import HomePage from './pages/HomePage.jsx';
+import StorePage from './pages/StorePage.jsx';
+import CategoriesPage from './pages/CategoriesPage.jsx';
+import NewReleasesPage from './pages/NewReleasesPage.jsx';
+import SpecialOffersPage from './pages/SpecialOffersPage.jsx';
+import FreeGamesPage from './pages/FreeGamesPage.jsx';
+import TopSellersPage from './pages/TopSellersPage.jsx';
+import SearchPage from './pages/SearchPage.jsx';
+import GameDetailsPage from './pages/GameDetailsPage.jsx';
+import LibraryPage from './pages/LibraryPage.jsx';
+import DownloadsPage from './pages/DownloadsPage.jsx';
+import WishlistPage from './pages/WishlistPage.jsx';
+import CartPage from './pages/CartPage.jsx';
+import PurchasesPage from './pages/PurchasesPage.jsx';
+import ProfilePage from './pages/ProfilePage.jsx';
+import AccountPage from './pages/AccountPage.jsx';
+import SettingsPage from './pages/SettingsPage.jsx';
+import SecurityPage from './pages/SecurityPage.jsx';
+import CommunityPage from './pages/CommunityPage.jsx';
+import DiscussionsPage from './pages/DiscussionsPage.jsx';
+import ActivityPage from './pages/ActivityPage.jsx';
+import FriendsPage from './pages/FriendsPage.jsx';
+import GroupsPage from './pages/GroupsPage.jsx';
+import ReviewsPage from './pages/ReviewsPage.jsx';
+import NewsPage from './pages/NewsPage.jsx';
+import EventsPage from './pages/EventsPage.jsx';
+import SupportPage from './pages/SupportPage.jsx';
+import AboutPage from './pages/AboutPage.jsx';
+import NotificationsPage from './pages/NotificationsPage.jsx';
+import NotFoundPage from './pages/NotFoundPage.jsx';
 
-app.use('*', cors({
-  origin: ['https://fuzz-tau.vercel.app', 'http://localhost:5173', 'http://localhost:3000'],
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-}));
+// --- WALLET PAGES ---
+import WalletHistoryPage from './pages/WalletHistoryPage.jsx';
+import WalletTopUpPage from './pages/WalletTopUpPage.jsx';
+import WalletRefundPage from './pages/WalletRefundPage.jsx';
 
-// 1. Health Check (Ishlayapti)
-app.get('/fuzz/api/health', (c) => c.json({ status: 'ok', time: new Date().toISOString() }));
+// --- AUTH PAGES ---
+import LoginPage from './pages/LoginPage.jsx';
+import RegisterTelegramPage from './pages/RegisterTelegramPage.jsx';
+import RegisterFormPage from './pages/RegisterFormPage.jsx';
+import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
+import ResetPasswordCodePage from './pages/ResetPasswordCodePage.jsx';
+import ChangePasswordPage from './pages/ChangePasswordPage.jsx';
 
-// 2. Init DB (Jadval yaratish - qaytarildi)
-app.get('/fuzz/api/init-db', async (c) => {
-  try {
-    await c.env.DB.prepare(`
-      CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        role TEXT DEFAULT 'user',
-        balance REAL DEFAULT 0,
-        telegram_id TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-    `).run();
-    return c.json({ message: "Ma'lumotlar bazasi jadvali yaratildi!" });
-  } catch (err) {
-    return c.json({ error: "Jadval yaratishda xato: " + err.message }, 500);
-  }
-});
+// --- ADMIN PAGES ---
+import AdminDashboard from './admin/AdminDashboard.jsx';
+import AdminGames from './admin/AdminGames.jsx';
+import AdminUsers from './admin/AdminUsers.jsx';
+import AdminOrders from './admin/AdminOrders.jsx';
+import AdminReports from './admin/AdminReports.jsx';
+import AdminReviews from './admin/AdminReviews.jsx';
+import AdminCategories from './admin/AdminCategories.jsx';
+import AdminSettings from './admin/AdminSettings.jsx';
+import AdminLogs from './admin/AdminLogs.jsx';
+import AdminRate from './admin/AdminRate.jsx';
+import AdminPlatform from './admin/AdminPlatform.jsx';
+import AdminServer from './admin/AdminServer.jsx';
+import AdminTelegram from './admin/AdminTelegram.jsx';
+import AdminApi from './admin/AdminApi.jsx';
+import AdminWebhooks from './admin/AdminWebhooks.jsx';
+import AdminBackend from './admin/AdminBackend.jsx';
+import AdminUserLogs from './admin/AdminUserLogs.jsx';
+import AdminRoles from './admin/AdminRoles.jsx';
+import AdminPermissions from './admin/AdminPermissions.jsx';
+import AdminNewGame from './admin/AdminNewGame.jsx';
+import AdminBundles from './admin/AdminBundles.jsx';
 
-// 3. Register API
-app.post('/fuzz/api/auth/register', async (c) => {
-  try {
-    const { username, email, password, telegramId } = await c.req.json();
-    if (!username || !password || !email) return c.json({ error: 'Barcha maydonlarni to\'ldiring!' }, 400);
+// --- FOOTER PAGES ---
+import FooterAboutPage from '../footer/AboutPage.jsx';
+import FooterJobsPage from '../footer/JobsPage.jsx';
+import FooterSteamworksPage from '../footer/SteamworksPage.jsx';
+import FooterDistributionPage from '../footer/DistributionPage.jsx';
+import FooterSupportPage from '../footer/SupportPage.jsx';
+import FooterPrivacyPolicyPage from '../footer/PrivacyPolicyPage.jsx';
+import FooterLegalPage from '../footer/LegalPage.jsx';
+import FooterSubscriberAgreementPage from '../footer/SubscriberAgreementPage.jsx';
+import FooterRefundsPage from '../footer/RefundsPage.jsx';
+import FooterTermsOfServicePage from '../footer/TermsOfServicePage.jsx';
+import FooterCookiePreferencesPage from '../footer/CookiePreferencesPage.jsx';
 
-    const existing = await c.env.DB.prepare('SELECT * FROM users WHERE username = ? OR email = ?').bind(username, email).first();
-    if (existing) return c.json({ error: 'Bu username yoki email band!' }, 409);
+export const router = createBrowserRouter([
+  // 1. AUTHENTICATION ROUTES (Login, Register, Reset)
+  {
+    element: <AuthLayout />,
+    children: [
+      { path: '/login', element: <LoginPage /> },
+      { path: '/register', element: <RegisterTelegramPage /> },
+      { path: '/register/form', element: <RegisterFormPage /> },
+      { path: '/reset-password', element: <ResetPasswordPage /> },
+      { path: '/reset-password/code', element: <ResetPasswordCodePage /> },
+      { path: '/reset-password/change', element: <ChangePasswordPage /> },
+    ],
+  },
 
-    const id = crypto.randomUUID();
-    await c.env.DB.prepare('INSERT INTO users (id, username, email, password, role, telegram_id) VALUES (?, ?, ?, ?, ?, ?)')
-      .bind(id, username, email, password, 'user', telegramId || null).run();
+  // 2. MAIN APPLICATION ROUTES (Public & Users)
+  {
+    path: '/',
+    element: <MainLayout />,
+    children: [
+      { index: true, element: <HomePage /> },
+      { path: 'store', element: <StorePage /> },
+      { path: 'categories', element: <CategoriesPage /> },
+      { path: 'new-releases', element: <NewReleasesPage /> },
+      { path: 'special-offers', element: <SpecialOffersPage /> },
+      { path: 'free-games', element: <FreeGamesPage /> },
+      { path: 'top-sellers', element: <TopSellersPage /> },
+      { path: 'search', element: <SearchPage /> },
+      { path: 'game/:id', element: <GameDetailsPage /> },
+      
+      // User Routes
+      { path: 'library', element: <ProtectedRoute><LibraryPage /></ProtectedRoute> },
+      { path: 'downloads', element: <ProtectedRoute><DownloadsPage /></ProtectedRoute> },
+      { path: 'wishlist', element: <ProtectedRoute><WishlistPage /></ProtectedRoute> },
+      { path: 'cart', element: <CartPage /> },
+      { path: 'purchases', element: <ProtectedRoute><PurchasesPage /></ProtectedRoute> },
+      { path: 'profile', element: <ProtectedRoute><ProfilePage /></ProtectedRoute> },
+      { path: 'account', element: <ProtectedRoute><AccountPage /></ProtectedRoute> },
+      { path: 'settings', element: <ProtectedRoute><SettingsPage /></ProtectedRoute> },
+      { path: 'security', element: <ProtectedRoute><SecurityPage /></ProtectedRoute> },
+      
+      // Wallet Routes
+      { path: 'wallet/history', element: <ProtectedRoute><WalletHistoryPage /></ProtectedRoute> },
+      { path: 'wallet/topup', element: <ProtectedRoute><WalletTopUpPage /></ProtectedRoute> },
+      { path: 'wallet/refund', element: <ProtectedRoute><WalletRefundPage /></ProtectedRoute> },
 
-    return c.json({ user: { id, username, role: 'user', balance: 0 } }, 201);
-  } catch (err) {
-    return c.json({ error: 'Serverda xatolik' }, 500);
-  }
-});
+      // Community Routes
+      { path: 'community', element: <CommunityPage /> },
+      { path: 'discussions', element: <DiscussionsPage /> },
+      { path: 'activity', element: <ActivityPage /> },
+      { path: 'friends', element: <FriendsPage /> },
+      { path: 'groups', element: <GroupsPage /> },
+      { path: 'reviews', element: <ReviewsPage /> },
+      { path: 'news', element: <NewsPage /> },
+      { path: 'events', element: <EventsPage /> },
+      { path: 'support', element: <SupportPage /> },
+      { path: 'about', element: <AboutPage /> },
+      { path: 'notifications', element: <NotificationsPage /> },
+      
+      // Footer Routes
+      { path: 'footer/about', element: <FooterAboutPage /> },
+      { path: 'footer/jobs', element: <FooterJobsPage /> },
+      { path: 'footer/steamworks', element: <FooterSteamworksPage /> },
+      { path: 'footer/distribution', element: <FooterDistributionPage /> },
+      { path: 'footer/support', element: <FooterSupportPage /> },
+      { path: 'footer/privacy', element: <FooterPrivacyPolicyPage /> },
+      { path: 'footer/legal', element: <FooterLegalPage /> },
+      { path: 'footer/subscriber-agreement', element: <FooterSubscriberAgreementPage /> },
+      { path: 'footer/refunds', element: <FooterRefundsPage /> },
+      { path: 'footer/terms', element: <FooterTermsOfServicePage /> },
+      { path: 'footer/cookies', element: <FooterCookiePreferencesPage /> },
 
-// 4. Login API
-app.post('/fuzz/api/auth/login', async (c) => {
-  try {
-    const { username, password } = await c.req.json();
-    if (!username || !password) return c.json({ error: 'Foydalanuvchi nomi va parolni kiriting!' }, 400);
+      // 404
+      { path: '*', element: <NotFoundPage /> },
+    ],
+  },
 
-    let user = await c.env.DB.prepare('SELECT * FROM users WHERE username = ?').bind(username).first();
-
-    // Test akkauntlar (agar bazada bo'lmasa)
-    if (!user && username === 'admin' && password === '55668576he') {
-        const id = crypto.randomUUID();
-        await c.env.DB.prepare('INSERT INTO users (id, username, email, password, role) VALUES (?, ?, ?, ?, ?)')
-          .bind(id, username, 'admin@fuzz.store', password, 'admin').run();
-        user = { id, username, role: 'admin', balance: 0 };
-    }
-
-    if (!user || user.password !== password) return c.json({ error: 'Foydalanuvchi nomi yoki parol xato!' }, 401);
-
-    return c.json({ user: { id: user.id, username: user.username, role: user.role, balance: user.balance || 0 } });
-  } catch (err) {
-    return c.json({ error: 'Serverda xatolik' }, 500);
-  }
-});
-
-// 5. Telegram Webhook
-app.post('/fuzz/telegram/webhook', async (c) => {
-  try {
-    const update = await c.req.json();
-    const BOT_TOKEN = c.env.BOT_TOKEN; 
-    if (!BOT_TOKEN) return c.json({ error: 'Bot token sozlanmagan' }, 500);
-
-    const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
-
-    if (update.message && update.message.text === '/start') {
-      const chatId = update.message.chat.id;
-      const firstName = update.message.from.first_name || 'User';
-
-      await fetch(`${TELEGRAM_API}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: `👋 Salom, ${firstName}!\n\nSaytda ro'yxatdan o'tishni tasdiqlash uchun pastdagi tugmani bosing.`,
-          reply_markup: {
-            inline_keyboard: [
-              [
-                {
-                  text: "✅ Tasdiqlash (App)",
-                  web_app: { url: `https://fuzz-tau.vercel.app/register/form?tgId=${chatId}` }
-                }
-              ]
-            ]
-          }
-        }),
-      });
-    }
-
-    return c.json({ ok: true });
-  } catch (err) {
-    return c.json({ error: 'Webhook xatosi' }, 500);
-  }
-});
-
-export default app;
+  // 3. ADMIN ROUTES
+  {
+    path: '/admin',
+    element: (
+      <ProtectedRoute adminOnly>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { index: true, element: <AdminDashboard /> },
+      { path: 'games', element: <AdminGames /> },
+      { path: 'users', element: <AdminUsers /> },
+      { path: 'orders', element: <AdminOrders /> },
+      { path: 'reports', element: <AdminReports /> },
+      { path: 'reviews', element: <AdminReviews /> },
+      { path: 'categories', element: <AdminCategories /> },
+      { path: 'settings', element: <AdminSettings /> },
+      { path: 'logs', element: <AdminLogs /> },
+      { path: 'rate', element: <AdminRate /> },
+      { path: 'platform', element: <AdminPlatform /> },
+      { path: 'server', element: <AdminServer /> },
+      { path: 'telegram', element: <AdminTelegram /> },
+      { path: 'api', element: <AdminApi /> },
+      { path: 'webhooks', element: <AdminWebhooks /> },
+      { path: 'backend', element: <AdminBackend /> },
+      { path: 'user-logs', element: <AdminUserLogs /> },
+      { path: 'roles', element: <AdminRoles /> },
+      { path: 'permissions', element: <AdminPermissions /> },
+      { path: 'new-game', element: <AdminNewGame /> },
+      { path: 'bundles', element: <AdminBundles /> },
+    ],
+  },
+]);

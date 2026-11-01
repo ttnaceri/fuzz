@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from 'react'; // IMPORT QILINDI
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
 import useToast from '../hooks/useToast.js';
@@ -50,16 +50,14 @@ export default function AdminNewGame() {
           </div>
         </div>
 
-        <div style={{ marginBottom: '1rem' }}>
+        <div style={{ marginBottom: '1rem', backgroundColor: 'rgba(67, 181, 129, 0.1)', padding: '1rem', borderRadius: '4px', border: '1px solid #43b581' }}>
           <label style={{ display: 'block', color: '#43b581', marginBottom: '0.5rem', fontWeight: 'bold' }}>O'yin Linki (GitHub / Vercel) *</label>
           <input type="url" value={form.game_url} onChange={e => setForm({ ...form, game_url: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} placeholder="https://my-web-game.vercel.app" />
         </div>
 
-        {/* Yangilangan Rasm qismi */}
-        <div style={{ marginBottom: '1.5rem', backgroundColor: '#19100e', padding: '1rem', borderRadius: '4px', border: '1px dashed #48201a' }}>
+        <div style={{ marginBottom: '1.5rem' }}>
           <label style={{ display: 'block', color: '#b9a6a2', marginBottom: '0.5rem' }}>Rasm URL manzili (Cover)</label>
-          <input type="text" value={form.image} onChange={e => setForm({ ...form, image: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', marginBottom: '0.5rem' }} placeholder="https://site.com/rasm.jpg yoki /image/games/rasm.jpg" />
-          <small style={{ color: '#b9a6a2' }}>Rasmni to'g'ridan-to'g'ri yuklash tizimi tez kunda qo'shiladi. Hozircha URL kiriting.</small>
+          <input type="text" value={form.image} onChange={e => setForm({ ...form, image: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} placeholder="https://site.com/rasm.jpg yoki /image/games/rasm.jpg" />
         </div>
 
         <button type="submit" disabled={loading} style={{ backgroundColor: '#8a1200', color: '#fff', padding: '0.8rem', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}>

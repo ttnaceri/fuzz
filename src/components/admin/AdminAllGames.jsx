@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react'; // IMPORT QILINDI
 import { Link } from 'react-router-dom';
 import { api } from '../services/api.js';
 import useToast from '../hooks/useToast.js';

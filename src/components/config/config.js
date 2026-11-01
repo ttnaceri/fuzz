@@ -2,7 +2,7 @@ export const config = {
   appName: 'Fuzz',
   appVersion: '1.0.0',
   
-  // Backend manzili (oxirida / bo'lmasin)
+  // MUHIM: Bu manzil /fuzz bilan tugashi kerak, oxirida / bo'lmasin
   apiBaseUrl: 'https://my-backend.updbackend.workers.dev/fuzz',
   apiPrefix: '', 
   

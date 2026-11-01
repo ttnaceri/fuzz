@@ -1,23 +1,49 @@
+import { useState, useEffect } from 'react';
+import { api } from '../services/api.js';
+
 export default function AdminUsers() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/api/admin/users')
+      .then(data => {
+        setUsers(data.users || []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Userlarni yuklashda xato:", err);
+        setLoading(false);
+      });
+  }, []);
+
   return (
     <div>
       <h1 style={{ color: '#f5eeee', marginBottom: '1.5rem' }}>Foydalanuvchilar</h1>
       <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#241411', borderRadius: '8px', border: '1px solid #48201a' }}>
         <thead>
           <tr style={{ backgroundColor: '#19100e', color: '#b9a6a2', textAlign: 'left' }}>
-            <th style={{ padding: '1rem' }}>ID</th>
             <th style={{ padding: '1rem' }}>Username</th>
             <th style={{ padding: '1rem' }}>Email</th>
             <th style={{ padding: '1rem' }}>Role</th>
+            <th style={{ padding: '1rem' }}>Balance</th>
           </tr>
         </thead>
         <tbody>
-          <tr style={{ borderBottom: '1px solid #48201a', color: '#f5eeee' }}>
-            <td style={{ padding: '1rem' }}>1</td>
-            <td style={{ padding: '1rem' }}>admin</td>
-            <td style={{ padding: '1rem' }}>admin@fuzz.store</td>
-            <td style={{ padding: '1rem', color: '#43b581' }}>SuperAdmin</td>
-          </tr>
+          {loading ? (
+            <tr><td colSpan="4" style={{ padding: '1rem', textAlign: 'center', color: '#b9a6a2' }}>Yuklanmoqda...</td></tr>
+          ) : users.length === 0 ? (
+            <tr><td colSpan="4" style={{ padding: '1rem', textAlign: 'center', color: '#b9a6a2' }}>Foydalanuvchilar topilmadi</td></tr>
+          ) : (
+            users.map(u => (
+              <tr key={u.id} style={{ borderBottom: '1px solid #48201a', color: '#f5eeee' }}>
+                <td style={{ padding: '1rem' }}>{u.username}</td>
+                <td style={{ padding: '1rem' }}>{u.email}</td>
+                <td style={{ padding: '1rem', color: u.role === 'admin' ? '#43b581' : '#f5eeee' }}>{u.role}</td>
+                <td style={{ padding: '1rem' }}>${u.balance || 0}</td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>

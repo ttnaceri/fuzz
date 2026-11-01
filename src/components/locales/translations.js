@@ -8,10 +8,11 @@ export const translations = {
       quickLinks: "Quick links", newReleases: "New Releases", specialOffers: "Special Offers",
       freeGames: "Free Games", topSellers: "Top Sellers", categories: "Categories", community: "Community"
     },
+    store: {
+      title: "Featured", wishlist: "Wishlist", news: "News", charts: "Charts"
+    },
     wallet: {
-      history: "My History",
-      topUp: "Top Up Balance",
-      refund: "Refund"
+      history: "My History", topUp: "Top Up Balance", refund: "Refund"
     },
     register: {
       step1: "Enter your Telegram ID", step2: "Complete your account",
@@ -33,10 +34,11 @@ export const translations = {
       quickLinks: "Tezkor havolalar", newReleases: "Yangi chiqqanlar", specialOffers: "Maxsus takliflar",
       freeGames: "Bepul o'yinlar", topSellers: "Eng ko'p sotilganlar", categories: "Kategoriyalar", community: "Hamjamiyat"
     },
+    store: {
+      title: "Tanlanganlar", wishlist: "Istaklar ro'yxati", news: "Yangiliklar", charts: "Jadvallar"
+    },
     wallet: {
-      history: "Mening tarixim",
-      topUp: "Balansni to'ldirish",
-      refund: "Pulni qaytarish"
+      history: "Mening tarixim", topUp: "Balansni to'ldirish", refund: "Pulni qaytarish"
     },
     register: {
       step1: "Telegram ID ingizni kiriting", step2: "Akkauntingizni yakunlang",
@@ -58,10 +60,11 @@ export const translations = {
       quickLinks: "Быстрые ссылки", newReleases: "Новинки", specialOffers: "Спецпредложения",
       freeGames: "Бесплатные игры", topSellers: "Лидеры продаж", categories: "Категории", community: "Сообщество"
     },
+    store: {
+      title: "Избранное", wishlist: "Список желаемого", news: "Новости", charts: "Чарты"
+    },
     wallet: {
-      history: "Моя история",
-      topUp: "Пополнить баланс",
-      refund: "Возврат средств"
+      history: "Моя история", topUp: "Пополнить баланс", refund: "Возврат средств"
     },
     register: {
       step1: "Введите ваш Telegram ID", step2: "Завершите настройку аккаунта",

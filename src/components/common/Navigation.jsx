@@ -20,15 +20,18 @@ export default function Navigation() {
     <nav className="header__nav" style={{ display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', gap: '0.2rem' }}>
       <NavLink to="/" end style={{ whiteSpace: 'nowrap' }}>{t('nav.home')}</NavLink>
 
+      {/* STORE Dropdown */}
       <div className="nav-dropdown">
         <NavLink to="/store" className="nav-dropdown-btn" style={{ whiteSpace: 'nowrap' }}>{t('nav.store')}</NavLink>
         <div className="nav-dropdown-content">
-          <NavLink to="/store">{t('store.title') || 'Store'}</NavLink>
-          <NavLink to="/new-releases">{t('home.newReleases')}</NavLink>
-          <NavLink to="/top-sellers">{t('home.topSellers')}</NavLink>
+          <NavLink to="/store">{t('store.title')}</NavLink>
+          <NavLink to="/wishlist">{t('store.wishlist')}</NavLink>
+          <NavLink to="/news">{t('store.news')}</NavLink>
+          <NavLink to="/top-sellers">{t('store.charts')}</NavLink>
         </div>
       </div>
 
+      {/* LIBRARY Dropdown */}
       <div className="nav-dropdown">
         <NavLink to="/library" className="nav-dropdown-btn" style={{ whiteSpace: 'nowrap' }}>{t('nav.library')}</NavLink>
         <div className="nav-dropdown-content">
@@ -38,7 +41,7 @@ export default function Navigation() {
         </div>
       </div>
 
-      {/* WALLET DROPDOWN */}
+      {/* WALLET Dropdown */}
       <div className="nav-dropdown">
         <div className="nav-dropdown-btn" style={{ cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <i className="fa-solid fa-wallet" style={{ fontSize: '0.9rem' }}></i>

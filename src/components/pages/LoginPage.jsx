@@ -1,11 +1,12 @@
-import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import useToast from '../hooks/useToast.js';
 import useAuth from '../hooks/useAuth.js';
 
 export default function LoginPage() {
-  const [qrToken] = useState('fuzz_qr_' + Math.random().toString(36).substring(7));
+  const [searchParams] = useSearchParams();
+  const isMobileScanMode = searchParams.get('mobileScan') === 'true';
   const { success, error: toastError } = useToast();
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -14,7 +15,17 @@ export default function LoginPage() {
   const [form, setForm] = useState({ username: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
+  // Check if device is mobile
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const qrToken = 'fuzz_qr_' + Math.random().toString(36).substring(7);
   const qrUrl = `https://fuzz-tau.vercel.app/qr-auth?token=${qrToken}`;
 
   const handleLogin = async (e) => {
@@ -28,6 +39,8 @@ export default function LoginPage() {
     try {
       await login(form);
       success('Tizimga muvaffaqiyatli kirdingiz!');
+      
+      // If user is admin, go to /admin, else /account
       navigate(location.state?.from || '/account', { replace: true });
     } catch (err) {
       setApiError(err.message || 'Xato yuz berdi');
@@ -36,12 +49,13 @@ export default function LoginPage() {
     }
   };
 
+  // --- INLINE CSS (Steam Layout, Fuzz Design) ---
   const styles = {
     wrapper: { minHeight: 'calc(100vh - 64px)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#100b0a', padding: '2rem 1rem' },
     box: { backgroundColor: '#241411', border: '1px solid #48201a', borderRadius: '8px', width: '100%', maxWidth: '750px', boxShadow: '0 10px 40px rgba(0,0,0,0.8)' },
     body: { display: 'flex', flexWrap: 'wrap', padding: '2rem', gap: '2rem' },
     formSide: { flex: '1 1 300px', display: 'flex', flexDirection: 'column' },
-    qrSide: { flex: '0 1 280px', borderLeft: '1px solid #48201a', paddingLeft: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' },
+    qrSide: { flex: '0 1 280px', borderLeft: '1px solid #48201a', paddingLeft: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
     title: { color: '#8a1200', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '1.5rem', fontWeight: '700' },
     input: { width: '100%', padding: '0.8rem 1rem', backgroundColor: '#100b0a', border: '1px solid #48201a', borderRadius: '4px', color: '#f5eeee', outline: 'none', fontSize: '1rem', boxSizing: 'border-box' },
     errorBox: { backgroundColor: 'rgba(237, 85, 85, 0.1)', border: '1px solid #ed5555', padding: '0.8rem', borderRadius: '4px', color: '#ed5555', marginBottom: '1rem', fontSize: '0.85rem' },
@@ -49,6 +63,25 @@ export default function LoginPage() {
     footer: { backgroundColor: '#19100e', padding: '1.2rem 2rem', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #48201a', fontSize: '0.85rem', color: '#b9a6a2' }
   };
 
+  // --- MOBILE QR SCANNER VIEW ---
+  if (isMobileScanMode && isMobile) {
+    return (
+      <div style={styles.wrapper}>
+        <div style={{ ...styles.box, maxWidth: '400px', textAlign: 'center', padding: '2rem' }}>
+          <h2 style={{ color: '#f5eeee', marginBottom: '1rem' }}>QR Skaner</h2>
+          <p style={{ color: '#b9a6a2', marginBottom: '2rem' }}>Kamerani kompyuteringizdagi QR kodga qarating.</p>
+          
+          <div style={{ width: '250px', height: '250px', border: '2px dashed #8a1200', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px' }}>
+            <i className="fa-solid fa-camera" style={{ fontSize: '3rem', color: '#48201a' }}></i>
+          </div>
+          
+          <button onClick={() => navigate('/login')} className="btn btn-ghost" style={{ marginTop: '2rem' }}>Orqaga qaytish</button>
+        </div>
+      </div>
+    );
+  }
+
+  // --- STANDARD LOGIN VIEW (Desktop & Mobile Form) ---
   return (
     <div style={styles.wrapper}>
       <div style={styles.box}>
@@ -56,6 +89,7 @@ export default function LoginPage() {
           <div style={styles.formSide}>
             <h3 style={styles.title}>SIGN IN WITH ACCOUNT NAME</h3>
             {apiError && <div style={styles.errorBox}>{apiError}</div>}
+            
             <form onSubmit={handleLogin}>
               <div style={{ marginBottom: '1.2rem' }}>
                 <input type="text" style={styles.input} placeholder="Account Name (Username)" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
@@ -69,18 +103,24 @@ export default function LoginPage() {
               </div>
               <button type="submit" style={styles.btnPrimary} disabled={loading}>{loading ? 'Signing in...' : 'Sign in'}</button>
             </form>
+            
             <div style={{ marginTop: '1rem', fontSize: '0.85rem' }}>
               <Link to="/reset-password" style={{ color: '#b9a6a2', textDecoration: 'underline' }}>Forgot password?</Link>
             </div>
           </div>
-          <div style={styles.qrSide}>
-            <h3 style={styles.title}>OR SIGN IN WITH QR</h3>
-            <div style={{ backgroundColor: '#fff', padding: '1rem', borderRadius: '8px', margin: '1rem 0' }}>
-              <QRCodeSVG value={qrUrl} size={150} />
+
+          {/* Show QR Code ONLY on Desktop */}
+          {!isMobile && (
+            <div style={styles.qrSide}>
+              <h3 style={styles.title}>OR SIGN IN WITH QR</h3>
+              <div style={{ backgroundColor: '#fff', padding: '1rem', borderRadius: '8px', margin: '1rem 0' }}>
+                <QRCodeSVG value={qrUrl} size={150} />
+              </div>
+              <p style={{ fontSize: '0.8rem', color: '#b9a6a2', textAlign: 'center' }}>Use the <strong>Fuzz Mobile App</strong> to scan</p>
             </div>
-            <p style={{ fontSize: '0.8rem', color: '#b9a6a2', textAlign: 'center' }}>Use the <strong>Fuzz Mobile App</strong> to sign in</p>
-          </div>
+          )}
         </div>
+
         <div style={styles.footer}>
           <span>Don't have an account?</span>
           <Link to="/register" style={{ color: '#8a1200', fontWeight: '600', textDecoration: 'underline' }}>Create a Free Account</Link>

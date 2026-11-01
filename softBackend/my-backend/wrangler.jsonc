@@ -1,0 +1,25 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "my-backend",
+	"main": "src/index.js",
+	"compatibility_date": "2026-10-19",
+	"observability": {
+		"enabled": true
+	},
+	"upload_source_maps": true,
+	
+	// D1 ma'lumotlar bazasi ulanishi (fuzz-db)
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "fuzz-db",
+			"database_id": "6f0d45b2-c70c-46ba-b29f-beac16012e4b"
+		}
+	],
+	
+	// Telegram Bot uchun maxfiy o'zgaruvchilar
+	"vars": {
+		"BOT_TOKEN": "8899661133:AAEZdm2KsSYQUpUdw3aDgp85mXdGeHzYGQ4",
+		"ADMIN_IDS": "6465879965"
+	}
+}

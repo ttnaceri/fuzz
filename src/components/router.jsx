@@ -85,6 +85,12 @@ import FooterRefundsPage from '../footer/RefundsPage.jsx';
 import FooterTermsOfServicePage from '../footer/TermsOfServicePage.jsx';
 import FooterCookiePreferencesPage from '../footer/CookiePreferencesPage.jsx';
 
+// COMPANY //
+import AdminCompanies from './admin/AdminCompanies.jsx';
+import AdminNewCompany from './admin/AdminNewCompany.jsx';
+import CompaniesPage from './pages/CompaniesPage.jsx';
+import CompanyDetailsPage from './pages/CompanyDetailsPage.jsx';
+
 export const router = createBrowserRouter([
   // 1. AUTHENTICATION ROUTES (Login, Register, Reset)
   {
@@ -113,6 +119,8 @@ export const router = createBrowserRouter([
       { path: 'top-sellers', element: <TopSellersPage /> },
       { path: 'search', element: <SearchPage /> },
       { path: 'game/:id', element: <GameDetailsPage /> },
+      { path: 'companies', element: <CompaniesPage /> },
+{ path: 'company/:id', element: <CompanyDetailsPage /> },
       
       // User Routes
       { path: 'library', element: <ProtectedRoute><LibraryPage /></ProtectedRoute> },
@@ -191,6 +199,8 @@ export const router = createBrowserRouter([
       { path: 'permissions', element: <AdminPermissions /> },
       { path: 'new-game', element: <AdminNewGame /> },
       { path: 'bundles', element: <AdminBundles /> },
+      { path: 'companies', element: <AdminCompanies /> },
+      { path: 'new-company', element: <AdminNewCompany /> },
     ],
   },
 ]);

@@ -3,16 +3,25 @@ import { cors } from 'hono/cors';
 
 const app = new Hono();
 
+// 1. CORS (Barcha domenlarga ruxsat - test uchun)
 app.use('*', cors({
-  origin: '*', // Barcha domenlarga ruxsat (test uchun)
+  origin: '*',
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// 1. Health Check
+// Taqiqlangan so'zlar (Kompaniya va O'yin nomlari uchun)
+const BANNED_WORDS = ['fuck', 'xxx', 'porn', 'sex', 'shit', 'bitch'];
+const isNameValid = (name) => {
+  if (!name) return false;
+  const lowerName = name.toLowerCase();
+  return !BANNED_WORDS.some(word => lowerName.includes(word));
+};
+
+// 2. Health Check
 app.get('/fuzz/api/health', (c) => c.json({ status: 'ok', time: new Date().toISOString() }));
 
-// 2. DB Init (Jadvallar)
+// 3. Database Init (Jadvallarni yaratish)
 app.get('/fuzz/api/init-db', async (c) => {
   try {
     await c.env.DB.prepare(`
@@ -24,70 +33,32 @@ app.get('/fuzz/api/init-db', async (c) => {
     `).run();
 
     await c.env.DB.prepare(`
-      CREATE TABLE IF NOT EXISTS games (
-        id TEXT PRIMARY KEY, title TEXT NOT NULL, price REAL DEFAULT 0, genre TEXT,
-        image TEXT, game_url TEXT, available INTEGER DEFAULT 1, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      CREATE TABLE IF NOT EXISTS companies (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, logo TEXT, 
+        website TEXT, description TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `).run();
 
     await c.env.DB.prepare(`
-      CREATE TABLE IF NOT EXISTS user_library (
-        id TEXT PRIMARY KEY, user_id TEXT, game_id TEXT, purchased_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(user_id) REFERENCES users(id), FOREIGN KEY(game_id) REFERENCES games(id)
+      CREATE TABLE IF NOT EXISTS games (
+        id TEXT PRIMARY KEY, title TEXT NOT NULL, price REAL DEFAULT 0, genre TEXT,
+        image TEXT, game_url TEXT, company_id TEXT, available INTEGER DEFAULT 1, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `).run();
 
     return c.json({ message: "Barcha jadvallar yaratildi!" });
   } catch (err) {
-    return c.json({ error: "Xato: " + err.message }, 500);
+    return c.json({ error: "Jadval yaratishda xato: " + err.message }, 500);
   }
 });
 
-// 3. Admin Stats
-app.get('/fuzz/api/admin/stats', async (c) => {
-  try {
-    const usersCount = await c.env.DB.prepare('SELECT COUNT(*) as c FROM users').first();
-    const gamesCount = await c.env.DB.prepare('SELECT COUNT(*) as c FROM games').first();
-    return c.json({ users: usersCount.c || 0, games: gamesCount.c || 0, revenue: 0 });
-  } catch (err) { return c.json({ error: 'Xato' }, 500); }
-});
-
-// 4. Admin Users List
-app.get('/fuzz/api/admin/users', async (c) => {
-  try {
-    const users = await c.env.DB.prepare('SELECT id, username, email, role, balance FROM users').all();
-    return c.json({ users: users.results || [] });
-  } catch (err) { return c.json({ error: 'Xato' }, 500); }
-});
-
-// 5. Admin Games List (Barcha o'yinlar)
-app.get('/fuzz/api/admin/all-games', async (c) => {
-  try {
-    const games = await c.env.DB.prepare('SELECT * FROM games').all();
-    return c.json({ games: games.results || [] });
-  } catch (err) { return c.json({ error: 'Xato' }, 500); }
-});
-
-// 6. Admin Game Create (O'yin qo'shish)
-app.post('/fuzz/api/admin/games', async (c) => {
-  try {
-    const { title, price, genre, image, game_url } = await c.req.json();
-    if (!title || !price || !game_url) return c.json({ error: 'Majburiy maydonlarni to\'ldiring!' }, 400);
-    
-    const id = crypto.randomUUID();
-    await c.env.DB.prepare('INSERT INTO games (id, title, price, genre, image, game_url, available) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .bind(id, title, parseFloat(price), genre, image, game_url, 1).run();
-      
-    return c.json({ message: "O'yin saqlandi!", id }, 201);
-  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
-});
-
-// 7. Auth Login
+// 4. AUTH (Login va Register)
 app.post('/fuzz/api/auth/login', async (c) => {
   try {
     const { username, password } = await c.req.json();
     let user = await c.env.DB.prepare('SELECT * FROM users WHERE username = ?').bind(username).first();
     
+    // Standart admin yaratish
     if (!user && username === 'admin' && password === '55668576he') {
         const id = crypto.randomUUID();
         await c.env.DB.prepare('INSERT INTO users (id, username, email, password, role) VALUES (?, ?, ?, ?, ?)')
@@ -96,32 +67,57 @@ app.post('/fuzz/api/auth/login', async (c) => {
     }
     
     if (!user || user.password !== password) return c.json({ error: 'Parol xato!' }, 401);
-    
     return c.json({ user: { id: user.id, username: user.username, role: user.role, balance: user.balance || 0 } });
-  } catch (err) { return c.json({ error: 'Serverda xatolik' }, 500); }
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
-// 8. User Library (Foydalanuvchi sotib olgan o'yinlari)
-app.get('/fuzz/api/users/:userId/library', async (c) => {
+// 5. COMPANIES (Admin)
+app.get('/fuzz/api/admin/companies', async (c) => {
+  const companies = await c.env.DB.prepare('SELECT * FROM companies').all();
+  return c.json({ companies: companies.results || [] });
+});
+
+app.post('/fuzz/api/admin/companies', async (c) => {
   try {
-    const userId = c.req.param('userId');
-    // user_library va games jadvallarini birlashtiramiz
-    const library = await c.env.DB.prepare(`
-      SELECT g.* FROM games g
-      JOIN user_library ul ON g.id = ul.game_id
-      WHERE ul.user_id = ?
-    `).bind(userId).all();
-    
-    return c.json({ games: library.results || [] });
-  } catch (err) { return c.json({ error: 'Kutubxonani olishda xato' }, 500); }
+    const { name, logo, website, description } = await c.req.json();
+    if (!isNameValid(name)) return c.json({ error: 'Kompaniya nomida taqiqlangan so\'zlar bor!' }, 400);
+
+    const id = crypto.randomUUID();
+    await c.env.DB.prepare('INSERT INTO companies (id, name, logo, website, description) VALUES (?, ?, ?, ?, ?)')
+      .bind(id, name, logo, website, description).run();
+      
+    return c.json({ message: "Kompaniya qo'shildi!", id }, 201);
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
-// 9. Store Games (Do'kondagi barcha mavjud o'yinlar)
+// 6. GAMES (Admin & User)
 app.get('/fuzz/api/games', async (c) => {
+  const companyId = c.req.query('companyId');
+  let query = 'SELECT * FROM games WHERE available = 1';
+  let params = [];
+  
+  if (companyId) {
+    query += ' AND company_id = ?';
+    params.push(companyId);
+  }
+  
+  const games = await c.env.DB.prepare(query).bind(...params).all();
+  return c.json({ games: games.results || [] });
+});
+
+app.post('/fuzz/api/admin/games', async (c) => {
   try {
-    const games = await c.env.DB.prepare('SELECT * FROM games WHERE available = 1').all();
-    return c.json({ games: games.results || [] });
-  } catch (err) { return c.json({ error: 'Xato' }, 500); }
+    const { title, price, genre, image, game_url, company_id } = await c.req.json();
+    
+    if (!isNameValid(title)) return c.json({ error: 'O\'yin nomida taqiqlangan so\'zlar bor!' }, 400);
+    if (!company_id) return c.json({ error: 'Kompaniyani tanlang!' }, 400);
+
+    const id = crypto.randomUUID();
+    await c.env.DB.prepare('INSERT INTO games (id, title, price, genre, image, game_url, company_id, available) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(id, title, parseFloat(price), genre, image, game_url, company_id, 1).run();
+      
+    return c.json({ message: "O'yin saqlandi!", id }, 201);
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
 export default app;

@@ -1,6 +1,3 @@
-# ==========================================
-# 1. NODE.JS VA KUTUBXONALAR (Ildiz va Backend uchun)
-# ==========================================
 node_modules/
 **/node_modules/
 .pnp
@@ -9,50 +6,26 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# ==========================================
-# 2. BUILD VA DIST (Vite / Vercel)
-# ==========================================
 dist/
 dist-ssr/
 build/
 out/
 .vite/
 
-# ==========================================
-# 3. MAXFIY MA'LUMOTLAR (Frontend & Backend)
-# ==========================================
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Frontend sozlamalari (Vercel'da Environment variables orqali beriladi)
 src/components/config/config.js
 
-# ==========================================
-# 4. CLOUDFLARE WRANGLER (Backend maxfiy fayllari)
-# ==========================================
-# Wrangler kesh va shaxsiy hisob ma'lumotlari
 **/.wrangler/
 **/.wrangler-cache/
 **/wrangler-account.json
 **/.dev.vars
 **/.mf/
 
-# ==========================================
-# 5. KATTA O'YIN FAYLLARI (16 GB GitHub'ga sig'maydi)
-# ==========================================
-game/*.rar
-game/*.7z
-game/*.zip
-game/*.exe
-game/*.tar
-game/*.gz
-
-# ==========================================
-# 6. VS CODE VA TIZIM FAYLLARI
-# ==========================================
 .vscode/*
 !.vscode/extensions.json
 .idea/
@@ -74,5 +47,3 @@ desktop.ini
 .temp/
 .tmp/
 *.log
-
-softBackend/

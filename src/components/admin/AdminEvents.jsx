@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react'; // useState va useEffect import qilindi
 import { api } from '../services/api.js';
 import useToast from '../hooks/useToast.js';
 
@@ -15,8 +15,10 @@ export default function AdminEvents() {
     e.preventDefault();
     try {
       await api.post('/api/admin/events', form);
-      success("Event qo'shildi!"); load(); setForm({ title: '', image: '', link_url: '', start_date: '', end_date: '' });
-    } catch { toastError("Xato"); }
+      success("Event qo'shildi!"); 
+      load(); 
+      setForm({ title: '', image: '', link_url: '', start_date: '', end_date: '' });
+    } catch { toastError("Xato yuz berdi"); }
   };
 
   return (

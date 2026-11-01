@@ -1,91 +1,73 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
 import useToast from '../hooks/useToast.js';
 
-export default function AdminGames() {
-  const [games, setGames] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function AdminNewGame() {
+  const [form, setForm] = useState({ title: '', price: '', genre: 'Web Game', image: '', game_url: '' });
+  const [loading, setLoading] = useState(false);
   const { success, error: toastError } = useToast();
+  const navigate = useNavigate();
 
-  const fetchGames = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.title || !form.price || !form.game_url) return toastError("Nom, Narx va URL ni kiriting!");
+
     setLoading(true);
     try {
-      const data = await api.get('/api/admin/games');
-      setGames(data.games || []);
+      await api.post('/api/admin/games', form);
+      success("Web o'yin muvaffaqiyatli qo'shildi!");
+      navigate('/admin/games');
     } catch (err) {
-      toastError("O'yinlarni yuklashda xato");
+      toastError(err.message || "Xatolik yuz berdi");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchGames();
-  }, []);
-
-  const handleDelete = async (id) => {
-    if (!window.confirm("Rostdan ham bu o'yinni o'chirmoqchimisiz?")) return;
-    try {
-      await api.delete(`/api/admin/games/${id}`);
-      success("O'yin o'chirildi");
-      fetchGames(); // Ro'yxatni yangilash
-    } catch (err) {
-      toastError("O'chirishda xato");
-    }
-  };
-
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h1 style={{ color: '#f5eeee', margin: 0 }}>O'yinlar Boshqaruvi</h1>
-        <Link to="/admin/new-game" style={{ backgroundColor: '#8a1200', color: '#fff', padding: '0.6rem 1.2rem', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold' }}>
-          + Yangi O'yin Qo'shish
-        </Link>
-      </div>
+      <h1 style={{ color: '#f5eeee', marginBottom: '1.5rem' }}>Yangi Web O'yin Qo'shish</h1>
+      
+      <form onSubmit={handleSubmit} style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', border: '1px solid #48201a', maxWidth: '700px' }}>
+        
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ display: 'block', color: '#b9a6a2', marginBottom: '0.5rem' }}>O'yin Nomi *</label>
+          <input type="text" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', boxSizing: 'border-box' }} placeholder="Masalan: Ravenfield Web" />
+        </div>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#241411', borderRadius: '8px', border: '1px solid #48201a' }}>
-        <thead>
-          <tr style={{ backgroundColor: '#19100e', color: '#b9a6a2', textAlign: 'left' }}>
-            <th style={{ padding: '1rem' }}>Rasm</th>
-            <th style={{ padding: '1rem' }}>O'yin Nomi</th>
-            <th style={{ padding: '1rem' }}>Janr</th>
-            <th style={{ padding: '1rem' }}>Narxi</th>
-            <th style={{ padding: '1rem' }}>Holat</th>
-            <th style={{ padding: '1rem' }}>Amallar</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? (
-            <tr><td colSpan="6" style={{ padding: '1rem', textAlign: 'center', color: '#b9a6a2' }}>Yuklanmoqda...</td></tr>
-          ) : games.length === 0 ? (
-            <tr><td colSpan="6" style={{ padding: '1rem', textAlign: 'center', color: '#b9a6a2' }}>Hozircha o'yinlar yo'q.</td></tr>
-          ) : (
-            games.map((game) => (
-              <tr key={game.id} style={{ borderBottom: '1px solid #48201a', color: '#f5eeee' }}>
-                <td style={{ padding: '1rem' }}>
-                  {game.image ? (
-                    <img src={game.image} alt={game.title} style={{ width: '60px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
-                  ) : (
-                    <div style={{ width: '60px', height: '40px', backgroundColor: '#100b0a', borderRadius: '4px' }}></div>
-                  )}
-                </td>
-                <td style={{ padding: '1rem', fontWeight: 'bold' }}>{game.title}</td>
-                <td style={{ padding: '1rem', color: '#b9a6a2' }}>{game.genre}</td>
-                <td style={{ padding: '1rem', color: '#43b581', fontWeight: 'bold' }}>${game.price}</td>
-                <td style={{ padding: '1rem' }}>
-                  {game.available ? <span style={{ color: '#43b581' }}>Faol</span> : <span style={{ color: '#ed5555' }}>Nofaol</span>}
-                </td>
-                <td style={{ padding: '1rem' }}>
-                  <button onClick={() => handleDelete(game.id)} style={{ background: 'none', border: 'none', color: '#ed5555', cursor: 'pointer', marginRight: '10px' }}>
-                    <i className="fa-solid fa-trash"></i>
-                  </button>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ display: 'block', color: '#b9a6a2', marginBottom: '0.5rem' }}>Narxi ($) *</label>
+            <input type="number" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', boxSizing: 'border-box' }} placeholder="0.00" step="0.01" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ display: 'block', color: '#b9a6a2', marginBottom: '0.5rem' }}>Janri</label>
+            <select value={form.genre} onChange={e => setForm({ ...form, genre: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', boxSizing: 'border-box' }}>
+              <option value="Web Game">Web Game</option>
+              <option value="3D Shooter">3D Shooter</option>
+              <option value="2D Platformer">2D Platformer</option>
+              <option value="WebGL">WebGL</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Eng muhim qism: O'yin URL manzili */}
+        <div style={{ marginBottom: '1rem', backgroundColor: 'rgba(67, 181, 129, 0.1)', padding: '1rem', borderRadius: '4px', border: '1px solid #43b581' }}>
+          <label style={{ display: 'block', color: '#43b581', marginBottom: '0.5rem', fontWeight: 'bold' }}>O'yin Linki (GitHub / Vercel) *</label>
+          <input type="url" value={form.game_url} onChange={e => setForm({ ...form, game_url: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', boxSizing: 'border-box' }} placeholder="https://my-web-game.vercel.app" />
+          <small style={{ color: '#b9a6a2', display: 'block', marginTop: '0.3rem' }}>Foydalanuvchi sotib olgach, o'yin shu havolada ochiladi.</small>
+        </div>
+
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label style={{ display: 'block', color: '#b9a6a2', marginBottom: '0.5rem' }}>Rasm URL manzili (Cover)</label>
+          <input type="text" value={form.image} onChange={e => setForm({ ...form, image: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', boxSizing: 'border-box' }} placeholder="/image/games/default.jpg" />
+        </div>
+
+        <button type="submit" disabled={loading} style={{ backgroundColor: '#8a1200', color: '#fff', padding: '0.8rem 1.5rem', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}>
+          {loading ? 'Saqlanmoqda...' : 'O\'yinni Saqlash'}
+        </button>
+      </form>
     </div>
   );
 }

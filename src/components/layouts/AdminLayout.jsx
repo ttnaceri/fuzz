@@ -67,3 +67,27 @@ export default function AdminLayout() {
     </div>
   );
 }
+
+// AdminLayout.jsx ichida useState va useEffect qo'shing:
+const [contextMenu, setContextMenu] = useState(null);
+
+useEffect(() => {
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  };
+  document.addEventListener('contextmenu', handleContextMenu);
+  return () => document.removeEventListener('contextmenu', handleContextMenu);
+}, []);
+
+// JSX eng pastiga qo'shing:
+{contextMenu && (
+  <div style={{ position: 'fixed', top: contextMenu.y, left: contextMenu.x, backgroundColor: '#241411', border: '1px solid #48201a', borderRadius: '6px', zIndex: 99999, padding: '0.5rem 0', width: '200px', boxShadow: '0 10px 30px rgba(0,0,0,0.8)' }} onMouseLeave={() => setContextMenu(null)}>
+    <div onClick={() => { navigate('/admin'); setContextMenu(null); }} style={{ padding: '0.5rem 1rem', color: '#f5eeee', cursor: 'pointer', fontSize: '0.9rem' }}>Dashboard</div>
+    <div onClick={() => { navigate('/admin/users'); setContextMenu(null); }} style={{ padding: '0.5rem 1rem', color: '#f5eeee', cursor: 'pointer', fontSize: '0.9rem' }}>Users</div>
+    <div onClick={() => { navigate('/admin/all-games'); setContextMenu(null); }} style={{ padding: '0.5rem 1rem', color: '#f5eeee', cursor: 'pointer', fontSize: '0.9rem' }}>Games</div>
+    <div onClick={() => { navigate('/admin/events'); setContextMenu(null); }} style={{ padding: '0.5rem 1rem', color: '#f5eeee', cursor: 'pointer', fontSize: '0.9rem' }}>Events</div>
+    <div style={{ height: '1px', backgroundColor: '#48201a', margin: '0.5rem 0' }}></div>
+    <div onClick={() => setContextMenu(null)} style={{ padding: '0.5rem 1rem', color: '#ed5555', cursor: 'pointer', fontSize: '0.9rem' }}>Yopish</div>
+  </div>
+)}

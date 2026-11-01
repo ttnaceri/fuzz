@@ -169,4 +169,50 @@ app.post('/fuzz/telegram/webhook', async (c) => {
   }
 });
 
+// ... (Oldingi importlar va CORS, health, init-db, auth qismlari o'zgarishsiz qoladi)
+
+// 5.3 Admin Games List (Ma'lumotlarni olish)
+app.get('/fuzz/api/admin/games', async (c) => {
+  try {
+    const games = await c.env.DB.prepare('SELECT * FROM games').all();
+    return c.json({ games: games.results || [] });
+  } catch (err) {
+    return c.json({ error: 'O\'yinlarni olishda xato' }, 500);
+  }
+});
+
+// 5.4 Admin Games Create (Yangi o'yin qo'shish)
+app.post('/fuzz/api/admin/games', async (c) => {
+  try {
+    const { title, price, genre, image } = await c.req.json();
+
+    if (!title || !price) {
+      return c.json({ error: 'O\'yin nomi va narxini kiriting!' }, 400);
+    }
+
+    const id = crypto.randomUUID();
+    // image: foydalanuvchi kiritgan rasm URL manzili (masalan: /image/games/test.jpg)
+    await c.env.DB.prepare(
+      'INSERT INTO games (id, title, price, genre, image, available) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(id, title, parseFloat(price), genre || 'Action', image || '', 1).run();
+
+    return c.json({ message: "O'yin muvaffaqiyatli qo'shildi!", id }, 201);
+  } catch (err) {
+    console.error(err);
+    return c.json({ error: 'O\'yin qo\'shishda xato' }, 500);
+  }
+});
+
+// 5.5 Admin Games Delete (O'yinni o'chirish)
+app.delete('/fuzz/api/admin/games/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    await c.env.DB.prepare('DELETE FROM games WHERE id = ?').bind(id).run();
+    return c.json({ message: "O'yin o'chirildi!" });
+  } catch (err) {
+    return c.json({ error: 'O\'chirishda xato' }, 500);
+  }
+});
+
+// ... (Telegram Webhook qismi o'zgarishsiz qoladi)
 export default app;

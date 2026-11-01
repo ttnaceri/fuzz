@@ -1,5 +1,6 @@
 import { NavLink, Outlet, Link } from 'react-router-dom';
 import { useLanguage } from '../context/useLanguage.js';
+import AdminConsole from '../admin/AdminConsole.jsx'; // Console import qilindi
 
 const ADMIN_LINKS = [
   { to: '/admin', label: 'Dashboard', icon: 'fa-gauge', end: true },
@@ -60,6 +61,9 @@ export default function AdminLayout() {
       <main style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
         <Outlet />
       </main>
+
+      {/* Admin Console (Eng pastda turadi va faqat /admin da ishlaydi) */}
+      <AdminConsole />
     </div>
   );
 }

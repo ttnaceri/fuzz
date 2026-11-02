@@ -5,15 +5,14 @@ import useToast from '../hooks/useToast.js';
 
 export default function ImageUploader({ value, onChange, label = "Rasm yuklash" }) {
   const [uploading, setUploading] = useState(false);
-  const { error: toastError } = useToast();
+  const { error: toastError, success } = useToast();
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Fayl hajmini tekshirish (masalan, 2MB dan oshmasin)
-    if (file.size > 2 * 1024 * 1024) {
-      return toastError("Rasm hajmi 2MB dan oshmasligi kerak!");
+    if (file.size > 1024 * 1024) {
+      return toastError("Rasm hajmi 1MB dan oshmasligi kerak!");
     }
 
     setUploading(true);
@@ -21,17 +20,17 @@ export default function ImageUploader({ value, onChange, label = "Rasm yuklash" 
     
     reader.onloadend = async () => {
       try {
-        const base64String = reader.result.split(',')[1]; // "data:image/jpeg;base64," qismini olib tashlash
+        const base64String = reader.result.split(',')[1];
         const res = await api.post('/api/upload', {
           base64: base64String,
           mimeType: file.type
         });
         
-        // To'liq URL ni hosil qilamiz (masalan: https://my-backend.../fuzz/api/images/uuid)
         const fullUrl = `${config.apiBaseUrl}${res.url}`;
-        onChange(fullUrl); // Ota-onaga yangi URL ni yuborish
+        onChange(fullUrl);
+        success("Rasm muvaffaqiyatli yuklandi!");
       } catch (err) {
-        toastError("Rasm yuklashda xatolik yuz berdi");
+        toastError("Rasm yuklashda xatolik: " + (err.message || "Server xatosi"));
       } finally {
         setUploading(false);
       }
@@ -44,7 +43,6 @@ export default function ImageUploader({ value, onChange, label = "Rasm yuklash" 
     <div>
       <label style={{ display: 'block', color: '#b9a6a2', marginBottom: '0.5rem' }}>{label}</label>
       
-      {/* Rasmni ko'rish va o'chirish */}
       {value && (
         <div style={{ marginBottom: '0.5rem', position: 'relative', display: 'inline-block' }}>
           <img src={value} alt="Preview" style={{ height: '80px', borderRadius: '4px', border: '1px solid #48201a' }} />
@@ -52,13 +50,7 @@ export default function ImageUploader({ value, onChange, label = "Rasm yuklash" 
         </div>
       )}
 
-      <input 
-        type="file" 
-        accept="image/*" 
-        onChange={handleFileChange} 
-        disabled={uploading}
-        style={{ display: 'block', color: '#b9a6a2', fontSize: '0.9rem' }}
-      />
+      <input type="file" accept="image/*" onChange={handleFileChange} disabled={uploading} style={{ display: 'block', color: '#b9a6a2', fontSize: '0.9rem' }} />
       
       {uploading && <span style={{ color: '#f0b44d', fontSize: '0.8rem', marginLeft: '0.5rem' }}>Yuklanmoqda...</span>}
     </div>

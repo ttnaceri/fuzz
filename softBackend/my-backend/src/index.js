@@ -13,7 +13,7 @@ app.use('*', cors({
 // Health Check
 app.get('/fuzz/api/health', (c) => c.json({ status: 'ok' }));
 
-// DB Init (Barcha jadvallar)
+// DB Init
 app.get('/fuzz/api/init-db', async (c) => {
   try {
     await c.env.DB.prepare(`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT NOT NULL, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, role TEXT DEFAULT 'user', balance REAL DEFAULT 0, telegram_id TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`).run();
@@ -22,25 +22,32 @@ app.get('/fuzz/api/init-db', async (c) => {
     await c.env.DB.prepare(`CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, title TEXT NOT NULL, image TEXT, link_url TEXT, start_date DATETIME, end_date DATETIME, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`).run();
     await c.env.DB.prepare(`CREATE TABLE IF NOT EXISTS user_library (id TEXT PRIMARY KEY, user_id TEXT, game_id TEXT, purchased_at DATETIME DEFAULT CURRENT_TIMESTAMP);`).run();
     await c.env.DB.prepare(`CREATE TABLE IF NOT EXISTS images (id TEXT PRIMARY KEY, base64_data TEXT NOT NULL, mime_type TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`).run();
+    await c.env.DB.prepare(`CREATE TABLE IF NOT EXISTS game_stats (id TEXT PRIMARY KEY, user_id TEXT, game_id TEXT, total_seconds INTEGER DEFAULT 0, last_played DATETIME DEFAULT CURRENT_TIMESTAMP);`).run();
     
     return c.json({ message: "Barcha jadvallar yaratildi!" });
   } catch (err) { return c.json({ error: "Xato: " + err.message }, 500); }
 });
 
-// ==========================================
-// RASM YUKLASH API
-// ==========================================
+// Rasm yuklash (Xatolarni ushlash bilan)
 app.post('/fuzz/api/upload', async (c) => {
   try {
     const { base64, mimeType } = await c.req.json();
     if (!base64) return c.json({ error: 'Rasm ma\'lumotlari topilmadi' }, 400);
+
+    // Rasm hajmi 1MB dan oshmasligi kerak (Base64 da bu ~1.3MB)
+    if (base64.length > 1500000) {
+      return c.json({ error: 'Rasm hajmi juda katta! (Max 1MB)' }, 400);
+    }
 
     const id = crypto.randomUUID();
     await c.env.DB.prepare('INSERT INTO images (id, base64_data, mime_type) VALUES (?, ?, ?)')
       .bind(id, base64, mimeType || 'image/jpeg').run();
 
     return c.json({ message: 'Rasm yuklandi!', url: `/api/images/${id}` }, 201);
-  } catch (err) { return c.json({ error: 'Rasm yuklashda xato: ' + err.message }, 500); }
+  } catch (err) { 
+    console.error("Upload xatosi:", err);
+    return c.json({ error: 'Rasm yuklashda xato' }, 500); 
+  }
 });
 
 app.get('/fuzz/api/images/:id', async (c) => {
@@ -51,9 +58,8 @@ app.get('/fuzz/api/images/:id', async (c) => {
 
     const binaryStr = atob(image.base64_data);
     const bytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) {
-      bytes[i] = binaryStr.charCodeAt(i);
-    }
+    for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+
     return c.body(bytes, 200, {
       'Content-Type': image.mime_type || 'image/jpeg',
       'Cache-Control': 'public, max-age=31536000'
@@ -94,7 +100,7 @@ app.get('/fuzz/api/admin/users', async (c) => {
 });
 
 // ==========================================
-// COMPANIES API
+// COMPANIES (To'liq qayta yozildi)
 // ==========================================
 app.get('/fuzz/api/admin/companies', async (c) => {
   try {
@@ -109,10 +115,18 @@ app.post('/fuzz/api/admin/companies', async (c) => {
     if (!name) return c.json({ error: 'Kompaniya nomini kiriting!' }, 400);
 
     const id = crypto.randomUUID();
+    
+    // Logo uzunligini cheklash
+    const safeLogo = (logo && logo.length > 2000) ? logo.substring(0, 2000) : (logo || '');
+    
     await c.env.DB.prepare('INSERT INTO companies (id, name, logo, website, description) VALUES (?, ?, ?, ?, ?)')
-      .bind(id, name, logo, website, description).run();
+      .bind(id, name, safeLogo, website || '', description || '').run();
+      
     return c.json({ message: "Kompaniya qo'shildi!", id }, 201);
-  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
+  } catch (err) { 
+    console.error("Company xatosi:", err);
+    return c.json({ error: 'Server xatosi: ' + err.message }, 500); 
+  }
 });
 
 // Public Companies
@@ -124,7 +138,7 @@ app.get('/fuzz/api/companies', async (c) => {
 });
 
 // ==========================================
-// GAMES API
+// GAMES (To'liq qayta yozildi)
 // ==========================================
 app.get('/fuzz/api/admin/all-games', async (c) => {
   try {
@@ -141,10 +155,16 @@ app.post('/fuzz/api/admin/games', async (c) => {
     }
 
     const id = crypto.randomUUID();
+    const safeImage = (image && image.length > 2000) ? image.substring(0, 2000) : (image || '');
+    
     await c.env.DB.prepare('INSERT INTO games (id, title, price, genre, image, game_url, company_id, available) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(id, title, parseFloat(price), genre, image, game_url, company_id, 1).run();
+      .bind(id, title, parseFloat(price), genre || '', safeImage, game_url, company_id, 1).run();
+      
     return c.json({ message: "O'yin saqlandi!", id }, 201);
-  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
+  } catch (err) { 
+    console.error("Game xatosi:", err);
+    return c.json({ error: 'Server xatosi: ' + err.message }, 500); 
+  }
 });
 
 app.get('/fuzz/api/games', async (c) => {
@@ -162,7 +182,7 @@ app.get('/fuzz/api/games', async (c) => {
 });
 
 // ==========================================
-// EVENTS API
+// EVENTS (To'liq qayta yozildi)
 // ==========================================
 app.get('/fuzz/api/admin/events', async (c) => {
   try {
@@ -180,15 +200,19 @@ app.post('/fuzz/api/admin/events', async (c) => {
     }
 
     const id = crypto.randomUUID();
+    const safeImage = (image && image.length > 2000) ? image.substring(0, 2000) : (image || '');
+    
     await c.env.DB.prepare('INSERT INTO events (id, title, image, link_url, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?)')
-      .bind(id, title, image, link_url, start_date, end_date).run();
+      .bind(id, title, safeImage, link_url || '', start_date, end_date).run();
+      
     return c.json({ message: "Event qo'shildi!", id }, 201);
-  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
+  } catch (err) { 
+    console.error("Event xatosi:", err);
+    return c.json({ error: 'Server xatosi: ' + err.message }, 500); 
+  }
 });
 
-// ==========================================
-// ADMIN DELETE & UPDATE API
-// ==========================================
+// Admin CRUD
 app.delete('/fuzz/api/admin/users/:id', async (c) => {
   try { await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(c.req.param('id')).run(); return c.json({ success: true }); } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
@@ -208,15 +232,13 @@ app.delete('/fuzz/api/admin/games/:id', async (c) => {
 app.put('/fuzz/api/admin/games/:id/discount', async (c) => {
   try {
     const { discount } = await c.req.json();
-    if (discount < 10 || discount > 95) return c.json({ error: 'Chegirma 10% dan 95% gacha bo\'lishi shart!' }, 400);
+    if (discount < 10 || discount > 95) return c.json({ error: '10-95 oralig\'ida!' }, 400);
     await c.env.DB.prepare('UPDATE games SET discount = ? WHERE id = ?').bind(discount, c.req.param('id')).run();
     return c.json({ success: true });
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
-// ==========================================
-// STORE & LIBRARY
-// ==========================================
+// Store & Library
 app.post('/fuzz/api/store/buy', async (c) => {
   try {
     const { userId, gameId } = await c.req.json();

@@ -19,7 +19,7 @@ export default function AdminNewCompany() {
       success("Kompaniya muvaffaqiyatli qo'shildi!");
       navigate('/admin/companies');
     } catch (err) {
-      toastError(err.message || "Xatolik yuz berdi (Taqiqlangan so'z bo'lishi mumkin)");
+      toastError(err.message || "Xatolik yuz berdi");
     } finally {
       setLoading(false);
     }
@@ -47,7 +47,7 @@ export default function AdminNewCompany() {
 
         <div style={{ marginBottom: '1.5rem' }}>
           <label style={{ display: 'block', color: '#b9a6a2', marginBottom: '0.5rem' }}>Tavsif</label>
-          <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows="3" style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} placeholder="Kompaniya haqida qisqacha..."></textarea>
+          <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows="3" style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} placeholder="Kompaniya haqida..."></textarea>
         </div>
 
         <button type="submit" disabled={loading} style={{ backgroundColor: '#8a1200', color: '#fff', padding: '0.8rem', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}>

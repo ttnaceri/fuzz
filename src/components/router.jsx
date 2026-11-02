@@ -74,9 +74,9 @@ import AdminUserLogs from './admin/AdminUserLogs.jsx';
 import AdminRoles from './admin/AdminRoles.jsx';
 import AdminPermissions from './admin/AdminPermissions.jsx';
 import AdminNewGame from './admin/AdminNewGame.jsx';
+import AdminAllGames from './admin/AdminAllGames.jsx';
 import AdminBundles from './admin/AdminBundles.jsx';
 import AdminEvents from './admin/AdminEvents.jsx';
-import AdminAllGames from './admin/AdminAllGames.jsx';
 import AdminCompanies from './admin/AdminCompanies.jsx';
 import AdminNewCompany from './admin/AdminNewCompany.jsx';
 

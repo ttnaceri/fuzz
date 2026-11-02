@@ -10,28 +10,12 @@ export class ApiError extends Error {
   }
 }
 
-function buildUrl(path, params) {
-  const base = config.apiBaseUrl ? config.apiBaseUrl.replace(/\/+$/, '') : '';
+async function request(method, path, { body, headers = {} } = {}) {
+  const base = config.apiBaseUrl.replace(/\/+$/, '');
+  // Agar path /api bilan boshlanmasa, avtomatik qo'shamiz
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  let url = `${base}${cleanPath}`;
-  
-  if (!base) {
-    throw new ApiError('Backend URL manzili sozlanmagan!', { code: 'NO_BACKEND' });
-  }
-  
-  if (params && typeof params === 'object') {
-    const usp = new URLSearchParams();
-    Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== '') usp.append(k, String(v));
-    });
-    const qs = usp.toString();
-    if (qs) url += `?${qs}`;
-  }
-  return url;
-}
+  const url = `${base}${cleanPath}`;
 
-async function request(method, path, { params, body, headers = {} } = {}) {
-  const url = buildUrl(path, params);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), config.requestTimeout || 15000);
 
@@ -44,7 +28,7 @@ async function request(method, path, { params, body, headers = {} } = {}) {
   }
 
   try {
-    console.log(`[API] ${method} ${url}`, body ? body : '');
+    console.log(`[API] ${method} ${url}`);
     
     const res = await fetch(url, {
       method,
@@ -73,19 +57,16 @@ async function request(method, path, { params, body, headers = {} } = {}) {
   } catch (err) {
     clearTimeout(timeout);
     if (err.name === 'AbortError') {
-      throw new ApiError('So\'rov vaqti tugadi (Timeout)', { code: 'TIMEOUT' });
+      throw new ApiError('So\'rov vaqti tugadi', { code: 'TIMEOUT' });
     }
     if (err instanceof ApiError) throw err;
-    
-    console.error("[API Network Error]", err);
-    throw new ApiError('Internet aloqasi yo\'q yoki server javob bermayapti', { code: 'NETWORK_ERROR', details: err.message });
+    throw new ApiError('Internet aloqasi yo\'q', { code: 'NETWORK_ERROR' });
   }
 }
 
 export const api = {
   get: (path, opts) => request('GET', path, opts),
   post: (path, body, opts) => request('POST', path, { ...opts, body }),
-  patch: (path, body, opts) => request('PATCH', path, { ...opts, body }),
   delete: (path, opts) => request('DELETE', path, opts),
   isConfigured: () => Boolean(config.apiBaseUrl),
 };

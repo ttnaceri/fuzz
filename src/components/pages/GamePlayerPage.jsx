@@ -18,7 +18,7 @@ export default function GamePlayerPage() {
     if (!user) { navigate('/login'); return; }
     api.get(`/api/games/${id}/play?userId=${user.id}`)
       .then(data => { setGameUrl(data.game_url); setLoading(false); })
-      .catch(() => { setError("O'yinni yuklab bo'lmadi."); setLoading(false); });
+      .catch(() => { setError("O'yinni yuklab bo'lmadi. Sotib olinganligini tekshiring."); setLoading(false); });
   }, [id, user, navigate]);
 
   useEffect(() => {

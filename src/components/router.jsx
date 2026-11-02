@@ -53,6 +53,9 @@ import ChangePasswordPage from './pages/ChangePasswordPage.jsx';
 import CompaniesPage from './pages/CompaniesPage.jsx';
 import CompanyDetailsPage from './pages/CompanyDetailsPage.jsx';
 
+// --- GAMEPLAY PAGE (MUHIM!) ---
+import GamePlayerPage from './pages/GamePlayerPage.jsx';
+
 // --- ADMIN PAGES ---
 import AdminDashboard from './admin/AdminDashboard.jsx';
 import AdminGames from './admin/AdminGames.jsx';
@@ -161,6 +164,10 @@ export const router = createBrowserRouter([
 
       { path: '*', element: <NotFoundPage /> },
     ],
+  },
+  {
+    path: '/game/:id/play',
+    element: <ProtectedRoute><GamePlayerPage /></ProtectedRoute>,
   },
   {
     path: '/admin',

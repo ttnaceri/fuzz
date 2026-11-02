@@ -22,17 +22,12 @@ export default function CartPage() {
 
     setLoading(true);
     try {
-      // Har bir o'yinni navbat bilan sotib olamiz
       for (const item of items) {
         await api.post('/api/store/buy', { userId: user.id, gameId: item.id });
       }
-      
       success("Barcha o'yinlar muvaffaqiyatli sotib olindi!");
       clear();
-      
-      // Kutubxonaga o'tish
       navigate('/library');
-      
     } catch (err) {
       toastError(err.message || "Xarid qilishda xatolik yuz berdi");
     } finally {

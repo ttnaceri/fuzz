@@ -263,4 +263,61 @@ app.post('/fuzz/api/games/track-time', async (c) => {
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
+// ==========================================
+// CART & CHECKOUT API'LARI (YANGI)
+// ==========================================
+
+// 1. O'yinni sotib olish (Checkout)
+app.post('/fuzz/api/store/buy', async (c) => {
+  try {
+    const { userId, gameId } = await c.req.json();
+    if (!userId || !gameId) return c.json({ error: 'Ma\'lumot yetarli emas' }, 400);
+
+    const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first();
+    const game = await c.env.DB.prepare('SELECT * FROM games WHERE id = ?').bind(gameId).first();
+
+    if (!user) return c.json({ error: 'Foydalanuvchi topilmadi' }, 404);
+    if (!game) return c.json({ error: 'O\'yin topilmadi' }, 404);
+
+    // Allaqachon sotib olinganligini tekshirish
+    const owned = await c.env.DB.prepare('SELECT * FROM user_library WHERE user_id = ? AND game_id = ?').bind(userId, gameId).first();
+    if (owned) return c.json({ error: 'Siz bu o\'yinni allaqachon sotib olgansiz!' }, 400);
+
+    // Narxni hisoblash (chegirma bilan)
+    let finalPrice = game.price;
+    if (game.discount > 0) {
+      finalPrice = game.price - (game.price * (game.discount / 100));
+    }
+
+    // Balansni tekshirish
+    if (user.balance < finalPrice) {
+      return c.json({ error: 'Balansingizda yetarli mablag\' yo\'q!' }, 400);
+    }
+
+    // Balansdan yechish
+    await c.env.DB.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').bind(finalPrice, userId).run();
+
+    // Kutubxonaga qo'shish
+    const libraryId = crypto.randomUUID();
+    await c.env.DB.prepare('INSERT INTO user_library (id, user_id, game_id) VALUES (?, ?, ?)').bind(libraryId, userId, gameId).run();
+
+    return c.json({ message: 'O\'yin muvaffaqiyatli sotib olindi!', newBalance: user.balance - finalPrice });
+  } catch (err) {
+    return c.json({ error: 'Server xatosi' }, 500);
+  }
+});
+
+// 2. Foydalanuvchi kutubxonasini olish
+app.get('/fuzz/api/users/:userId/library', async (c) => {
+  try {
+    const userId = c.req.param('userId');
+    const library = await c.env.DB.prepare(`
+      SELECT g.* FROM games g
+      JOIN user_library ul ON g.id = ul.game_id
+      WHERE ul.user_id = ?
+    `).bind(userId).all();
+    return c.json({ games: library.results || [] });
+  } catch (err) { return c.json({ games: [] }); }
+});
+
 export default app;

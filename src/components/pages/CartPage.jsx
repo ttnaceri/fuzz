@@ -7,7 +7,7 @@ import { api } from '../services/api.js';
 
 export default function CartPage() {
   const { items, removeItem, clear, subtotal } = useCart();
-  const { user, login } = useAuth(); // login orqali userni yangilash
+  const { user } = useAuth();
   const { success, error: toastError } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -30,8 +30,8 @@ export default function CartPage() {
       success("Barcha o'yinlar muvaffaqiyatli sotib olindi!");
       clear();
       
-      // Foydalanuvchi balansini yangilash (sahifani yangilash orqali)
-      window.location.href = '/library';
+      // Kutubxonaga o'tish
+      navigate('/library');
       
     } catch (err) {
       toastError(err.message || "Xarid qilishda xatolik yuz berdi");

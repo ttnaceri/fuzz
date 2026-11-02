@@ -2,57 +2,44 @@ import { Link } from 'react-router-dom';
 import { formatPrice } from '../utils/formatters.js';
 
 export default function GameCard({ game, onAddToCart }) {
-  const cover = game.cover || game.image;
-  const priceLabel = formatPrice(game.price, game.currency);
-  const isUnavailable = game.available === false || game.availability === 'unavailable';
+  const cover = game.image || game.cover;
+  const isUnavailable = game.available === false;
 
   return (
     <article className="game-card">
       <div className="game-card__media">
         <Link to={`/game/${game.id}`} aria-label={game.title}>
-          <img
-            src={cover}
-            alt={game.title}
-            loading="lazy"
-            onError={(e) => {
-              e.currentTarget.src = 'https://via.placeholder.com/400x225?text=No+Image';
-            }}
-          />
+          {cover && <img src={cover} alt={game.title} loading="lazy" />}
         </Link>
       </div>
       <div className="game-card__body">
         <h3 className="game-card__title" title={game.title}>{game.title}</h3>
-        <p className="game-card__desc">{game.description}</p>
+        <p className="game-card__desc">{game.genre || 'Game'}</p>
+        
         <div className="game-card__meta">
-          <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>
-            {game.genre || (game.genres && game.genres[0]) || 'Game'}
-          </span>
-          <span className="game-card__price">{game.isHtmlGame ? 'Web Game' : priceLabel}</span>
+          {game.discount > 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span className="game-card__price" style={{ color: '#43b581' }}>${game.price - (game.price * game.discount / 100)}</span>
+              <span style={{ textDecoration: 'line-through', color: '#b9a6a2', fontSize: '0.8rem' }}>${game.price}</span>
+              <span style={{ backgroundColor: '#f0b44d', color: '#000', padding: '0.1rem 0.3rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold' }}>-{game.discount}%</span>
+            </div>
+          ) : (
+            <span className="game-card__price">{formatPrice(game.price)}</span>
+          )}
         </div>
-        {isUnavailable && (
-          <div className="badge badge-error" style={{ alignSelf: 'flex-start', marginTop: 4 }}>
-            Mavjud emas
-          </div>
-        )}
+
         <div className="game-card__actions">
           <Link to={`/game/${game.id}`} className="btn btn-secondary btn-sm" style={{ flex: 1 }}>
             <i className="fa-solid fa-circle-info" /> Batafsil
           </Link>
-          {!game.isHtmlGame && (
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={() => onAddToCart?.(game)}
-              disabled={isUnavailable}
-              title={isUnavailable ? 'Unavailable' : 'Add to cart'}
-            >
-              <i className="fa-solid fa-cart-plus" />
-            </button>
-          )}
-          {game.isHtmlGame && (
-            <a href={game.downloadUrl} target="_blank" rel="noreferrer" className="btn btn-primary btn-sm">
-              <i className="fa-solid fa-play" />
-            </a>
-          )}
+          <button 
+            className="btn btn-primary btn-sm" 
+            onClick={() => onAddToCart?.(game)} 
+            disabled={isUnavailable}
+            title={isUnavailable ? 'Mavjud emas' : 'Savatga qo\'shish'}
+          >
+            <i className="fa-solid fa-cart-plus" />
+          </button>
         </div>
       </div>
     </article>

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
 
-const COMMANDS = ['help', 'clear', 'exit', 'kill', 'give', 'take', 'discount', 'newName', 'newUpd', 'ban', 'unBan', 'open'];
+const COMMANDS = ['help', 'cls', 'clear', 'exit', 'kill', 'give', 'take', 'discount', 'newName', 'newUpd', 'ban', 'unBan', 'open'];
 
 export default function AdminConsole() {
   const [isOpen, setIsOpen] = useState(false);
@@ -44,6 +44,7 @@ export default function AdminConsole() {
 
     // Mahalliy buyruqlar
     if (cmd === 'clear') { setHistory([]); return; }
+    if (cmd === 'cls') { setHistory([]); return; }
     if (cmd === 'exit') { setIsOpen(false); navigate('/'); return; }
     
     // Sahifaga o'tish

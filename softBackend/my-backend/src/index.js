@@ -225,4 +225,39 @@ app.post('/fuzz/api/admin/console', async (c) => {
   }
 });
 
+// Admin: Userni o'chirish
+app.delete('/fuzz/api/admin/users/:id', async (c) => {
+  try {
+    await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(c.req.param('id')).run();
+    return c.json({ success: true });
+  } catch (err) { return c.json({ error: 'Xato' }, 500); }
+});
+
+// Admin: Rolni o'zgartirish
+app.put('/fuzz/api/admin/users/:id/role', async (c) => {
+  try {
+    const { role } = await c.req.json();
+    await c.env.DB.prepare('UPDATE users SET role = ? WHERE id = ?').bind(role, c.req.param('id')).run();
+    return c.json({ success: true });
+  } catch (err) { return c.json({ error: 'Xato' }, 500); }
+});
+
+// Admin: O'yinni o'chirish
+app.delete('/fuzz/api/admin/games/:id', async (c) => {
+  try {
+    await c.env.DB.prepare('DELETE FROM games WHERE id = ?').bind(c.req.param('id')).run();
+    return c.json({ success: true });
+  } catch (err) { return c.json({ error: 'Xato' }, 500); }
+});
+
+// Admin: Chegirma
+app.put('/fuzz/api/admin/games/:id/discount', async (c) => {
+  try {
+    const { discount } = await c.req.json();
+    if (discount < 10 || discount > 95) return c.json({ error: 'Chegirma 10% dan 95% gacha bo\'lishi shart!' }, 400);
+    await c.env.DB.prepare('UPDATE games SET discount = ? WHERE id = ?').bind(discount, c.req.param('id')).run();
+    return c.json({ success: true });
+  } catch (err) { return c.json({ error: 'Xato' }, 500); }
+});
+
 export default app;

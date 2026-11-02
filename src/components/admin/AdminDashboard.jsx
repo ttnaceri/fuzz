@@ -6,16 +6,9 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Backenddan real ma'lumotlarni yuklash
     api.get('/api/admin/stats')
-      .then(data => {
-        setStats(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Stats yuklashda xato:", err);
-        setLoading(false);
-      });
+      .then(data => { setStats(data); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
   return (

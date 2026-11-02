@@ -19,7 +19,7 @@ const isNameValid = (name) => {
 // Health Check
 app.get('/fuzz/api/health', (c) => c.json({ status: 'ok' }));
 
-// DB Init
+// DB Init (images jadvali qo'shildi)
 app.get('/fuzz/api/init-db', async (c) => {
   try {
     await c.env.DB.prepare(`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT NOT NULL, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, role TEXT DEFAULT 'user', balance REAL DEFAULT 0, telegram_id TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`).run();
@@ -28,8 +28,62 @@ app.get('/fuzz/api/init-db', async (c) => {
     await c.env.DB.prepare(`CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, title TEXT NOT NULL, image TEXT, link_url TEXT, start_date DATETIME, end_date DATETIME, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`).run();
     await c.env.DB.prepare(`CREATE TABLE IF NOT EXISTS user_library (id TEXT PRIMARY KEY, user_id TEXT, game_id TEXT, purchased_at DATETIME DEFAULT CURRENT_TIMESTAMP);`).run();
     await c.env.DB.prepare(`CREATE TABLE IF NOT EXISTS game_stats (id TEXT PRIMARY KEY, user_id TEXT, game_id TEXT, total_seconds INTEGER DEFAULT 0, last_played DATETIME DEFAULT CURRENT_TIMESTAMP);`).run();
+    
+    // Yangi: Rasmlar jadvali (Base64 saqlash uchun)
+    await c.env.DB.prepare(`CREATE TABLE IF NOT EXISTS images (id TEXT PRIMARY KEY, base64_data TEXT NOT NULL, mime_type TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`).run();
+    
     return c.json({ message: "Barcha jadvallar yaratildi!" });
   } catch (err) { return c.json({ error: "Xato: " + err.message }, 500); }
+});
+
+// ==========================================
+// RASM YUKLASH (UPLOAD) API
+// ==========================================
+app.post('/fuzz/api/upload', async (c) => {
+  try {
+    const { base64, mimeType } = await c.req.json();
+    
+    if (!base64) return c.json({ error: 'Rasm ma\'lumotlari topilmadi' }, 400);
+
+    const id = crypto.randomUUID();
+    
+    // Bazaga yozish
+    await c.env.DB.prepare('INSERT INTO images (id, base64_data, mime_type) VALUES (?, ?, ?)')
+      .bind(id, base64, mimeType || 'image/jpeg').run();
+
+    // Rasmga kirish uchun to'liq URL qaytaramiz
+    const imageUrl = `/api/images/${id}`;
+    
+    return c.json({ message: 'Rasm yuklandi!', url: imageUrl }, 201);
+  } catch (err) {
+    return c.json({ error: 'Rasm yuklashda xato: ' + err.message }, 500);
+  }
+});
+
+// ==========================================
+// RASMNI KO'RSATISH API (Public)
+// ==========================================
+app.get('/fuzz/api/images/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const image = await c.env.DB.prepare('SELECT base64_data, mime_type FROM images WHERE id = ?').bind(id).first();
+    
+    if (!image) return c.json({ error: 'Rasm topilmadi' }, 404);
+
+    // Base64 dan binary ga o'girib qaytaramiz
+    const binaryStr = atob(image.base64_data);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+      bytes[i] = binaryStr.charCodeAt(i);
+    }
+
+    return c.body(bytes, 200, {
+      'Content-Type': image.mime_type || 'image/jpeg',
+      'Cache-Control': 'public, max-age=31536000'
+    });
+  } catch (err) {
+    return c.json({ error: 'Xato' }, 500);
+  }
 });
 
 // Auth Login
@@ -112,102 +166,71 @@ app.get('/fuzz/api/games', async (c) => {
   } catch (err) { return c.json({ games: [] }); }
 });
 
-// ==========================================
-// XARID QILISH VA KUTUBXONA API'LARI
-// ==========================================
-
-// 1. Foydalanuvchi kutubxonasini olish
-app.get('/fuzz/api/users/:userId/library', async (c) => {
-  try {
-    const userId = c.req.param('userId');
-    const library = await c.env.DB.prepare(`
-      SELECT g.* FROM games g
-      JOIN user_library ul ON g.id = ul.game_id
-      WHERE ul.user_id = ?
-    `).bind(userId).all();
-    return c.json({ games: library.results || [] });
-  } catch (err) { return c.json({ games: [] }); }
-});
-
-// 2. O'yinni sotib olish (Checkout)
+// Xarid qilish va boshqa API'lar (oldin yozilgan)
 app.post('/fuzz/api/store/buy', async (c) => {
   try {
     const { userId, gameId } = await c.req.json();
     if (!userId || !gameId) return c.json({ error: 'Ma\'lumot yetarli emas' }, 400);
 
-    // Foydalanuvchini va o'yinni olish
     const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first();
     const game = await c.env.DB.prepare('SELECT * FROM games WHERE id = ?').bind(gameId).first();
 
     if (!user) return c.json({ error: 'Foydalanuvchi topilmadi' }, 404);
     if (!game) return c.json({ error: 'O\'yin topilmadi' }, 404);
 
-    // Allaqachon sotib olinganligini tekshirish
     const owned = await c.env.DB.prepare('SELECT * FROM user_library WHERE user_id = ? AND game_id = ?').bind(userId, gameId).first();
     if (owned) return c.json({ error: 'Siz bu o\'yinni allaqachon sotib olgansiz!' }, 400);
 
-    // Narxni hisoblash (chegirma bilan)
     let finalPrice = game.price;
-    if (game.discount > 0) {
-      finalPrice = game.price - (game.price * (game.discount / 100));
-    }
+    if (game.discount > 0) finalPrice = game.price - (game.price * (game.discount / 100));
 
-    // Balansni tekshirish
-    if (user.balance < finalPrice) {
-      return c.json({ error: 'Balansingizda yetarli mablag\' yo\'q!' }, 400);
-    }
+    if (user.balance < finalPrice) return c.json({ error: 'Balansingizda yetarli mablag\' yo\'q!' }, 400);
 
-    // Balansdan yechish
     await c.env.DB.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').bind(finalPrice, userId).run();
-
-    // Kutubxonaga qo'shish
     const libraryId = crypto.randomUUID();
     await c.env.DB.prepare('INSERT INTO user_library (id, user_id, game_id) VALUES (?, ?, ?)').bind(libraryId, userId, gameId).run();
 
     return c.json({ message: 'O\'yin muvaffaqiyatli sotib olindi!', newBalance: user.balance - finalPrice });
-  } catch (err) {
-    return c.json({ error: 'Server xatosi' }, 500);
-  }
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
-// 3. O'yinni o'ynash (URL olish)
+app.get('/fuzz/api/users/:userId/library', async (c) => {
+  try {
+    const userId = c.req.param('userId');
+    const library = await c.env.DB.prepare(`SELECT g.* FROM games g JOIN user_library ul ON g.id = ul.game_id WHERE ul.user_id = ?`).bind(userId).all();
+    return c.json({ games: library.results || [] });
+  } catch (err) { return c.json({ games: [] }); }
+});
+
 app.get('/fuzz/api/games/:id/play', async (c) => {
   try {
     const gameId = c.req.param('id');
-    const userId = c.req.query('userId');
-    
     const game = await c.env.DB.prepare('SELECT * FROM games WHERE id = ?').bind(gameId).first();
     if (!game) return c.json({ error: 'O\'yin topilmadi' }, 404);
-
     return c.json({ game_url: game.game_url });
   } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
-// 4. O'yin vaqtini saqlash
 app.post('/fuzz/api/games/track-time', async (c) => {
   try {
     const { userId, gameId, seconds } = await c.req.json();
     if (!userId || !gameId || !seconds) return c.json({ error: 'Ma\'lumot yetarli emas' }, 400);
-
     const existing = await c.env.DB.prepare('SELECT * FROM game_stats WHERE user_id = ? AND game_id = ?').bind(userId, gameId).first();
-
     if (existing) {
       await c.env.DB.prepare('UPDATE game_stats SET total_seconds = total_seconds + ?, last_played = CURRENT_TIMESTAMP WHERE id = ?').bind(seconds, existing.id).run();
     } else {
       const id = crypto.randomUUID();
       await c.env.DB.prepare('INSERT INTO game_stats (id, user_id, game_id, total_seconds) VALUES (?, ?, ?, ?)').bind(id, userId, gameId, seconds).run();
     }
-
     return c.json({ success: true });
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
-// Console Commands (Admin)
+// Console Commands
 app.post('/fuzz/api/admin/console', async (c) => {
   try {
     const { command } = await c.req.json();
     if (!command) return c.json({ error: 'Buyruq kiritilmadi' }, 400);
-
     const parts = command.trim().split(/\s+/);
     const action = parts[0].toLowerCase();
     let response = '';
@@ -269,39 +292,18 @@ app.post('/fuzz/api/admin/console', async (c) => {
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
-// Admin: Userni o'chirish
+// Admin CRUD APIs
 app.delete('/fuzz/api/admin/users/:id', async (c) => {
-  try {
-    await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(c.req.param('id')).run();
-    return c.json({ success: true });
-  } catch (err) { return c.json({ error: 'Xato' }, 500); }
+  try { await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(c.req.param('id')).run(); return c.json({ success: true }); } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
-
-// Admin: Rolni o'zgartirish
 app.put('/fuzz/api/admin/users/:id/role', async (c) => {
-  try {
-    const { role } = await c.req.json();
-    await c.env.DB.prepare('UPDATE users SET role = ? WHERE id = ?').bind(role, c.req.param('id')).run();
-    return c.json({ success: true });
-  } catch (err) { return c.json({ error: 'Xato' }, 500); }
+  try { const { role } = await c.req.json(); await c.env.DB.prepare('UPDATE users SET role = ? WHERE id = ?').bind(role, c.req.param('id')).run(); return c.json({ success: true }); } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
-
-// Admin: O'yinni o'chirish
 app.delete('/fuzz/api/admin/games/:id', async (c) => {
-  try {
-    await c.env.DB.prepare('DELETE FROM games WHERE id = ?').bind(c.req.param('id')).run();
-    return c.json({ success: true });
-  } catch (err) { return c.json({ error: 'Xato' }, 500); }
+  try { await c.env.DB.prepare('DELETE FROM games WHERE id = ?').bind(c.req.param('id')).run(); return c.json({ success: true }); } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
-
-// Admin: Chegirma
 app.put('/fuzz/api/admin/games/:id/discount', async (c) => {
-  try {
-    const { discount } = await c.req.json();
-    if (discount < 10 || discount > 95) return c.json({ error: 'Chegirma 10% dan 95% gacha bo\'lishi shart!' }, 400);
-    await c.env.DB.prepare('UPDATE games SET discount = ? WHERE id = ?').bind(discount, c.req.param('id')).run();
-    return c.json({ success: true });
-  } catch (err) { return c.json({ error: 'Xato' }, 500); }
+  try { const { discount } = await c.req.json(); if (discount < 10 || discount > 95) return c.json({ error: '10-95 oralig\'ida!' }, 400); await c.env.DB.prepare('UPDATE games SET discount = ? WHERE id = ?').bind(discount, c.req.param('id')).run(); return c.json({ success: true }); } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
 export default app;

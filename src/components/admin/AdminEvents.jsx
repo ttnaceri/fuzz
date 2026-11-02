@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
 import useToast from '../hooks/useToast.js';
+import ImageUploader from '../common/ImageUploader.jsx';
 
 export default function AdminEvents() {
   const [events, setEvents] = useState([]);
@@ -27,8 +28,18 @@ export default function AdminEvents() {
       
       <form onSubmit={handleSubmit} style={{ backgroundColor: '#241411', padding: '1.5rem', borderRadius: '8px', border: '1px solid #48201a', marginBottom: '2rem', display: 'grid', gap: '1rem' }}>
         <input type="text" placeholder="Event Nomi" value={form.title} onChange={e => setForm({...form, title: e.target.value})} style={{ padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} required />
-        <input type="text" placeholder="Rasm URL" value={form.image} onChange={e => setForm({...form, image: e.target.value})} style={{ padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
+        
+        {/* Rasm yuklash */}
+        <div style={{ backgroundColor: '#19100e', padding: '1rem', borderRadius: '4px', border: '1px dashed #48201a' }}>
+          <ImageUploader 
+            label="Event Rasmi"
+            value={form.image} 
+            onChange={(url) => setForm({ ...form, image: url })} 
+          />
+        </div>
+
         <input type="text" placeholder="Havola (Link URL)" value={form.link_url} onChange={e => setForm({...form, link_url: e.target.value})} style={{ padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
+        
         <div style={{ display: 'flex', gap: '1rem' }}>
           <div style={{ flex: 1 }}>
             <label style={{ color: '#b9a6a2', fontSize: '0.8rem', marginBottom: '0.3rem', display: 'block' }}>Boshlanish vaqti</label>
@@ -39,6 +50,7 @@ export default function AdminEvents() {
             <input type="datetime-local" value={form.end_date} onChange={e => setForm({...form, end_date: e.target.value})} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#b9a6a2', borderRadius: '4px' }} required />
           </div>
         </div>
+        
         <button type="submit" style={{ padding: '0.8rem', backgroundColor: '#8a1200', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Event Rejalashtirish</button>
       </form>
 

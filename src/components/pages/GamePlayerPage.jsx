@@ -31,7 +31,6 @@ export default function GamePlayerPage() {
     const handleBeforeUnload = () => {
       if (secondsPlayed > 5) {
         const data = new Blob([JSON.stringify({ userId: user?.id, gameId: id, seconds: secondsPlayed })], { type: 'application/json' });
-        // To'g'rilangan URL
         navigator.sendBeacon(`${config.apiBaseUrl}/api/games/track-time`, data);
       }
     };

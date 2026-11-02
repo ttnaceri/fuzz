@@ -27,6 +27,7 @@ app.get('/fuzz/api/init-db', async (c) => {
     await c.env.DB.prepare(`CREATE TABLE IF NOT EXISTS games (id TEXT PRIMARY KEY, title TEXT NOT NULL, price REAL DEFAULT 0, genre TEXT, image TEXT, game_url TEXT, company_id TEXT, available INTEGER DEFAULT 1, discount INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`).run();
     await c.env.DB.prepare(`CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, title TEXT NOT NULL, image TEXT, link_url TEXT, start_date DATETIME, end_date DATETIME, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`).run();
     await c.env.DB.prepare(`CREATE TABLE IF NOT EXISTS user_library (id TEXT PRIMARY KEY, user_id TEXT, game_id TEXT, purchased_at DATETIME DEFAULT CURRENT_TIMESTAMP);`).run();
+    await c.env.DB.prepare(`CREATE TABLE IF NOT EXISTS game_stats (id TEXT PRIMARY KEY, user_id TEXT, game_id TEXT, total_seconds INTEGER DEFAULT 0, last_played DATETIME DEFAULT CURRENT_TIMESTAMP);`).run();
     return c.json({ message: "Barcha jadvallar yaratildi!" });
   } catch (err) { return c.json({ error: "Xato: " + err.message }, 500); }
 });
@@ -55,7 +56,7 @@ app.get('/fuzz/api/admin/stats', async (c) => {
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
-// Admin Users List
+// Admin Users
 app.get('/fuzz/api/admin/users', async (c) => {
   try {
     const users = await c.env.DB.prepare('SELECT id, username, email, role, balance FROM users').all();
@@ -88,9 +89,120 @@ app.get('/fuzz/api/admin/events', async (c) => {
   } catch (err) { return c.json({ events: [] }); }
 });
 
+// Public Companies
+app.get('/fuzz/api/companies', async (c) => {
+  try {
+    const companies = await c.env.DB.prepare('SELECT * FROM companies').all();
+    return c.json({ companies: companies.results || [] });
+  } catch (err) { return c.json({ companies: [] }); }
+});
+
+// Public Games
+app.get('/fuzz/api/games', async (c) => {
+  try {
+    const companyId = c.req.query('companyId');
+    let query = 'SELECT * FROM games WHERE available = 1';
+    let params = [];
+    if (companyId) {
+      query += ' AND company_id = ?';
+      params.push(companyId);
+    }
+    const games = await c.env.DB.prepare(query).bind(...params).all();
+    return c.json({ games: games.results || [] });
+  } catch (err) { return c.json({ games: [] }); }
+});
+
 // ==========================================
-// CONSOLE COMMANDS API (YANGI)
+// XARID QILISH VA KUTUBXONA API'LARI
 // ==========================================
+
+// 1. Foydalanuvchi kutubxonasini olish
+app.get('/fuzz/api/users/:userId/library', async (c) => {
+  try {
+    const userId = c.req.param('userId');
+    const library = await c.env.DB.prepare(`
+      SELECT g.* FROM games g
+      JOIN user_library ul ON g.id = ul.game_id
+      WHERE ul.user_id = ?
+    `).bind(userId).all();
+    return c.json({ games: library.results || [] });
+  } catch (err) { return c.json({ games: [] }); }
+});
+
+// 2. O'yinni sotib olish (Checkout)
+app.post('/fuzz/api/store/buy', async (c) => {
+  try {
+    const { userId, gameId } = await c.req.json();
+    if (!userId || !gameId) return c.json({ error: 'Ma\'lumot yetarli emas' }, 400);
+
+    // Foydalanuvchini va o'yinni olish
+    const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first();
+    const game = await c.env.DB.prepare('SELECT * FROM games WHERE id = ?').bind(gameId).first();
+
+    if (!user) return c.json({ error: 'Foydalanuvchi topilmadi' }, 404);
+    if (!game) return c.json({ error: 'O\'yin topilmadi' }, 404);
+
+    // Allaqachon sotib olinganligini tekshirish
+    const owned = await c.env.DB.prepare('SELECT * FROM user_library WHERE user_id = ? AND game_id = ?').bind(userId, gameId).first();
+    if (owned) return c.json({ error: 'Siz bu o\'yinni allaqachon sotib olgansiz!' }, 400);
+
+    // Narxni hisoblash (chegirma bilan)
+    let finalPrice = game.price;
+    if (game.discount > 0) {
+      finalPrice = game.price - (game.price * (game.discount / 100));
+    }
+
+    // Balansni tekshirish
+    if (user.balance < finalPrice) {
+      return c.json({ error: 'Balansingizda yetarli mablag\' yo\'q!' }, 400);
+    }
+
+    // Balansdan yechish
+    await c.env.DB.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').bind(finalPrice, userId).run();
+
+    // Kutubxonaga qo'shish
+    const libraryId = crypto.randomUUID();
+    await c.env.DB.prepare('INSERT INTO user_library (id, user_id, game_id) VALUES (?, ?, ?)').bind(libraryId, userId, gameId).run();
+
+    return c.json({ message: 'O\'yin muvaffaqiyatli sotib olindi!', newBalance: user.balance - finalPrice });
+  } catch (err) {
+    return c.json({ error: 'Server xatosi' }, 500);
+  }
+});
+
+// 3. O'yinni o'ynash (URL olish)
+app.get('/fuzz/api/games/:id/play', async (c) => {
+  try {
+    const gameId = c.req.param('id');
+    const userId = c.req.query('userId');
+    
+    const game = await c.env.DB.prepare('SELECT * FROM games WHERE id = ?').bind(gameId).first();
+    if (!game) return c.json({ error: 'O\'yin topilmadi' }, 404);
+
+    return c.json({ game_url: game.game_url });
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
+});
+
+// 4. O'yin vaqtini saqlash
+app.post('/fuzz/api/games/track-time', async (c) => {
+  try {
+    const { userId, gameId, seconds } = await c.req.json();
+    if (!userId || !gameId || !seconds) return c.json({ error: 'Ma\'lumot yetarli emas' }, 400);
+
+    const existing = await c.env.DB.prepare('SELECT * FROM game_stats WHERE user_id = ? AND game_id = ?').bind(userId, gameId).first();
+
+    if (existing) {
+      await c.env.DB.prepare('UPDATE game_stats SET total_seconds = total_seconds + ?, last_played = CURRENT_TIMESTAMP WHERE id = ?').bind(seconds, existing.id).run();
+    } else {
+      const id = crypto.randomUUID();
+      await c.env.DB.prepare('INSERT INTO game_stats (id, user_id, game_id, total_seconds) VALUES (?, ?, ?, ?)').bind(id, userId, gameId, seconds).run();
+    }
+
+    return c.json({ success: true });
+  } catch (err) { return c.json({ error: 'Xato' }, 500); }
+});
+
+// Console Commands (Admin)
 app.post('/fuzz/api/admin/console', async (c) => {
   try {
     const { command } = await c.req.json();
@@ -98,131 +210,63 @@ app.post('/fuzz/api/admin/console', async (c) => {
 
     const parts = command.trim().split(/\s+/);
     const action = parts[0].toLowerCase();
-    
     let response = '';
 
-    // 1. KILL (User yoki O'yinni o'chirish)
     if (action === 'kill') {
       const target = parts[1];
-      if (!target) return c.json({ error: 'Kimni yoki nimani o\'chirish kerakligini kiriting' }, 400);
-      
-      if (target.toLowerCase() === 'all') {
+      if (target === 'all') {
         await c.env.DB.prepare('DELETE FROM users WHERE role != "admin"').run();
         response = "Barcha oddiy foydalanuvchilar o'chirildi.";
       } else {
-        // Username yoki GameID ekanligini tekshirish
         const user = await c.env.DB.prepare('SELECT * FROM users WHERE username = ?').bind(target).first();
         if (user) {
           await c.env.DB.prepare('DELETE FROM users WHERE username = ?').bind(target).run();
           response = `Foydalanuvchi ${target} o'chirildi.`;
         } else {
-          const game = await c.env.DB.prepare('SELECT * FROM games WHERE id = ?').bind(target).first();
-          if (game) {
-            await c.env.DB.prepare('DELETE FROM games WHERE id = ?').bind(target).run();
-            response = `O'yin ${target} o'chirildi.`;
-          } else {
-            response = `"${target}" nomli foydalanuvchi yoki o'yin topilmadi.`;
-          }
+          await c.env.DB.prepare('DELETE FROM games WHERE id = ?').bind(target).run();
+          response = `O'yin ${target} o'chirildi.`;
         }
       }
-    }
-    
-    // 2. GIVE (Pul yoki O'yin berish)
-    else if (action === 'give') {
+    } else if (action === 'give') {
       const targetUser = parts[1];
       const typeOrId = parts[2];
       const amount = parts[3];
-
-      if (!targetUser) return c.json({ error: 'Foydalanuvchini kiriting' }, 400);
-
       if (amount && !isNaN(amount)) {
-        // Pul berish (give user USD 100)
         await c.env.DB.prepare('UPDATE users SET balance = balance + ? WHERE username = ?').bind(parseFloat(amount), targetUser).run();
         response = `${targetUser} ga $${amount} qo'shildi.`;
       } else {
-        // O'yin berish (give user GameID)
-        const gameId = typeOrId;
         const user = await c.env.DB.prepare('SELECT * FROM users WHERE username = ?').bind(targetUser).first();
         if (!user) return c.json({ error: 'Foydalanuvchi topilmadi' }, 404);
-        
         const id = crypto.randomUUID();
-        await c.env.DB.prepare('INSERT INTO user_library (id, user_id, game_id) VALUES (?, ?, ?)').bind(id, user.id, gameId).run();
-        response = `${targetUser} ga o'yin (${gameId}) qo'shildi.`;
+        await c.env.DB.prepare('INSERT INTO user_library (id, user_id, game_id) VALUES (?, ?, ?)').bind(id, user.id, typeOrId).run();
+        response = `${targetUser} ga o'yin qo'shildi.`;
       }
-    }
-
-    // 3. TAKE (Pul yoki O'yinni tortib olish)
-    else if (action === 'take') {
-      const targetUser = parts[1];
-      const typeOrId = parts[2];
-      const amount = parts[3];
-
-      if (amount && !isNaN(amount)) {
-        await c.env.DB.prepare('UPDATE users SET balance = balance - ? WHERE username = ?').bind(parseFloat(amount), targetUser).run();
-        response = `${targetUser} dan $${amount} ayirildi.`;
-      } else {
-        response = `${targetUser} dan o'yin olib tashlandi.`;
-      }
-    }
-
-    // 4. DISCOUNT (Chegirma)
-    else if (action === 'discount') {
+    } else if (action === 'discount') {
       const gameId = parts[1];
       const percent = parseInt(parts[2]);
       if (percent < 10 || percent > 95) return c.json({ error: 'Chegirma 10% dan 95% gacha bo\'lishi kerak!' }, 400);
-      
       await c.env.DB.prepare('UPDATE games SET discount = ? WHERE id = ?').bind(percent, gameId).run();
-      response = `${gameId} o'yiniga ${percent}% chegirma qo'llanildi.`;
-    }
-
-    // 5. NEWNAME (Yangi user yaratish)
-    else if (action === 'newname' || action === 'newuser') {
+      response = `Chegirma qo'llanildi.`;
+    } else if (action === 'newname' || action === 'newuser') {
       const newName = parts[1];
       const newBalance = parseFloat(parts[2]) || 0;
-      
-      if (!newName || !isNameValid(newName)) return c.json({ error: 'Nom noto\'g\'ri yoki taqiqlangan!' }, 400);
-      
+      if (!newName || !isNameValid(newName)) return c.json({ error: 'Nom noto\'g\'ri!' }, 400);
       const id = crypto.randomUUID();
-      await c.env.DB.prepare('INSERT INTO users (id, username, email, password, role, balance) VALUES (?, ?, ?, ?, ?, ?)')
-        .bind(id, newName, `${newName}@temp.com`, '123456', 'user', newBalance).run();
-      response = `${newName} nomli foydalanuvchi yaratildi. Balans: $${newBalance}`;
-    }
-
-    // 6. NEWUPD (Rolni o'zgartirish)
-    else if (action === 'newupd') {
+      await c.env.DB.prepare('INSERT INTO users (id, username, email, password, role, balance) VALUES (?, ?, ?, ?, ?, ?)').bind(id, newName, `${newName}@temp.com`, '123456', 'user', newBalance).run();
+      response = `${newName} yaratildi.`;
+    } else if (action === 'ban') {
       const username = parts[1];
-      const newRole = parts[2];
-      
-      await c.env.DB.prepare('UPDATE users SET role = ? WHERE username = ?').bind(newRole, username).run();
-      response = `${username} ning roli ${newRole} ga o'zgartirildi.`;
-    }
-
-    // 7. BAN (Bloklash)
-    else if (action === 'ban') {
-      const username = parts[1];
-      const reason = parts.slice(2).join(' ') || 'Sababsiz';
-      
       await c.env.DB.prepare('UPDATE users SET role = "banned" WHERE username = ?').bind(username).run();
-      response = `${username} bloklandi. Sabab: ${reason}`;
-    }
-
-    // 8. UNBAN (Blokdan chiqarish)
-    else if (action === 'unban') {
+      response = `${username} bloklandi.`;
+    } else if (action === 'unban') {
       const username = parts[1];
       await c.env.DB.prepare('UPDATE users SET role = "user" WHERE username = ?').bind(username).run();
       response = `${username} blokdan chiqarildi.`;
-    }
-
-    // 9. HELP
-    else if (action === 'help') {
+    } else if (action === 'help') {
       response = 'kill, give, take, discount, newName, newUpd, ban, unBan, open, clear, exit';
     }
-
     return c.json({ message: response });
-
-  } catch (err) {
-    return c.json({ error: 'Buyruqni bajarishda xato: ' + err.message }, 500);
-  }
+  } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
 // Admin: Userni o'chirish

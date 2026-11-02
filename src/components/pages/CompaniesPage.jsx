@@ -7,7 +7,7 @@ export default function CompaniesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/api/admin/companies')
+    api.get('/api/companies')
       .then(data => {
         setCompanies(data.companies || []);
         setLoading(false);

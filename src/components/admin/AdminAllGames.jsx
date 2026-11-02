@@ -37,15 +37,11 @@ export default function AdminAllGames() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
         <h1 style={{ color: '#f5eeee', margin: 0 }}>Barcha O'yinlar</h1>
-        <Link to="/admin/new-game" style={{ backgroundColor: '#8a1200', color: '#fff', padding: '0.6rem 1.2rem', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold' }}>
-          + Yangi Qo'shish
-        </Link>
+        <Link to="/admin/new-game" style={{ backgroundColor: '#8a1200', color: '#fff', padding: '0.6rem 1.2rem', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold' }}>+ Yangi Qo'shish</Link>
       </div>
-
       <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#241411', borderRadius: '8px', border: '1px solid #48201a' }}>
         <thead>
           <tr style={{ backgroundColor: '#19100e', color: '#b9a6a2', textAlign: 'left' }}>
-            <th style={{ padding: '1rem' }}>Rasm</th>
             <th style={{ padding: '1rem' }}>Nomi</th>
             <th style={{ padding: '1rem' }}>Narxi</th>
             <th style={{ padding: '1rem' }}>Chegirma</th>
@@ -55,7 +51,6 @@ export default function AdminAllGames() {
         <tbody>
           {games.map(g => (
             <tr key={g.id} style={{ borderBottom: '1px solid #48201a', color: '#f5eeee' }}>
-              <td style={{ padding: '1rem' }}>{g.image ? <img src={g.image} style={{width: 50, height: 30, objectFit:'cover', borderRadius: 4}}/> : 'Yo\'q'}</td>
               <td style={{ padding: '1rem', fontWeight: 'bold' }}>{g.title}</td>
               <td style={{ padding: '1rem', color: '#43b581' }}>${g.price}</td>
               <td style={{ padding: '1rem' }}>

@@ -1,17 +1,27 @@
-import { useState } from 'react'; // IMPORT QILINDI
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
 import useToast from '../hooks/useToast.js';
 
 export default function AdminNewGame() {
-  const [form, setForm] = useState({ title: '', price: '', genre: 'Web Game', image: '', game_url: '' });
+  const [form, setForm] = useState({ title: '', price: '', genre: '', image: '', game_url: '', company_id: '' });
+  const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(false);
   const { success, error: toastError } = useToast();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    // Kompaniyalar ro'yxatini yuklash
+    api.get('/api/admin/companies')
+      .then(data => setCompanies(data.companies || []))
+      .catch(() => toastError("Kompaniyalarni yuklashda xato"));
+  }, [toastError]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.title || !form.price || !form.game_url) return toastError("Nom, Narx va URL ni kiriting!");
+    if (!form.title || !form.price || !form.game_url || !form.company_id) {
+      return toastError("Barcha majburiy maydonlarni to'ldiring!");
+    }
 
     setLoading(true);
     try {
@@ -41,13 +51,19 @@ export default function AdminNewGame() {
             <input type="number" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} placeholder="0.00" step="0.01" />
           </div>
           <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', color: '#b9a6a2', marginBottom: '0.5rem' }}>Janri</label>
-            <select value={form.genre} onChange={e => setForm({ ...form, genre: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }}>
-              <option value="Web Game">Web Game</option>
-              <option value="3D Shooter">3D Shooter</option>
-              <option value="2D Platformer">2D Platformer</option>
-            </select>
+            <label style={{ display: 'block', color: '#b9a6a2', marginBottom: '0.5rem' }}>Janrlar</label>
+            <input type="text" value={form.genre} onChange={e => setForm({ ...form, genre: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} placeholder="Action, FPS" />
           </div>
+        </div>
+
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ display: 'block', color: '#b9a6a2', marginBottom: '0.5rem' }}>Kompaniya *</label>
+          <select value={form.company_id} onChange={e => setForm({ ...form, company_id: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }}>
+            <option value="">Kompaniyani tanlang</option>
+            {companies.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
         </div>
 
         <div style={{ marginBottom: '1rem', backgroundColor: 'rgba(67, 181, 129, 0.1)', padding: '1rem', borderRadius: '4px', border: '1px solid #43b581' }}>
@@ -57,7 +73,7 @@ export default function AdminNewGame() {
 
         <div style={{ marginBottom: '1.5rem' }}>
           <label style={{ display: 'block', color: '#b9a6a2', marginBottom: '0.5rem' }}>Rasm URL manzili (Cover)</label>
-          <input type="text" value={form.image} onChange={e => setForm({ ...form, image: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} placeholder="https://site.com/rasm.jpg yoki /image/games/rasm.jpg" />
+          <input type="text" value={form.image} onChange={e => setForm({ ...form, image: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} placeholder="https://site.com/rasm.jpg" />
         </div>
 
         <button type="submit" disabled={loading} style={{ backgroundColor: '#8a1200', color: '#fff', padding: '0.8rem', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}>

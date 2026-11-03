@@ -792,4 +792,179 @@ app.post('/fuzz/telegram/webhook', async (c) => {
   } catch (err) { return c.json({ error: 'Webhook xatosi' }, 500); }
 });
 
+// ==========================================
+// RATES API (Valyuta kurslari)
+// ==========================================
+app.get('/fuzz/api/admin/rates', async (c) => {
+  try {
+    const rates = await c.env.DB.prepare('SELECT * FROM rates').all();
+    return c.json({ rates: rates.results || [] });
+  } catch (err) { return c.json({ rates: [] }); }
+});
+
+app.post('/fuzz/api/admin/rates', async (c) => {
+  try {
+    const { currency, rate, source } = await c.req.json();
+    const id = crypto.randomUUID();
+    await c.env.DB.prepare('INSERT INTO rates (id, currency, rate, source) VALUES (?, ?, ?, ?)')
+      .bind(id, currency, parseFloat(rate), source || 'manual').run();
+    return c.json({ message: "Kurs saqlandi!", id }, 201);
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
+});
+
+// ==========================================
+// SERVER STATUS API
+// ==========================================
+app.get('/fuzz/api/admin/server', async (c) => {
+  try {
+    // Simulyatsiya (haqiqiy serverda real ma'lumotlar bo'ladi)
+    return c.json({
+      status: 'online',
+      uptime: '99.9%',
+      cpu: Math.floor(Math.random() * 30) + 20,
+      ram: Math.floor(Math.random() * 40) + 40,
+      storage: Math.floor(Math.random() * 20) + 60,
+      api_requests: Math.floor(Math.random() * 1000) + 500,
+      errors: Math.floor(Math.random() * 5),
+    });
+  } catch (err) { return c.json({ error: 'Xato' }, 500); }
+});
+
+// ==========================================
+// TELEGRAM SUPPORT API
+// ==========================================
+app.get('/fuzz/api/admin/telegram/messages', async (c) => {
+  try {
+    const messages = await c.env.DB.prepare('SELECT * FROM support_messages ORDER BY created_at DESC').all();
+    return c.json({ messages: messages.results || [] });
+  } catch (err) { return c.json({ messages: [] }); }
+});
+
+app.post('/fuzz/api/admin/telegram/reply', async (c) => {
+  try {
+    const { chatId, text } = await c.req.json();
+    const BOT_TOKEN = c.env.BOT_TOKEN;
+    if (!BOT_TOKEN) return c.json({ error: 'Bot token yo\'q' }, 500);
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text })
+    });
+    return c.json({ success: true });
+  } catch (err) { return c.json({ error: 'Xato' }, 500); }
+});
+
+// ==========================================
+// API KEYS (YANGI)
+// ==========================================
+app.get('/fuzz/api/admin/api-keys', async (c) => {
+  try {
+    const keys = await c.env.DB.prepare('SELECT * FROM api_keys').all();
+    return c.json({ keys: keys.results || [] });
+  } catch (err) { return c.json({ keys: [] }); }
+});
+
+app.post('/fuzz/api/admin/api-keys', async (c) => {
+  try {
+    const { description, permissions, expires_at } = await c.req.json();
+    const id = crypto.randomUUID();
+    const keyValue = 'fz_live_' + crypto.randomUUID().replace(/-/g, '');
+    await c.env.DB.prepare('INSERT INTO api_keys (id, key_value, description, permissions, expires_at) VALUES (?, ?, ?, ?, ?)')
+      .bind(id, keyValue, description || '', permissions || '', expires_at || null).run();
+    return c.json({ message: "API Key yaratildi!", key: keyValue }, 201);
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
+});
+
+app.delete('/fuzz/api/admin/api-keys/:id', async (c) => {
+  try {
+    await c.env.DB.prepare('DELETE FROM api_keys WHERE id = ?').bind(c.req.param('id')).run();
+    return c.json({ success: true });
+  } catch (err) { return c.json({ error: 'Xato' }, 500); }
+});
+
+// ==========================================
+// WEBHOOKS (YANGI)
+// ==========================================
+app.get('/fuzz/api/admin/webhooks', async (c) => {
+  try {
+    const webhooks = await c.env.DB.prepare('SELECT * FROM webhooks').all();
+    return c.json({ webhooks: webhooks.results || [] });
+  } catch (err) { return c.json({ webhooks: [] }); }
+});
+
+app.post('/fuzz/api/admin/webhooks', async (c) => {
+  try {
+    const { name, url, event_type, secret } = await c.req.json();
+    if (!name || !url) return c.json({ error: 'Nom va URL ni kiriting!' }, 400);
+    const id = crypto.randomUUID();
+    await c.env.DB.prepare('INSERT INTO webhooks (id, name, url, event_type, secret) VALUES (?, ?, ?, ?, ?)')
+      .bind(id, name, url, event_type || 'all', secret || '').run();
+    return c.json({ message: "Webhook yaratildi!", id }, 201);
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
+});
+
+app.delete('/fuzz/api/admin/webhooks/:id', async (c) => {
+  try {
+    await c.env.DB.prepare('DELETE FROM webhooks WHERE id = ?').bind(c.req.param('id')).run();
+    return c.json({ success: true });
+  } catch (err) { return c.json({ error: 'Xato' }, 500); }
+});
+
+// ==========================================
+// BACKEND SERVICES (YANGI)
+// ==========================================
+app.get('/fuzz/api/admin/backend', async (c) => {
+  try {
+    const services = await c.env.DB.prepare('SELECT * FROM backend_services').all();
+    return c.json({ services: services.results || [] });
+  } catch (err) { return c.json({ services: [] }); }
+});
+
+app.post('/fuzz/api/admin/backend', async (c) => {
+  try {
+    const { name, url, status } = await c.req.json();
+    const id = crypto.randomUUID();
+    await c.env.DB.prepare('INSERT INTO backend_services (id, name, url, status) VALUES (?, ?, ?, ?)')
+      .bind(id, name, url, status || 'active').run();
+    return c.json({ message: "Xizmat qo'shildi!", id }, 201);
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
+});
+
+// ==========================================
+// ROLES & PERMISSIONS (YANGI)
+// ==========================================
+app.get('/fuzz/api/admin/roles', async (c) => {
+  try {
+    const roles = await c.env.DB.prepare('SELECT * FROM roles').all();
+    return c.json({ roles: roles.results || [] });
+  } catch (err) { return c.json({ roles: [] }); }
+});
+
+app.post('/fuzz/api/admin/roles', async (c) => {
+  try {
+    const { name, description, permissions } = await c.req.json();
+    if (!name) return c.json({ error: 'Rol nomini kiriting!' }, 400);
+    const id = crypto.randomUUID();
+    await c.env.DB.prepare('INSERT INTO roles (id, name, description, permissions) VALUES (?, ?, ?, ?)')
+      .bind(id, name, description || '', JSON.stringify(permissions || [])).run();
+    return c.json({ message: "Rol yaratildi!", id }, 201);
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
+});
+
+app.put('/fuzz/api/admin/roles/:id', async (c) => {
+  try {
+    const { name, description, permissions } = await c.req.json();
+    await c.env.DB.prepare('UPDATE roles SET name = ?, description = ?, permissions = ? WHERE id = ?')
+      .bind(name, description || '', JSON.stringify(permissions || []), c.req.param('id')).run();
+    return c.json({ success: true });
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
+});
+
+app.delete('/fuzz/api/admin/roles/:id', async (c) => {
+  try {
+    await c.env.DB.prepare('DELETE FROM roles WHERE id = ?').bind(c.req.param('id')).run();
+    return c.json({ success: true });
+  } catch (err) { return c.json({ error: 'Xato' }, 500); }
+});
+
 export default app;

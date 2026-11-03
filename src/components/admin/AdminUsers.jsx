@@ -24,9 +24,7 @@ export default function AdminUsers() {
     } catch { toastError("Xato"); }
   };
 
-  const handleEdit = (user) => {
-    setEditUser({ ...user });
-  };
+  const handleEdit = (user) => setEditUser({ ...user });
 
   const handleSave = async () => {
     try {

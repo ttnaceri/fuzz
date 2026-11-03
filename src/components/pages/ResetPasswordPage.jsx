@@ -1,32 +1,58 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useToast from '../hooks/useToast.js';
+import { api } from '../services/api.js';
 
-export default function ResetPasswordPage() {
-  const [tgId, setTgId] = useState('');
-  const { success, info } = useToast();
+export default function ChangePasswordPage() {
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const { success, error: toastError } = useToast();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const username = sessionStorage.getItem('reset_username');
+  const code = sessionStorage.getItem('reset_code');
+
+  useEffect(() => {
+    if (!username || !code) {
+      navigate('/reset-password');
+    }
+  }, [username, code, navigate]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!tgId) return info("Telegram ID ni kiriting!");
-    sessionStorage.setItem('reset_tg_id', tgId);
-    success("Kod yuborildi! Telegram botni tekshiring.");
-    navigate('/reset-password/code');
+    if (password !== confirm) return toastError("Parollar mos kelmadi!");
+    if (password.length < 6) return toastError("Parol kamida 6 belgidan iborat bo'lishi kerak!");
+
+    try {
+      await api.post('/api/auth/reset-password', { username, code, newPassword: password });
+      success("Parol muvaffaqiyatli o'zgartirildi!");
+      sessionStorage.removeItem('reset_username');
+      sessionStorage.removeItem('reset_code');
+      navigate('/login');
+    } catch (err) {
+      toastError(err.message || "Xatolik yuz berdi");
+    }
   };
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 64px)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#100b0a' }}>
+    <div style={{ minHeight: 'calc(100vh - 64px)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#100b0a', padding: '2rem 1rem' }}>
       <div style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', width: '100%', maxWidth: '400px', border: '1px solid #48201a' }}>
-        <h2 style={{ color: '#8a1200', textAlign: 'center', marginBottom: '1.5rem' }}>Reset Password</h2>
-        <p style={{ color: '#b9a6a2', fontSize: '0.9rem', marginBottom: '1.5rem', textAlign: 'center' }}>Enter your Telegram ID to receive a code.</p>
+        <h2 style={{ color: '#f5eeee', textAlign: 'center', marginBottom: '1rem' }}>Yangi Parol</h2>
+        <p style={{ color: '#b9a6a2', fontSize: '0.9rem', marginBottom: '1.5rem', textAlign: 'center' }}>
+          Yangi parolingizni o'ylab toping va kiriting.
+        </p>
+        
         <form onSubmit={handleSubmit}>
-          <input type="text" placeholder="Telegram ID" value={tgId} onChange={e => setTgId(e.target.value)} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', marginBottom: '1rem', boxSizing: 'border-box' }} />
-          <button type="submit" style={{ width: '100%', padding: '0.8rem', backgroundColor: '#8a1200', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Send Code</button>
+          <div style={{ marginBottom: '1rem' }}>
+            <input type="password" placeholder="Yangi Parol" value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', boxSizing: 'border-box' }} />
+          </div>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <input type="password" placeholder="Parolni tasdiqlang" value={confirm} onChange={(e) => setConfirm(e.target.value)} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', boxSizing: 'border-box' }} />
+          </div>
+          <button type="submit" style={{ width: '100%', padding: '0.8rem', backgroundColor: '#8a1200', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+            Parolni Yangilash
+          </button>
         </form>
-        <div style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.85rem' }}>
-          <Link to="/login" style={{ color: '#b9a6a2' }}>Back to Login</Link>
-        </div>
       </div>
     </div>
   );

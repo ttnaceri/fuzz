@@ -17,7 +17,18 @@ export default function LoginPage() {
   const [apiError, setApiError] = useState('');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
-  // Check if device is mobile
+  // QR token faqat bir marta yaratiladi va 30 soniyada bir yangilanadi
+  const [qrToken, setQrToken] = useState('fuzz_qr_' + Math.random().toString(36).substring(7));
+
+  // Har 30 soniyada QR kodni yangilash
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setQrToken('fuzz_qr_' + Math.random().toString(36).substring(7));
+    }, 30000); // 30 soniya
+    return () => clearInterval(interval);
+  }, []);
+
+  // Mobil ekanligini aniqlash
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 768);
     checkMobile();
@@ -25,7 +36,6 @@ export default function LoginPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const qrToken = 'fuzz_qr_' + Math.random().toString(36).substring(7);
   const qrUrl = `https://fuzz-tau.vercel.app/qr-auth?token=${qrToken}`;
 
   const handleLogin = async (e) => {
@@ -39,8 +49,6 @@ export default function LoginPage() {
     try {
       await login(form);
       success('Tizimga muvaffaqiyatli kirdingiz!');
-      
-      // If user is admin, go to /admin, else /account
       navigate(location.state?.from || '/account', { replace: true });
     } catch (err) {
       setApiError(err.message || 'Xato yuz berdi');
@@ -49,7 +57,6 @@ export default function LoginPage() {
     }
   };
 
-  // --- INLINE CSS (Steam Layout, Fuzz Design) ---
   const styles = {
     wrapper: { minHeight: 'calc(100vh - 64px)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#100b0a', padding: '2rem 1rem' },
     box: { backgroundColor: '#241411', border: '1px solid #48201a', borderRadius: '8px', width: '100%', maxWidth: '750px', boxShadow: '0 10px 40px rgba(0,0,0,0.8)' },
@@ -63,25 +70,21 @@ export default function LoginPage() {
     footer: { backgroundColor: '#19100e', padding: '1.2rem 2rem', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #48201a', fontSize: '0.85rem', color: '#b9a6a2' }
   };
 
-  // --- MOBILE QR SCANNER VIEW ---
+  // Mobil QR skaner rejimi
   if (isMobileScanMode && isMobile) {
     return (
       <div style={styles.wrapper}>
         <div style={{ ...styles.box, maxWidth: '400px', textAlign: 'center', padding: '2rem' }}>
           <h2 style={{ color: '#f5eeee', marginBottom: '1rem' }}>QR Skaner</h2>
-          <p style={{ color: '#b9a6a2', marginBottom: '2rem' }}>Kamerani kompyuteringizdagi QR kodga qarating.</p>
-          
           <div style={{ width: '250px', height: '250px', border: '2px dashed #8a1200', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px' }}>
             <i className="fa-solid fa-camera" style={{ fontSize: '3rem', color: '#48201a' }}></i>
           </div>
-          
           <button onClick={() => navigate('/login')} className="btn btn-ghost" style={{ marginTop: '2rem' }}>Orqaga qaytish</button>
         </div>
       </div>
     );
   }
 
-  // --- STANDARD LOGIN VIEW (Desktop & Mobile Form) ---
   return (
     <div style={styles.wrapper}>
       <div style={styles.box}>
@@ -92,16 +95,30 @@ export default function LoginPage() {
             
             <form onSubmit={handleLogin}>
               <div style={{ marginBottom: '1.2rem' }}>
-                <input type="text" style={styles.input} placeholder="Account Name (Username)" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
+                <input 
+                  type="text" 
+                  style={styles.input} 
+                  placeholder="Account Name (Username)" 
+                  value={form.username} 
+                  onChange={(e) => setForm({ ...form, username: e.target.value })} 
+                />
               </div>
               <div style={{ marginBottom: '1.2rem' }}>
-                <input type="password" style={styles.input} placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+                <input 
+                  type="password" 
+                  style={styles.input} 
+                  placeholder="Password" 
+                  value={form.password} 
+                  onChange={(e) => setForm({ ...form, password: e.target.value })} 
+                />
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', color: '#b9a6a2', fontSize: '0.85rem' }}>
                 <input type="checkbox" id="remember" style={{ accentColor: '#8a1200' }} />
                 <label htmlFor="remember">Remember me</label>
               </div>
-              <button type="submit" style={styles.btnPrimary} disabled={loading}>{loading ? 'Signing in...' : 'Sign in'}</button>
+              <button type="submit" style={styles.btnPrimary} disabled={loading}>
+                {loading ? 'Signing in...' : 'Sign in'}
+              </button>
             </form>
             
             <div style={{ marginTop: '1rem', fontSize: '0.85rem' }}>
@@ -109,7 +126,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Show QR Code ONLY on Desktop */}
           {!isMobile && (
             <div style={styles.qrSide}>
               <h3 style={styles.title}>OR SIGN IN WITH QR</h3>

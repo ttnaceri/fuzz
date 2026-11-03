@@ -13,10 +13,7 @@ export default function RegisterFormPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // 1. URL dan tgId ni tekshirish (Telegram WebApp dan kelgan bo'lsa)
     const urlTgId = searchParams.get('tgId');
-    
-    // 2. Sessiyadan tekshirish
     const sessionTgId = sessionStorage.getItem('reg_tg_id');
 
     if (urlTgId) {
@@ -40,22 +37,15 @@ export default function RegisterFormPage() {
 
     setLoading(true);
     try {
-      // Backendga yuboriladigan ma'lumotlar
-      const payload = {
+      await api.post('/api/auth/register', {
         username: form.username,
         email: form.email,
         password: form.password,
         telegramId: tgId
-      };
-
-      console.log("Yuborilayotgan ma'lumot:", payload);
-
-      await api.post('/api/auth/register', payload);
+      });
       
       success("Muvaffaqiyatli ro'yxatdan o'tdingiz! Endi tizimga kiring.");
       sessionStorage.removeItem('reg_tg_id');
-      
-      // Login sahifasiga o'tish
       navigate('/login');
       
     } catch (err) {
@@ -67,68 +57,35 @@ export default function RegisterFormPage() {
 
   return (
     <div style={{ minHeight: 'calc(100vh - 64px)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#100b0a', padding: '2rem 1rem' }}>
-      <div style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', width: '100%', maxWidth: '450px', border: '1px solid #48201a', boxShadow: '0 10px 40px rgba(0,0,0,0.8)' }}>
-        <h2 style={{ color: '#f5eeee', textAlign: 'center', marginBottom: '0.5rem', fontSize: '1.5rem' }}>Akkauntni yakunlash</h2>
+      <div style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', width: '100%', maxWidth: '450px', border: '1px solid #48201a' }}>
+        <h2 style={{ color: '#f5eeee', textAlign: 'center', marginBottom: '0.5rem' }}>Akkauntni yakunlash</h2>
         
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
           <span style={{ backgroundColor: 'rgba(67, 181, 129, 0.2)', color: '#43b581', padding: '0.4rem 0.8rem', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}>
-            <i className="fa-solid fa-check-circle"></i> Telegram ID ulandi: {tgId}
+            <i className="fa-solid fa-check-circle"></i> Telegram ID: {tgId}
           </span>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '1rem' }}>
-            <input
-              type="email"
-              placeholder="Email Address"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', boxSizing: 'border-box' }}
-              required
-            />
-          </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <input
-              type="email"
-              placeholder="Confirm Email"
-              value={form.confirmEmail}
-              onChange={(e) => setForm({ ...form, confirmEmail: e.target.value })}
-              style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', boxSizing: 'border-box' }}
-              required
-            />
-          </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <input
-              type="text"
-              placeholder="Username"
-              value={form.username}
-              onChange={(e) => setForm({ ...form, username: e.target.value })}
-              style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', boxSizing: 'border-box' }}
-              required
-            />
-          </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <input
-              type="password"
-              placeholder="Password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', boxSizing: 'border-box' }}
-              required
-            />
-          </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <input
-              type="password"
-              placeholder="Confirm Password"
-              value={form.confirmPassword}
-              onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-              style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', boxSizing: 'border-box' }}
-              required
-            />
-          </div>
-          
-          <button type="submit" disabled={loading} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#8a1200', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', marginTop: '1rem', fontSize: '1rem' }}>
+          {[
+            { name: 'email', label: 'Email Address', type: 'email' },
+            { name: 'confirmEmail', label: 'Confirm Email', type: 'email' },
+            { name: 'username', label: 'Username', type: 'text' },
+            { name: 'password', label: 'Password', type: 'password' },
+            { name: 'confirmPassword', label: 'Confirm Password', type: 'password' }
+          ].map((field) => (
+            <div key={field.name} style={{ marginBottom: '1rem' }}>
+              <input
+                type={field.type}
+                placeholder={field.label}
+                value={form[field.name]}
+                onChange={(e) => setForm({ ...form, [field.name]: e.target.value })}
+                style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', boxSizing: 'border-box' }}
+                required
+              />
+            </div>
+          ))}
+          <button type="submit" disabled={loading} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#8a1200', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', marginTop: '1rem' }}>
             {loading ? 'Yuborilmoqda...' : 'Ro\'yxatdan o\'tish'}
           </button>
         </form>

@@ -506,4 +506,92 @@ app.post('/fuzz/api/admin/console', async (c) => {
   }
 });
 
+// ==========================================
+// REGISTER & RESET PASSWORD UCHUN MAXSUS API'LAR
+// ==========================================
+
+// 1. Telegram ID mavjudligini tekshirish va kod yuborish (Reset Password)
+app.post('/fuzz/api/auth/reset-request', async (c) => {
+  try {
+    const { username, email, passwordEnd, telegramId } = await c.req.json();
+    
+    // Foydalanuvchini tekshirish
+    const user = await c.env.DB.prepare('SELECT * FROM users WHERE username = ? AND email = ?').bind(username, email).first();
+    if (!user) return c.json({ error: 'Bunday foydalanuvchi topilmadi!' }, 404);
+
+    // Agar parol oxiri kiritilgan bo'lsa, tekshiramiz (ixtiyoriy)
+    if (passwordEnd && user.password.slice(-2) !== passwordEnd) {
+      return c.json({ error: 'Parolning oxirgi 2 belgisi xato!' }, 400);
+    }
+
+    // 5 xonali kod yaratish
+    const code = Math.floor(10000 + Math.random() * 90000).toString();
+    
+    // Kodni bazaga saqlash (muddati 10 daqiqa)
+    const id = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    await c.env.DB.prepare('INSERT INTO reset_codes (id, username, code, expires_at) VALUES (?, ?, ?, ?)')
+      .bind(id, username, code, expiresAt).run();
+
+    // Telegramga kod yuborish (Bot orqali)
+    const BOT_TOKEN = c.env.BOT_TOKEN;
+    if (BOT_TOKEN && user.telegram_id) {
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: user.telegram_id,
+          text: `Fuzz parolni tiklash kodi: ${code}\n\nKod 10 daqiqa amal qiladi.`
+        })
+      });
+    } else {
+      // Agar Telegram ID yo'q bo'lsa, kodni konsolga chiqaramiz (test uchun)
+      console.log(`Foydalanuvchi ${username} uchun kod: ${code}`);
+    }
+
+    return c.json({ message: 'Kod yuborildi!' });
+  } catch (err) {
+    return c.json({ error: 'Server xatosi' }, 500);
+  }
+});
+
+// 2. Kodni tasdiqlash
+app.post('/fuzz/api/auth/reset-verify', async (c) => {
+  try {
+    const { username, code } = await c.req.json();
+    
+    const record = await c.env.DB.prepare('SELECT * FROM reset_codes WHERE username = ? AND code = ? ORDER BY expires_at DESC LIMIT 1')
+      .bind(username, code).first();
+    
+    if (!record) return c.json({ error: 'Kod xato!' }, 400);
+    if (new Date(record.expires_at) < new Date()) return c.json({ error: 'Kod muddati o\'tgan!' }, 400);
+
+    return c.json({ message: 'Kod tasdiqlandi!' });
+  } catch (err) {
+    return c.json({ error: 'Server xatosi' }, 500);
+  }
+});
+
+// 3. Yangi parolni saqlash
+app.post('/fuzz/api/auth/reset-password', async (c) => {
+  try {
+    const { username, code, newPassword } = await c.req.json();
+    
+    // Kodni qayta tekshirish
+    const record = await c.env.DB.prepare('SELECT * FROM reset_codes WHERE username = ? AND code = ?')
+      .bind(username, code).first();
+    if (!record) return c.json({ error: 'Ruxsatsiz so\'rov!' }, 403);
+
+    // Parolni yangilash
+    await c.env.DB.prepare('UPDATE users SET password = ? WHERE username = ?').bind(newPassword, username).run();
+    
+    // Kodni o'chirish
+    await c.env.DB.prepare('DELETE FROM reset_codes WHERE username = ?').bind(username).run();
+
+    return c.json({ message: 'Parol yangilandi!' });
+  } catch (err) {
+    return c.json({ error: 'Server xatosi' }, 500);
+  }
+});
+
 export default app;

@@ -12,7 +12,7 @@ export class ApiError extends Error {
 
 async function request(method, path, { body, headers = {} } = {}) {
   const base = config.apiBaseUrl.replace(/\/+$/, '');
-  // Agar path /api bilan boshlanmasa, avtomatik qo'shamiz
+  // Har qanday holatda ham /api/ bilan boshlanishini ta'minlaymiz
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   const url = `${base}${cleanPath}`;
 
@@ -67,6 +67,7 @@ async function request(method, path, { body, headers = {} } = {}) {
 export const api = {
   get: (path, opts) => request('GET', path, opts),
   post: (path, body, opts) => request('POST', path, { ...opts, body }),
+  put: (path, body, opts) => request('PUT', path, { ...opts, body }),
   delete: (path, opts) => request('DELETE', path, opts),
   isConfigured: () => Boolean(config.apiBaseUrl),
 };

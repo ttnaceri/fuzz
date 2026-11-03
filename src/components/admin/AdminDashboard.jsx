@@ -4,12 +4,28 @@ import { api } from '../services/api.js';
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ users: 0, games: 0, bundles: 0, events: 0, revenue: 0 });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     api.get('/api/admin/stats')
       .then(data => { setStats(data); setLoading(false); })
-      .catch(() => setLoading(false));
+      .catch(err => { setError(err.message); setLoading(false); });
   }, []);
+
+  if (loading) return <div style={{ color: '#fff', padding: '2rem' }}>Yuklanmoqda...</div>;
+
+  if (error) {
+    return (
+      <div style={{ color: '#ed5555', padding: '2rem', backgroundColor: '#241411', borderRadius: '8px', border: '1px solid #48201a' }}>
+        <h2>Backend bilan aloqa uzildi!</h2>
+        <p>Xato: {error}</p>
+        <p style={{ color: '#b9a6a2', marginTop: '1rem' }}>
+          Iltimos, backendni <code>npx wrangler deploy</code> orqali qayta yuklang va <br/>
+          <code>https://my-backend.updbackend.workers.dev/fuzz/api/init-db</code> havolasini ochib, bazani yangilang.
+        </p>
+      </div>
+    );
+  }
 
   const cards = [
     { label: 'Foydalanuvchilar', value: stats.users, icon: 'fa-users', color: '#43b581' },
@@ -30,9 +46,7 @@ export default function AdminDashboard() {
               <div style={{ color: '#b9a6a2', fontSize: '0.9rem' }}>{card.label}</div>
               <i className={`fa-solid ${card.icon}`} style={{ color: card.color, fontSize: '1.2rem' }}></i>
             </div>
-            <div style={{ color: card.color, fontSize: '2rem', fontWeight: 'bold' }}>
-              {loading ? '...' : card.value}
-            </div>
+            <div style={{ color: card.color, fontSize: '2rem', fontWeight: 'bold' }}>{card.value}</div>
           </div>
         ))}
       </div>

@@ -3,6 +3,7 @@ export const config = {
   appVersion: '1.0.0',
   
   apiBaseUrl: 'https://my-backend.updbackend.workers.dev/fuzz',
+  apiPrefix: '', 
   
   requestTimeout: 15000,
   defaultPageSize: 20,

@@ -27,7 +27,6 @@ export default function AdminPlatform() {
         </div>
       </div>
 
-      {/* Oddiy diagramma (bar chart) */}
       <div style={{ backgroundColor: '#241411', padding: '1.5rem', borderRadius: '8px', border: '1px solid #48201a' }}>
         <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>Haftalik Sotuvlar</h3>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1rem', height: '150px' }}>

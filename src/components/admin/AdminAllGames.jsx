@@ -6,13 +6,18 @@ import useToast from '../hooks/useToast.js';
 export default function AdminAllGames() {
   const [games, setGames] = useState([]);
   const [editGame, setEditGame] = useState(null);
+  const [bundles, setBundles] = useState([]);
   const { success, error: toastError } = useToast();
 
   const loadGames = () => {
     api.get('/api/admin/all-games').then(data => setGames(data.games || [])).catch(() => toastError("Yuklashda xato"));
   };
 
-  useEffect(() => { loadGames(); }, []);
+  const loadBundles = () => {
+    api.get('/api/admin/bundles').then(data => setBundles(data.bundles || [])).catch(() => {});
+  };
+
+  useEffect(() => { loadGames(); loadBundles(); }, []);
 
   const handleDelete = async (id) => {
     if (!window.confirm("O'yinni o'chirishni tasdiqlaysizmi?")) return;
@@ -35,6 +40,13 @@ export default function AdminAllGames() {
     } catch { toastError("Xato"); }
   };
 
+  const handleAddToBundle = async (gameId, bundleId) => {
+    try {
+      await api.post(`/api/admin/bundles/${bundleId}/games`, { gameId });
+      success("O'yin bundlega qo'shildi!");
+    } catch { toastError("Xato"); }
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
@@ -48,6 +60,7 @@ export default function AdminAllGames() {
             <th style={{ padding: '1rem' }}>Nomi</th>
             <th style={{ padding: '1rem' }}>Narxi</th>
             <th style={{ padding: '1rem' }}>Chegirma</th>
+            <th style={{ padding: '1rem' }}>Bundle</th>
             <th style={{ padding: '1rem' }}>Amallar</th>
           </tr>
         </thead>
@@ -58,6 +71,12 @@ export default function AdminAllGames() {
               <td style={{ padding: '1rem', fontWeight: 'bold' }}>{g.title}</td>
               <td style={{ padding: '1rem', color: '#43b581' }}>${g.price}</td>
               <td style={{ padding: '1rem', color: '#f0b44d' }}>{g.discount > 0 ? `${g.discount}%` : '—'}</td>
+              <td style={{ padding: '1rem' }}>
+                <select onChange={(e) => handleAddToBundle(g.id, e.target.value)} defaultValue="" style={{ padding: '0.3rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }}>
+                  <option value="" disabled>Bundlega qo'shish</option>
+                  {bundles.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              </td>
               <td style={{ padding: '1rem' }}>
                 <button onClick={() => handleEdit(g)} style={{ background: 'none', border: 'none', color: '#f0b44d', cursor: 'pointer', marginRight: '0.5rem' }}><i className="fa-solid fa-pen"></i></button>
                 <button onClick={() => handleDelete(g.id)} style={{ background: 'none', border: 'none', color: '#ed5555', cursor: 'pointer' }}><i className="fa-solid fa-trash"></i></button>
@@ -82,7 +101,7 @@ export default function AdminAllGames() {
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ color: '#b9a6a2', fontSize: '0.8rem', marginBottom: '0.3rem', display: 'block' }}>Chegirma (%)</label>
-                <input type="number" value={editGame.discount} onChange={e => setEditGame({ ...editGame, discount: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} min="10" max="95" />
+                <input type="number" value={editGame.discount} onChange={e => setEditGame({ ...editGame, discount: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
               </div>
             </div>
             <div style={{ marginBottom: '1rem' }}>

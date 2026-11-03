@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
 import { config } from '../config/config.js';
@@ -13,47 +13,50 @@ export default function GamePlayerPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [secondsPlayed, setSecondsPlayed] = useState(0);
-  
-  // Break menyu holati
-  const [isBreakMenuOpen, setIsBreakMenuOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
-  const iframeRef = useRef(null);
+  const [isBreakMenuOpen, setIsBreakMenuOpen] = useState(false);
 
-  // O'yinni yuklash
+  // Mobil ekanligini aniqlash
   useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // O'yinni yuklash (faqat mobil bo'lmasa)
+  useEffect(() => {
+    if (isMobile) { setLoading(false); return; }
     if (!user) { navigate('/login'); return; }
+
     api.get(`/api/games/${id}/play?userId=${user.id}`)
       .then(data => { setGameUrl(data.game_url); setLoading(false); })
       .catch(() => { setError("O'yinni yuklab bo'lmadi. Sotib olinganligini tekshiring."); setLoading(false); });
-  }, [id, user, navigate]);
+  }, [id, user, navigate, isMobile]);
 
-  // Fullscreen va pauza boshqaruvi
+  // Break Menyu (Shift + Tab)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.shiftKey && e.key === 'Tab') {
-        e.preventDefault(); // Brauzerning standart tabini to'xtatish
+        e.preventDefault();
         setIsBreakMenuOpen(prev => !prev);
         setIsPaused(prev => !prev);
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Vaqt hisoblagichi (faqat pauza bo'lmaganda ishlaydi)
+  // Vaqt hisoblagichi
   useEffect(() => {
-    if (!gameUrl || isPaused) return;
-    
-    const interval = setInterval(() => {
-      setSecondsPlayed(prev => prev + 1);
-    }, 1000);
-
+    if (!gameUrl || isPaused || isBreakMenuOpen) return;
+    const interval = setInterval(() => setSecondsPlayed(prev => prev + 1), 1000);
     return () => clearInterval(interval);
-  }, [gameUrl, isPaused]);
+  }, [gameUrl, isPaused, isBreakMenuOpen]);
 
-  // Sahifadan chiqib ketayotganda vaqtni backendga yuborish
+  // Sahifadan chiqishda vaqtni saqlash
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (secondsPlayed > 5) {
@@ -61,7 +64,6 @@ export default function GamePlayerPage() {
         navigator.sendBeacon(`${config.apiBaseUrl}/api/games/track-time`, data);
       }
     };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
@@ -69,9 +71,7 @@ export default function GamePlayerPage() {
     };
   }, [secondsPlayed, user, id]);
 
-  // Fuzz ga qaytish
   const handleReturnToFuzz = () => {
-    // Chiqishdan oldin vaqtni saqlash
     if (secondsPlayed > 5) {
       const data = new Blob([JSON.stringify({ userId: user?.id, gameId: id, seconds: secondsPlayed })], { type: 'application/json' });
       navigator.sendBeacon(`${config.apiBaseUrl}/api/games/track-time`, data);
@@ -79,13 +79,24 @@ export default function GamePlayerPage() {
     navigate('/library');
   };
 
+  // Agar mobil bo'lsa, o'yinni ochmaymiz
+  if (isMobile) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#100b0a', color: '#f5eeee', padding: '2rem', textAlign: 'center' }}>
+        <i className="fa-solid fa-desktop" style={{ fontSize: '4rem', color: '#8a1200', marginBottom: '1rem' }}></i>
+        <h2>Kompyuterdan foydalaning</h2>
+        <p style={{ color: '#b9a6a2', maxWidth: '400px' }}>Kechirasiz, Fuzz o'yinlarini faqat kompyuter yoki netbuk orqali o'ynash mumkin. Mobil qurilmalar uchun o'yin hozircha mavjud emas.</p>
+        <button onClick={() => navigate('/library')} className="btn btn-primary mt-3">Kutubxonaga qaytish</button>
+      </div>
+    );
+  }
+
   if (loading) return <div style={{ color: '#fff', textAlign: 'center', marginTop: '20vh', backgroundColor: '#000', height: '100vh' }}>O'yin yuklanmoqda...</div>;
   if (error) return <div style={{ color: '#ed5555', textAlign: 'center', marginTop: '20vh', backgroundColor: '#000', height: '100vh' }}>{error}</div>;
 
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: '#000', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
       
-      {/* Agar Break Menu ochiq bo'lsa, uni ko'rsatamiz */}
       {isBreakMenuOpen ? (
         <BreakMenu 
           secondsPlayed={secondsPlayed} 
@@ -94,9 +105,7 @@ export default function GamePlayerPage() {
           onClose={() => { setIsBreakMenuOpen(false); setIsPaused(false); }}
         />
       ) : (
-        /* Faqat O'yinning o'zi (hech qanday panel yo'q) */
         <iframe 
-          ref={iframeRef}
           src={gameUrl} 
           title="Fuzz Web Game" 
           style={{ flex: 1, width: '100%', height: '100%', border: 'none' }}
@@ -107,25 +116,20 @@ export default function GamePlayerPage() {
   );
 }
 
-// ==========================================
-// BREAK MENU KOMPONENTI (Faqat shu faylda)
-// ==========================================
+// Break Menu Komponenti
 function BreakMenu({ secondsPlayed, gameUrl, onReturn, onClose }) {
-  // Soat
   const [time, setTime] = useState(new Date().toLocaleTimeString());
   useEffect(() => {
     const interval = setInterval(() => setTime(new Date().toLocaleTimeString()), 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Notepad
   const [notes, setNotes] = useState(localStorage.getItem('fuzz_notes') || '');
   const handleNoteChange = (e) => {
     setNotes(e.target.value);
     localStorage.setItem('fuzz_notes', e.target.value);
   };
 
-  // Timer (Sekundomer)
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
 
@@ -147,7 +151,6 @@ function BreakMenu({ secondsPlayed, gameUrl, onReturn, onClose }) {
   return (
     <div style={{ flex: 1, backgroundColor: 'rgba(16, 11, 10, 0.95)', display: 'flex', flexDirection: 'column', padding: '2rem', color: '#f5eeee', zIndex: 9999, overflowY: 'auto' }}>
       
-      {/* Break Menu Sarlavhasi */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '1px solid #48201a', paddingBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <h1 style={{ margin: 0, fontSize: '1.5rem', color: '#8a1200' }}>Fuzz Break Menu</h1>
@@ -162,15 +165,13 @@ function BreakMenu({ secondsPlayed, gameUrl, onReturn, onClose }) {
             <i className="fa-solid fa-arrow-left"></i> Fuzz ga qaytish
           </button>
           <button onClick={onClose} style={{ backgroundColor: '#48201a', color: '#fff', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
-            <i className="fa-solid fa-play"></i> O'yinni Davom Ettirish
+            <i className="fa-solid fa-play"></i> Davom Ettirish
           </button>
         </div>
       </div>
 
-      {/* Grid Panellar */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem', flex: 1 }}>
         
-        {/* 1. O'yin Statistikasi */}
         <div style={{ backgroundColor: '#241411', padding: '1.5rem', borderRadius: '8px', border: '1px solid #48201a' }}>
           <h3 style={{ margin: '0 0 1rem 0', color: '#b9a6a2', fontSize: '1rem', textTransform: 'uppercase' }}>
             <i className="fa-solid fa-chart-simple"></i> O'yin Statistikasi
@@ -179,7 +180,6 @@ function BreakMenu({ secondsPlayed, gameUrl, onReturn, onClose }) {
           <div style={{ fontSize: '1.2rem' }}>Haftalik natija: <strong style={{ color: '#f0b44d' }}>4 soat 20 daqiqa</strong></div>
         </div>
 
-        {/* 2. Timer (Sekundomer) */}
         <div style={{ backgroundColor: '#241411', padding: '1.5rem', borderRadius: '8px', border: '1px solid #48201a' }}>
           <h3 style={{ margin: '0 0 1rem 0', color: '#b9a6a2', fontSize: '1rem', textTransform: 'uppercase' }}>
             <i className="fa-solid fa-stopwatch"></i> Timer
@@ -197,7 +197,6 @@ function BreakMenu({ secondsPlayed, gameUrl, onReturn, onClose }) {
           </div>
         </div>
 
-        {/* 3. Notepad */}
         <div style={{ backgroundColor: '#241411', padding: '1.5rem', borderRadius: '8px', border: '1px solid #48201a', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ margin: '0 0 1rem 0', color: '#b9a6a2', fontSize: '1rem', textTransform: 'uppercase' }}>
             <i className="fa-solid fa-pen"></i> Notepad
@@ -210,7 +209,6 @@ function BreakMenu({ secondsPlayed, gameUrl, onReturn, onClose }) {
           />
         </div>
 
-        {/* 4. Internet Browser (Katta va Resizable) */}
         <div style={{ backgroundColor: '#241411', padding: '1.5rem', borderRadius: '8px', border: '1px solid #48201a', display: 'flex', flexDirection: 'column', gridColumn: 'span 2' }}>
           <h3 style={{ margin: '0 0 1rem 0', color: '#b9a6a2', fontSize: '1rem', textTransform: 'uppercase' }}>
             <i className="fa-solid fa-globe"></i> Internet Browser
@@ -218,41 +216,22 @@ function BreakMenu({ secondsPlayed, gameUrl, onReturn, onClose }) {
           <iframe 
             src="https://www.google.com/search?igu=1" 
             title="Mini Browser"
-            style={{ 
-              flex: 1, 
-              minHeight: '400px', 
-              border: '1px solid #48201a', 
-              borderRadius: '4px', 
-              backgroundColor: '#fff',
-              resize: 'both', // O'lchamini o'zgartirish
-              overflow: 'auto'
-            }}
+            style={{ flex: 1, minHeight: '400px', border: '1px solid #48201a', borderRadius: '4px', backgroundColor: '#fff', resize: 'both', overflow: 'auto' }}
           />
-          <div style={{ fontSize: '0.7rem', color: '#b9a6a2', marginTop: '0.5rem', textAlign: 'right' }}>
-            (Brauzer o'lchamini burchagidan tortib o'zgartirishingiz mumkin)
-          </div>
         </div>
 
-        {/* 5. FPS va Internet Tezligi */}
         <div style={{ backgroundColor: '#241411', padding: '1.5rem', borderRadius: '8px', border: '1px solid #48201a' }}>
           <h3 style={{ margin: '0 0 1rem 0', color: '#b9a6a2', fontSize: '1rem', textTransform: 'uppercase' }}>
             <i className="fa-solid fa-wifi"></i> Tizim Resurslari
           </h3>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span>FPS:</span> <strong style={{ color: '#43b581' }}>60 FPS</strong>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span>Ping:</span> <strong style={{ color: '#43b581' }}>24 ms</strong>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span>Internet:</span> <strong style={{ color: '#43b581' }}>50 Mbps</strong>
-          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}><span>FPS:</span> <strong style={{ color: '#43b581' }}>60 FPS</strong></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}><span>Ping:</span> <strong style={{ color: '#43b581' }}>24 ms</strong></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Internet:</span> <strong style={{ color: '#43b581' }}>50 Mbps</strong></div>
         </div>
       </div>
 
-      {/* Pastki qism */}
       <div style={{ textAlign: 'center', marginTop: '2rem', color: '#b9a6a2', fontSize: '0.8rem' }}>
-        Break Menuni yopish uchun yana <strong>Shift + Tab</strong> tugmasini bosing yoki "O'yinni Davom Ettirish" tugmasini bosing.
+        Break Menuni yopish uchun yana <strong>Shift + Tab</strong> tugmasini bosing.
       </div>
     </div>
   );

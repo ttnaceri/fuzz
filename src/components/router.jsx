@@ -53,7 +53,7 @@ import ChangePasswordPage from './pages/ChangePasswordPage.jsx';
 import CompaniesPage from './pages/CompaniesPage.jsx';
 import CompanyDetailsPage from './pages/CompanyDetailsPage.jsx';
 
-// --- GAMEPLAY PAGE (MUHIM!) ---
+// --- GAMEPLAY PAGE ---
 import GamePlayerPage from './pages/GamePlayerPage.jsx';
 
 // --- ADMIN PAGES ---
@@ -104,8 +104,8 @@ export const router = createBrowserRouter([
       { path: '/register', element: <RegisterTelegramPage /> },
       { path: '/register/form', element: <RegisterFormPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },
-      { path: '/reset-password/code', element: <ResetPasswordCodePage /> },
-      { path: '/reset-password/change', element: <ChangePasswordPage /> },
+      { path: '/reset-password/verify', element: <ResetPasswordCodePage /> },
+      { path: '/reset-password/new', element: <ChangePasswordPage /> },
     ],
   },
   {

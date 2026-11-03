@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import useToast from '../hooks/useToast.js';
 import { api } from '../services/api.js';
 
 export default function RegisterFormPage() {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { success, error: toastError } = useToast();
   
@@ -13,19 +12,14 @@ export default function RegisterFormPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const urlTgId = searchParams.get('tgId');
     const sessionTgId = sessionStorage.getItem('reg_tg_id');
-
-    if (urlTgId) {
-      setTgId(urlTgId);
-      sessionStorage.setItem('reg_tg_id', urlTgId);
-    } else if (sessionTgId) {
+    if (sessionTgId) {
       setTgId(sessionTgId);
     } else {
       toastError("Iltimos, avval Telegram ID ingizni kiriting!");
       navigate('/register');
     }
-  }, [searchParams, navigate, toastError]);
+  }, [navigate, toastError]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

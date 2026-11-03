@@ -56,6 +56,9 @@ import CompanyDetailsPage from './pages/CompanyDetailsPage.jsx';
 // --- GAMEPLAY PAGE ---
 import GamePlayerPage from './pages/GamePlayerPage.jsx';
 
+// --- LANGUAGE PAGE (YANGI) ---
+import LanguagePage from './pages/LanguagePage.jsx';
+
 // --- ADMIN PAGES ---
 import AdminDashboard from './admin/AdminDashboard.jsx';
 import AdminGames from './admin/AdminGames.jsx';
@@ -106,6 +109,7 @@ export const router = createBrowserRouter([
       { path: '/reset-password', element: <ResetPasswordPage /> },
       { path: '/reset-password/verify', element: <ResetPasswordCodePage /> },
       { path: '/reset-password/new', element: <ChangePasswordPage /> },
+      { path: '/lang', element: <LanguagePage /> },
     ],
   },
   {

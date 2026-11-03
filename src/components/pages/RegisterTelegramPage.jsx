@@ -1,20 +1,32 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import useToast from '../hooks/useToast.js';
+import { api } from '../services/api.js';
 
 export default function RegisterTelegramPage() {
   const [tgId, setTgId] = useState('');
-  const { success, info } = useToast();
+  const [loading, setLoading] = useState(false);
+  const { success, error: toastError } = useToast();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!tgId.trim()) return info("Telegram ID raqamingizni kiriting!");
-    if (tgId.length < 9) return info("Telegram ID kamida 9 xonali bo'lishi kerak!");
+    if (!tgId.trim()) return toastError("Telegram ID raqamingizni kiriting!");
+    if (tgId.length < 9) return toastError("Telegram ID kamida 9 xonali bo'lishi kerak!");
 
-    sessionStorage.setItem('reg_tg_id', tgId.trim());
-    success("Telegram ID saqlandi! Endi botdan tasdiqlang.");
-    navigate('/register/form');
+    setLoading(true);
+    try {
+      // Backendga ID ni tekshirish uchun so'rov yuboramiz
+      await api.post('/api/auth/check-telegram', { telegramId: tgId.trim() });
+      
+      sessionStorage.setItem('reg_tg_id', tgId.trim());
+      success("Telegram ID tasdiqlandi!");
+      navigate('/register/form');
+    } catch (err) {
+      toastError(err.message || "Telegram ID topilmadi yoki tasdiqlanmagan!");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -41,7 +53,9 @@ export default function RegisterTelegramPage() {
             />
             <div style={{ textAlign: 'right', color: '#b9a6a2', fontSize: '0.75rem', marginTop: '0.3rem' }}>{tgId.length}/9</div>
           </div>
-          <button type="submit" style={{ width: '100%', padding: '0.8rem', backgroundColor: '#8a1200', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>ID ni yuborish</button>
+          <button type="submit" disabled={loading} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#8a1200', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+            {loading ? 'Tekshirilmoqda...' : 'ID ni yuborish'}
+          </button>
         </form>
         <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.85rem' }}>
           <Link to="/login" style={{ color: '#b9a6a2', textDecoration: 'underline' }}>Kirish sahifasiga qaytish</Link>

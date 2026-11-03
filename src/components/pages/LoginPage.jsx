@@ -15,7 +15,6 @@ export default function LoginPage() {
   const [apiError, setApiError] = useState('');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
-  // QR token faqat bir marta yaratiladi va 30 soniyada bir yangilanadi
   const [qrToken, setQrToken] = useState('fuzz_qr_' + Math.random().toString(36).substring(7));
 
   useEffect(() => {

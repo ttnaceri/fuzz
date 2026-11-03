@@ -5,10 +5,12 @@ export const LanguageContext = createContext(null);
 
 export function LanguageProvider({ children }) {
   const [lang, setLangState] = useState(() => {
+    // localStorage dan tilni o'qish
     return localStorage.getItem('fuzz_lang') || 'uz';
   });
 
   useEffect(() => {
+    // Har safar til o'zgarganda localStorage ga saqlash
     localStorage.setItem('fuzz_lang', lang);
     document.documentElement.lang = lang;
   }, [lang]);
@@ -19,20 +21,16 @@ export function LanguageProvider({ children }) {
     }
   };
 
-  // Xatolarga chidamli tarjima funksiyasi
   const t = (key) => {
     const keys = key.split('.');
     let value = translations[lang];
-    
     for (const k of keys) {
-      if (value && value[k]) {
-        value = value[k];
-      } else {
-        // Agar joriy tilda topilmasa, Ingliz tilidan qidiradi
+      if (value && value[k]) value = value[k];
+      else {
         let fallback = translations['en'];
         for (const fk of keys) {
           if (fallback && fallback[fk]) fallback = fallback[fk];
-          else return key; 
+          else return key;
         }
         return fallback;
       }

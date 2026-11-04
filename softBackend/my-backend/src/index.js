@@ -511,4 +511,47 @@ app.post('/fuzz/telegram/webhook', async (c) => {
 app.route('/fuzz/api', userApp);
 app.route('/fuzz/api', adminApp);
 
+// ... (index.js ning boshqa qismlari o'zgarishsiz qoladi)
+
+// DB Init ga qo'shish:
+app.get('/fuzz/api/init-db', async (c) => {
+  try {
+    // ... (boshqa jadvallar)
+
+    await c.env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS payment_methods (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        logo_url TEXT,
+        enabled INTEGER DEFAULT 0,
+        discount INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `).run();
+
+    // Standart to'lov turlarini qo'shish
+    const existing = await c.env.DB.prepare('SELECT * FROM payment_methods LIMIT 1').first();
+    if (!existing) {
+      const methods = [
+        { id: 'click', name: 'Click', logo: '/image/paymentsLogo/click.png', enabled: 0, discount: 0 },
+        { id: 'payme', name: 'Payme', logo: '/image/paymentsLogo/payme.png', enabled: 0, discount: 0 },
+        { id: 'humo', name: 'Humo', logo: '/image/paymentsLogo/humo.png', enabled: 0, discount: 0 },
+        { id: 'uzcard', name: 'Uzcard', logo: '/image/paymentsLogo/uzcard.png', enabled: 0, discount: 0 },
+        { id: 'hamkorbank', name: 'HamkorBank', logo: '/image/paymentsLogo/hamkorbank.png', enabled: 0, discount: 0 },
+        { id: 'paypal', name: 'PayPal', logo: '/image/paymentsLogo/payPal.png', enabled: 0, discount: 0 },
+        { id: 'stars', name: 'Telegram Stars', logo: '/image/paymentsLogo/telegramStars.png', enabled: 1, discount: 0 },
+        { id: 'card', name: 'Karta', logo: '/image/paymentsLogo/humoUzcard.png', enabled: 1, discount: 0 },
+      ];
+      for (const m of methods) {
+        await c.env.DB.prepare('INSERT INTO payment_methods (id, name, logo_url, enabled, discount) VALUES (?, ?, ?, ?, ?)')
+          .bind(m.id, m.name, m.logo, m.enabled, m.discount).run();
+      }
+    }
+
+    return c.json({ message: "Barcha jadvallar yaratildi!" });
+  } catch (err) {
+    return c.json({ error: "Xato: " + err.message }, 500);
+  }
+});
+
 export default app;

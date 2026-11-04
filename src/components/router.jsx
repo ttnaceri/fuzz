@@ -40,6 +40,7 @@ import NotFoundPage from './pages/NotFoundPage.jsx';
 import WalletHistoryPage from './pages/WalletHistoryPage.jsx';
 import WalletTopUpPage from './pages/WalletTopUpPage.jsx';
 import WalletRefundPage from './pages/WalletRefundPage.jsx';
+import AdminPayments from './admin/AdminPayments.jsx';
 
 // --- AUTH PAGES ---
 import LoginPage from './pages/LoginPage.jsx';

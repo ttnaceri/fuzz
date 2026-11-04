@@ -20,6 +20,14 @@ adminApp.get('/admin/stats', async (c) => {
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
+// Admin Payments (Stars statistikasi)
+adminApp.get('/admin/payments', async (c) => {
+  try {
+    const payments = await c.env.DB.prepare('SELECT * FROM payments').all();
+    return c.json({ payments: payments.results || [] });
+  } catch (err) { return c.json({ payments: [] }); }
+});
+
 // Admin Users
 adminApp.get('/admin/users', async (c) => {
   try {

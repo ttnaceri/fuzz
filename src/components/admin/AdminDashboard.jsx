@@ -2,13 +2,23 @@ import { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({ users: 0, games: 0, bundles: 0, events: 0, revenue: 0 });
+  const [stats, setStats] = useState({ users: 0, games: 0, bundles: 0, events: 0, revenue: 0, totalStars: 0, totalStarsUsd: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Admin stats
     api.get('/api/admin/stats')
-      .then(data => { setStats(data); setLoading(false); })
+      .then(data => { setStats(prev => ({ ...prev, ...data })); setLoading(false); })
       .catch(() => setLoading(false));
+
+    // Stars statistikasi
+    api.get('/api/admin/payments') // Yangi API (pastda qo'shiladi)
+      .then(data => {
+        const totalStars = data.payments?.reduce((sum, p) => sum + (p.stars_paid || 0), 0) || 0;
+        const totalStarsUsd = data.payments?.reduce((sum, p) => sum + (p.amount_usd || 0), 0) || 0;
+        setStats(prev => ({ ...prev, totalStars, totalStarsUsd }));
+      })
+      .catch(() => {});
   }, []);
 
   const cards = [
@@ -17,6 +27,8 @@ export default function AdminDashboard() {
     { label: 'Bundle\'lar', value: stats.bundles, icon: 'fa-box-open', color: '#8a1200' },
     { label: 'Eventlar', value: stats.events, icon: 'fa-calendar', color: '#43b581' },
     { label: 'Umumiy Balans', value: `$${stats.revenue}`, icon: 'fa-dollar-sign', color: '#43b581' },
+    { label: 'Umumiy Stars', value: `${stats.totalStars} ⭐`, icon: 'fa-star', color: '#f0b44d' },
+    { label: 'Stars ($ da)', value: `$${stats.totalStarsUsd.toFixed(2)}`, icon: 'fa-money-bill', color: '#43b581' },
   ];
 
   return (

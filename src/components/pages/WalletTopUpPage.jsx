@@ -9,7 +9,7 @@ import Modal from '../common/Modal.jsx';
 
 export default function WalletTopUpPage() {
   const { t } = useLanguage();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { info, success } = useToast();
   
   const [amount, setAmount] = useState('');
@@ -18,7 +18,9 @@ export default function WalletTopUpPage() {
   
   // Stars to'lov uchun
   const [starsRates, setStarsRates] = useState([]);
-  const [selectedStars, setSelectedStars] = useState(null);
+  const [selectedRate, setSelectedRate] = useState(null); // Tanlangan kurs ($1 = X Stars)
+  const [usdAmount, setUsdAmount] = useState('');
+  const [starsAmount, setStarsAmount] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
@@ -29,9 +31,34 @@ export default function WalletTopUpPage() {
 
     // Stars kurslarini yuklash
     api.get('/api/admin/stars-rates')
-      .then(data => setStarsRates(data.rates || []))
+      .then(data => {
+        setStarsRates(data.rates || []);
+        if (data.rates?.length > 0) setSelectedRate(data.rates[0]); // Birinchi kursni tanlash
+      })
       .catch(() => {});
   }, []);
+
+  // USD -> Stars hisoblash
+  const handleUsdChange = (val) => {
+    setUsdAmount(val);
+    if (selectedRate && val) {
+      const stars = Math.ceil(parseFloat(val) * (selectedRate.stars_amount / selectedRate.amount_usd));
+      setStarsAmount(stars > 0 ? stars.toString() : '');
+    } else {
+      setStarsAmount('');
+    }
+  };
+
+  // Stars -> USD hisoblash
+  const handleStarsChange = (val) => {
+    setStarsAmount(val);
+    if (selectedRate && val) {
+      const usd = (parseInt(val) / (selectedRate.stars_amount / selectedRate.amount_usd)).toFixed(2);
+      setUsdAmount(usd > 0 ? usd : '');
+    } else {
+      setUsdAmount('');
+    }
+  };
 
   const handleAmountChange = (e) => {
     let raw = e.target.value.replace(/\D/g, '');
@@ -60,8 +87,8 @@ export default function WalletTopUpPage() {
 
   // Stars to'lovni boshlash
   const handleStarsPay = () => {
-    if (!selectedStars || !user) return;
-    const botUrl = `https://t.me/FuzzAppBot?start=pay_${selectedStars.amount_usd}_${selectedStars.stars_amount}`;
+    if (!selectedRate || !usdAmount || !starsAmount || !user) return;
+    const botUrl = `https://t.me/FuzzAppBot?start=pay_${usdAmount}_${starsAmount}`;
     window.open(botUrl, '_blank');
     setIsModalOpen(false);
     info("Telegram botga o'ting va to'lovni tasdiqlang.");
@@ -129,39 +156,63 @@ export default function WalletTopUpPage() {
             </button>
           </div>
 
-          {/* 2. Telegram Stars orqali to'lov */}
+          {/* 2. Telegram Stars orqali to'lov (Dinamik) */}
           <div className="card" style={{ padding: '1.5rem' }}>
             <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>Telegram Stars orqali to'ldirish</h3>
-            <p className="text-muted mb-2">Telegram Stars yordamida tez va oson to'ldiring.</p>
+            <p className="text-muted mb-2">O'zingiz xohlagan miqdorda $ sotib oling (minimal 1 Stars).</p>
             
             {starsRates.length === 0 ? (
               <div style={{ color: '#b9a6a2', fontSize: '0.9rem', marginTop: '1rem' }}>
                 Hozircha Stars kurslari mavjud emas.
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                {starsRates.map(sr => (
-                  <div 
-                    key={sr.id} 
-                    onClick={() => { setSelectedStars(sr); setIsModalOpen(true); }}
-                    style={{ 
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      padding: '1rem', backgroundColor: '#100b0a', border: '1px solid #48201a', 
-                      borderRadius: '8px', cursor: 'pointer', transition: 'border-color 0.2s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.borderColor = '#8a1200'}
-                    onMouseLeave={(e) => e.currentTarget.style.borderColor = '#48201a'}
+              <div>
+                {/* Kursni tanlash */}
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Kursni tanlang</label>
+                  <select 
+                    value={starsRates.findIndex(r => r.id === selectedRate?.id)}
+                    onChange={(e) => setSelectedRate(starsRates[e.target.value])}
+                    style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }}
                   >
-                    <div>
-                      <div style={{ color: '#43b581', fontWeight: 'bold', fontSize: '1.2rem' }}>${sr.amount_usd}</div>
-                      <div style={{ color: '#b9a6a2', fontSize: '0.8rem' }}>Fuzz Balans</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ color: '#f0b44d', fontWeight: 'bold', fontSize: '1.2rem' }}>{sr.stars_amount} ⭐</div>
-                      <div style={{ color: '#b9a6a2', fontSize: '0.8rem' }}>Stars</div>
-                    </div>
+                    {starsRates.map((r, idx) => (
+                      <option key={r.id} value={idx}>${r.amount_usd} = {r.stars_amount} Stars</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Miqdorni kiritish */}
+                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', alignItems: 'center' }}>
+                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                    <label className="form-label">Fuzz Balans ($)</label>
+                    <input 
+                      type="number" step="0.01" min="0.01" 
+                      className="form-input" 
+                      value={usdAmount} 
+                      onChange={(e) => handleUsdChange(e.target.value)} 
+                      placeholder="1.00" 
+                    />
                   </div>
-                ))}
+                  <div style={{ flex: 1, textAlign: 'center', paddingTop: '1rem' }}><i className="fa-solid fa-arrow-right"></i></div>
+                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                    <label className="form-label">Telegram Stars</label>
+                    <input 
+                      type="number" min="1" 
+                      className="form-input" 
+                      value={starsAmount} 
+                      onChange={(e) => handleStarsChange(e.target.value)} 
+                      placeholder="10" 
+                    />
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '0.8rem', color: '#b9a6a2', marginBottom: '1.5rem', textAlign: 'right' }}>
+                  Joriy kurs: ${selectedRate?.amount_usd} = {selectedRate?.stars_amount} Stars
+                </div>
+
+                <button className="btn btn-primary" onClick={() => setIsModalOpen(true)} style={{ width: '100%' }} disabled={!usdAmount || !starsAmount || parseFloat(usdAmount) <= 0 || parseInt(starsAmount) < 1}>
+                  Telegram Stars orqali to'lash
+                </button>
               </div>
             )}
           </div>
@@ -169,10 +220,10 @@ export default function WalletTopUpPage() {
 
         {/* Modal */}
         <Modal open={isModalOpen} title="Telegram Stars orqali to'lov" onClose={() => setIsModalOpen(false)}>
-          {selectedStars && (
+          {selectedRate && (
             <div>
               <p style={{ color: '#f5eeee', marginBottom: '1rem' }}>
-                Siz <strong>${selectedStars.amount_usd}</strong> Fuzz balansini <strong>{selectedStars.stars_amount} Stars</strong> evaziga sotib olmoqchisiz.
+                Siz <strong>${usdAmount}</strong> Fuzz balansini <strong>{starsAmount} Stars</strong> evaziga sotib olmoqchisiz.
               </p>
               <p style={{ color: '#b9a6a2', fontSize: '0.85rem', marginBottom: '1rem' }}>
                 Telegram bot ochiladi va to'lovni tasdiqlaysiz.

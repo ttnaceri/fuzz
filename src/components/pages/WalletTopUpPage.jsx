@@ -9,7 +9,7 @@ import Modal from '../common/Modal.jsx';
 
 export default function WalletTopUpPage() {
   const { t } = useLanguage();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { info, success } = useToast();
   
   const [paymentMethods, setPaymentMethods] = useState([]);
@@ -22,8 +22,10 @@ export default function WalletTopUpPage() {
   const [usdAmount, setUsdAmount] = useState('');
   const [starsAmount, setStarsAmount] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Valyuta kursini yuklash
     fetch(config.payment.exchangeApiUrl)
       .then(res => res.json())
       .then(data => { if (data?.conversion_rates?.UZS) setRate(data.conversion_rates.UZS); })
@@ -31,8 +33,15 @@ export default function WalletTopUpPage() {
 
     // To'lov usullarini yuklash
     api.get('/api/payment-methods')
-      .then(data => setPaymentMethods(data.methods || []))
-      .catch(() => {});
+      .then(data => {
+        console.log("To'lov usullari:", data);
+        setPaymentMethods(data.methods || []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("To'lov usullarini yuklashda xato:", err);
+        setLoading(false);
+      });
 
     // Stars kurslarini yuklash
     api.get('/api/admin/stars-rates')
@@ -79,7 +88,9 @@ export default function WalletTopUpPage() {
         <h1 className="page-title">{t('wallet.topUp')}</h1>
         <p style={{ color: '#b9a6a2', marginBottom: '1.5rem' }}>{t('wallet.topUpInfo')}</p>
         
-        {!selectedMethod ? (
+        {loading ? (
+          <p style={{ color: '#b9a6a2' }}>Yuklanmoqda...</p>
+        ) : !selectedMethod ? (
           // To'lov usullari ro'yxati
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
             {paymentMethods.map(m => (
@@ -138,8 +149,10 @@ export default function WalletTopUpPage() {
                   <select 
                     onChange={(e) => {
                       const r = starsRates[e.target.value];
-                      setUsdAmount(r.amount_usd.toString());
-                      setStarsAmount(r.stars_amount.toString());
+                      if (r) {
+                        setUsdAmount(r.amount_usd.toString());
+                        setStarsAmount(r.stars_amount.toString());
+                      }
                     }}
                     style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }}
                   >
@@ -159,7 +172,7 @@ export default function WalletTopUpPage() {
                     <input type="number" className="form-input" value={starsAmount} onChange={(e) => setStarsAmount(e.target.value)} placeholder="10" />
                   </div>
                 </div>
-                <button className="btn btn-primary" onClick={handleStarsPay} style={{ width: '100%' }}>
+                <button className="btn btn-primary" onClick={() => setIsModalOpen(true)} style={{ width: '100%' }}>
                   Telegram Stars orqali to'lash
                 </button>
               </div>

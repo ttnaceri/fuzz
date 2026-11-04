@@ -21,7 +21,7 @@ const isNameValid = (name) => {
 // Health Check
 app.get('/fuzz/api/health', (c) => c.json({ status: 'ok', time: new Date().toISOString() }));
 
-// DB Init (Barcha jadvallar)
+// DB Init
 app.get('/fuzz/api/init-db', async (c) => {
   try {
     await c.env.DB.prepare(`
@@ -370,7 +370,6 @@ app.post('/fuzz/telegram/webhook', async (c) => {
       const textParts = update.message.text.split(' ');
       const startParam = textParts.length > 1 ? textParts[1] : null;
 
-      // Agar /start pay_... bo'lsa, Stars to'lovini yuborish
       if (startParam && startParam.startsWith('pay_')) {
         const parts = startParam.split('_');
         const amountUsd = parseFloat(parts[1]);
@@ -390,7 +389,6 @@ app.post('/fuzz/telegram/webhook', async (c) => {
           }),
         });
       } else {
-        // Oddiy /start (til tanlash)
         const existing = await c.env.DB.prepare('SELECT * FROM users WHERE telegram_id = ?').bind(chatId).first();
         if (!existing) {
           const id = crypto.randomUUID();

@@ -9,9 +9,26 @@ export default function AdminTelegram() {
   const [replyText, setReplyText] = useState('');
   const { success, error: toastError } = useToast();
 
+  // Xabarlarni yuklash funksiyasi
+  const loadMessages = async () => {
+    try {
+      const res = await api.get('/api/admin/telegram/messages');
+      setMessages(res.messages || []);
+    } catch (err) {
+      console.warn("Xabarlarni yuklashda xato");
+    }
+  };
+
   useEffect(() => {
+    // Foydalanuvchilarni yuklash
     api.get('/api/admin/telegram/users').then(data => setUsers(data.users || [])).catch(() => {});
-    api.get('/api/admin/telegram/messages').then(data => setMessages(data.messages || [])).catch(() => {});
+    
+    // Xabarlarni yuklash
+    loadMessages();
+
+    // Har 5 soniyada xabarlarni yangilash (avtomatik)
+    const interval = setInterval(loadMessages, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleReply = async () => {
@@ -20,9 +37,7 @@ export default function AdminTelegram() {
       await api.post('/api/admin/telegram/reply', { chatId: selectedChat, text: replyText });
       success("Xabar yuborildi!");
       setReplyText('');
-      // Xabarlarni yangilash
-      const res = await api.get('/api/admin/telegram/messages');
-      setMessages(res.messages || []);
+      loadMessages(); // Xabarlarni qayta yuklash
     } catch { toastError("Xato"); }
   };
 
@@ -51,7 +66,7 @@ export default function AdminTelegram() {
         <div style={{ backgroundColor: '#241411', borderRadius: '8px', border: '1px solid #48201a', padding: '1rem', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>Xabarlar</h3>
           <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #48201a', borderRadius: '4px', padding: '1rem', minHeight: '300px' }}>
-            {!selectedChat ? <p style={{ color: '#b9a6a2', textAlign: 'center', marginTop: '100px' }}>Chatni tanlang...</p> : messages.filter(m => m.chat_id === selectedChat).map(m => (
+            {!selectedChat ? <p style={{ color: '#b9a6a2', textAlign: 'center', marginTop: '100px' }}>Chatni tanlang...</p> : messages.filter(m => m.chat_id === selectedChat.toString()).map(m => (
               <div key={m.id} style={{ marginBottom: '1rem' }}>
                 <div style={{ color: '#f0b44d', fontSize: '0.8rem' }}>{m.username} • {new Date(m.created_at).toLocaleString()}</div>
                 <div style={{ color: '#f5eeee' }}>{m.message}</div>

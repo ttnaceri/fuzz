@@ -121,14 +121,19 @@ app.get('/fuzz/api/init-db', async (c) => {
     `).run();
 
     await c.env.DB.prepare(`
-      CREATE TABLE IF NOT EXISTS support_messages (
-        id TEXT PRIMARY KEY, chat_id TEXT, username TEXT, message TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      CREATE TABLE IF NOT EXISTS stars_rates (
+        id TEXT PRIMARY KEY, amount_usd REAL, stars_amount INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `).run();
 
+    const existingStarRate = await c.env.DB.prepare('SELECT * FROM stars_rates LIMIT 1').first();
+    if (!existingStarRate) {
+      await c.env.DB.prepare('INSERT INTO stars_rates (id, amount_usd, stars_amount) VALUES (?, ?, ?)').bind(crypto.randomUUID(), 1, 10).run();
+    }
+
     await c.env.DB.prepare(`
-      CREATE TABLE IF NOT EXISTS backend_services (
-        id TEXT PRIMARY KEY, name TEXT, url TEXT, status TEXT DEFAULT 'active', created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      CREATE TABLE IF NOT EXISTS payments (
+        id TEXT PRIMARY KEY, user_id TEXT, amount_usd REAL, stars_paid INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `).run();
 

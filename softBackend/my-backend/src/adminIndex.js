@@ -20,21 +20,23 @@ adminApp.get('/admin/stats', async (c) => {
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
-// Admin Users (To'g'rilangan)
+// Admin Users
 adminApp.get('/admin/users', async (c) => {
   try {
     const users = await c.env.DB.prepare('SELECT id, username, email, role, balance, telegram_id, language, created_at FROM users').all();
     return c.json({ users: users.results || [] });
-  } catch (err) { 
-    return c.json({ error: 'Foydalanuvchilarni olishda xato: ' + err.message }, 500); 
-  }
+  } catch (err) { return c.json({ error: 'Foydalanuvchilarni olishda xato: ' + err.message }, 500); }
 });
 
 adminApp.put('/admin/users/:id', async (c) => {
   try {
-    const { username, balance, role } = await c.req.json();
-    await c.env.DB.prepare('UPDATE users SET username = ?, balance = ?, role = ? WHERE id = ?')
-      .bind(username, parseFloat(balance), role, c.req.param('id')).run();
+    const { username, email, balance, role } = await c.req.json();
+    if (email) {
+      const existing = await c.env.DB.prepare('SELECT id FROM users WHERE email = ? AND id != ?').bind(email, c.req.param('id')).first();
+      if (existing) return c.json({ error: 'Bu email band!' }, 409);
+    }
+    await c.env.DB.prepare('UPDATE users SET username = ?, email = ?, balance = ?, role = ? WHERE id = ?')
+      .bind(username, email || null, parseFloat(balance), role, c.req.param('id')).run();
     return c.json({ success: true });
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
@@ -43,7 +45,7 @@ adminApp.delete('/admin/users/:id', async (c) => {
   try {
     await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(c.req.param('id')).run();
     return c.json({ success: true });
-  } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
+  } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
 // Admin Companies
@@ -63,7 +65,7 @@ adminApp.post('/admin/companies', async (c) => {
     await c.env.DB.prepare('INSERT INTO companies (id, name, logo, website, description) VALUES (?, ?, ?, ?, ?)')
       .bind(id, name, safeLogo, website || '', description || '').run();
     return c.json({ message: "Kompaniya qo'shildi!", id }, 201);
-  } catch (err) { return c.json({ error: 'Server xatosi: ' + err.message }, 500); }
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
 adminApp.put('/admin/companies/:id', async (c) => {
@@ -73,7 +75,7 @@ adminApp.put('/admin/companies/:id', async (c) => {
     await c.env.DB.prepare('UPDATE companies SET name = ?, logo = ?, website = ?, description = ? WHERE id = ?')
       .bind(name, safeLogo, website || '', description || '', c.req.param('id')).run();
     return c.json({ success: true });
-  } catch (err) { return c.json({ error: 'Server xatosi: ' + err.message }, 500); }
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
 // Admin Games
@@ -93,7 +95,7 @@ adminApp.post('/admin/games', async (c) => {
     await c.env.DB.prepare('INSERT INTO games (id, title, price, genre, image, game_url, company_id, available) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
       .bind(id, title, parseFloat(price), genre || '', safeImage, game_url, company_id, 1).run();
     return c.json({ message: "O'yin saqlandi!", id }, 201);
-  } catch (err) { return c.json({ error: 'Server xatosi: ' + err.message }, 500); }
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
 adminApp.put('/admin/games/:id', async (c) => {
@@ -103,7 +105,7 @@ adminApp.put('/admin/games/:id', async (c) => {
     await c.env.DB.prepare('UPDATE games SET title = ?, price = ?, genre = ?, image = ?, game_url = ?, discount = ? WHERE id = ?')
       .bind(title, parseFloat(price), genre, safeImage, game_url, parseInt(discount) || 0, c.req.param('id')).run();
     return c.json({ success: true });
-  } catch (err) { return c.json({ error: 'Server xatosi: ' + err.message }, 500); }
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
 adminApp.delete('/admin/games/:id', async (c) => {
@@ -130,7 +132,7 @@ adminApp.post('/admin/bundles', async (c) => {
     await c.env.DB.prepare('INSERT INTO bundles (id, name, description, image, price, discount) VALUES (?, ?, ?, ?, ?, ?)')
       .bind(id, name, description || '', safeImage, parseFloat(price), parseInt(discount) || 0).run();
     return c.json({ message: "Bundle yaratildi!", id }, 201);
-  } catch (err) { return c.json({ error: 'Server xatosi: ' + err.message }, 500); }
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
 adminApp.put('/admin/bundles/:id', async (c) => {
@@ -140,7 +142,7 @@ adminApp.put('/admin/bundles/:id', async (c) => {
     await c.env.DB.prepare('UPDATE bundles SET name = ?, description = ?, image = ?, price = ?, discount = ? WHERE id = ?')
       .bind(name, description || '', safeImage, parseFloat(price), parseInt(discount) || 0, c.req.param('id')).run();
     return c.json({ success: true });
-  } catch (err) { return c.json({ error: 'Server xatosi: ' + err.message }, 500); }
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
 adminApp.delete('/admin/bundles/:id', async (c) => {
@@ -159,7 +161,7 @@ adminApp.post('/admin/bundles/:id/games', async (c) => {
     await c.env.DB.prepare('INSERT INTO bundle_games (id, bundle_id, game_id) VALUES (?, ?, ?)')
       .bind(id, c.req.param('id'), gameId).run();
     return c.json({ message: "O'yin bundlega qo'shildi!" }, 201);
-  } catch (err) { return c.json({ error: 'Server xatosi: ' + err.message }, 500); }
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
 // Admin Events
@@ -180,7 +182,7 @@ adminApp.post('/admin/events', async (c) => {
     await c.env.DB.prepare('INSERT INTO events (id, title, image, link_url, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?)')
       .bind(id, title, safeImage, link_url || '', start_date, end_date).run();
     return c.json({ message: "Event qo'shildi!", id }, 201);
-  } catch (err) { return c.json({ error: 'Server xatosi: ' + err.message }, 500); }
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
 // Admin API Keys
@@ -199,7 +201,7 @@ adminApp.post('/admin/api-keys', async (c) => {
     await c.env.DB.prepare('INSERT INTO api_keys (id, key_value, description, permissions, expires_at) VALUES (?, ?, ?, ?, ?)')
       .bind(id, keyValue, description || '', permissions || '', expires_at || null).run();
     return c.json({ message: "API Key yaratildi!", key: keyValue }, 201);
-  } catch (err) { return c.json({ error: 'Server xatosi: ' + err.message }, 500); }
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
 adminApp.delete('/admin/api-keys/:id', async (c) => {
@@ -225,7 +227,7 @@ adminApp.post('/admin/webhooks', async (c) => {
     await c.env.DB.prepare('INSERT INTO webhooks (id, name, url, event_type, secret) VALUES (?, ?, ?, ?, ?)')
       .bind(id, name, url, event_type || 'all', secret || '').run();
     return c.json({ message: "Webhook yaratildi!", id }, 201);
-  } catch (err) { return c.json({ error: 'Server xatosi: ' + err.message }, 500); }
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
 adminApp.delete('/admin/webhooks/:id', async (c) => {
@@ -250,7 +252,7 @@ adminApp.post('/admin/backend', async (c) => {
     await c.env.DB.prepare('INSERT INTO backend_services (id, name, url, status) VALUES (?, ?, ?, ?)')
       .bind(id, name, url, status || 'active').run();
     return c.json({ message: "Xizmat qo'shildi!", id }, 201);
-  } catch (err) { return c.json({ error: 'Server xatosi: ' + err.message }, 500); }
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
 // Admin Roles
@@ -269,7 +271,7 @@ adminApp.post('/admin/roles', async (c) => {
     await c.env.DB.prepare('INSERT INTO roles (id, name, description, permissions) VALUES (?, ?, ?, ?)')
       .bind(id, name, description || '', JSON.stringify(permissions || [])).run();
     return c.json({ message: "Rol yaratildi!", id }, 201);
-  } catch (err) { return c.json({ error: 'Server xatosi: ' + err.message }, 500); }
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
 adminApp.put('/admin/roles/:id', async (c) => {
@@ -278,7 +280,7 @@ adminApp.put('/admin/roles/:id', async (c) => {
     await c.env.DB.prepare('UPDATE roles SET name = ?, description = ?, permissions = ? WHERE id = ?')
       .bind(name, description || '', JSON.stringify(permissions || []), c.req.param('id')).run();
     return c.json({ success: true });
-  } catch (err) { return c.json({ error: 'Server xatosi: ' + err.message }, 500); }
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
 adminApp.delete('/admin/roles/:id', async (c) => {
@@ -303,7 +305,33 @@ adminApp.post('/admin/rates', async (c) => {
     await c.env.DB.prepare('INSERT INTO rates (id, currency, rate, source) VALUES (?, ?, ?, ?)')
       .bind(id, currency, parseFloat(rate), source || 'manual').run();
     return c.json({ message: "Kurs saqlandi!", id }, 201);
-  } catch (err) { return c.json({ error: 'Server xatosi: ' + err.message }, 500); }
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
+});
+
+// Admin Stars Rates
+adminApp.get('/admin/stars-rates', async (c) => {
+  try {
+    const rates = await c.env.DB.prepare('SELECT * FROM stars_rates').all();
+    return c.json({ rates: rates.results || [] });
+  } catch (err) { return c.json({ rates: [] }); }
+});
+
+adminApp.post('/admin/stars-rates', async (c) => {
+  try {
+    const { amount_usd, stars_amount } = await c.req.json();
+    if (!amount_usd || !stars_amount) return c.json({ error: 'Barcha maydonlarni to\'ldiring!' }, 400);
+    const id = crypto.randomUUID();
+    await c.env.DB.prepare('INSERT INTO stars_rates (id, amount_usd, stars_amount) VALUES (?, ?, ?)')
+      .bind(id, parseFloat(amount_usd), parseInt(stars_amount)).run();
+    return c.json({ message: "Kurs qo'shildi!", id }, 201);
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
+});
+
+adminApp.delete('/admin/stars-rates/:id', async (c) => {
+  try {
+    await c.env.DB.prepare('DELETE FROM stars_rates WHERE id = ?').bind(c.req.param('id')).run();
+    return c.json({ success: true });
+  } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
 // Admin Server
@@ -319,33 +347,6 @@ adminApp.get('/admin/server', async (c) => {
       errors: Math.floor(Math.random() * 5),
     });
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
-});
-
-// Admin Users (language ustunisiz)
-adminApp.get('/admin/users', async (c) => {
-  try {
-    const users = await c.env.DB.prepare('SELECT id, username, email, role, balance, telegram_id, created_at FROM users').all();
-    return c.json({ users: users.results || [] });
-  } catch (err) { 
-    return c.json({ error: 'Foydalanuvchilarni olishda xato: ' + err.message }, 500); 
-  }
-});
-
-// Admin Users - Tahrirlash
-adminApp.put('/admin/users/:id', async (c) => {
-  try {
-    const { username, email, balance, role } = await c.req.json();
-    
-    // Email band emasligini tekshirish (o'zidan boshqa)
-    if (email) {
-      const existing = await c.env.DB.prepare('SELECT id FROM users WHERE email = ? AND id != ?').bind(email, c.req.param('id')).first();
-      if (existing) return c.json({ error: 'Bu email band!' }, 409);
-    }
-
-    await c.env.DB.prepare('UPDATE users SET username = ?, email = ?, balance = ?, role = ? WHERE id = ?')
-      .bind(username, email || null, parseFloat(balance), role, c.req.param('id')).run();
-    return c.json({ success: true });
-  } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
 export default adminApp;

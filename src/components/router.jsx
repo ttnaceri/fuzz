@@ -86,6 +86,7 @@ import AdminNewBundle from './admin/AdminNewBundle.jsx';
 import AdminEvents from './admin/AdminEvents.jsx';
 import AdminCompanies from './admin/AdminCompanies.jsx';
 import AdminNewCompany from './admin/AdminNewCompany.jsx';
+import AdminStarsRate from './admin/AdminStarsRate.jsx';
 
 // --- FOOTER PAGES ---
 import FooterAboutPage from '../footer/AboutPage.jsx';
@@ -208,6 +209,7 @@ export const router = createBrowserRouter([
       { path: 'events', element: <AdminEvents /> },
       { path: 'companies', element: <AdminCompanies /> },
       { path: 'new-company', element: <AdminNewCompany /> },
+      { path: 'stars-rate', element: <AdminStarsRate /> },
     ],
   },
 ]);

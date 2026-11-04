@@ -33,6 +33,24 @@ userApp.post('/store/buy', async (c) => {
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
+// Pay with Stars
+userApp.post('/store/pay-stars', async (c) => {
+  try {
+    const { userId, amount_usd, stars_paid } = await c.req.json();
+    if (!userId || !amount_usd || !stars_paid) return c.json({ error: 'Ma\'lumot yetarli emas' }, 400);
+
+    const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first();
+    if (!user) return c.json({ error: 'Foydalanuvchi topilmadi' }, 404);
+
+    await c.env.DB.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').bind(parseFloat(amount_usd), userId).run();
+    
+    const id = crypto.randomUUID();
+    await c.env.DB.prepare('INSERT INTO payments (id, user_id, amount_usd, stars_paid) VALUES (?, ?, ?, ?)').bind(id, userId, parseFloat(amount_usd), parseInt(stars_paid)).run();
+
+    return c.json({ message: "To'lov muvaffaqiyatli amalga oshirildi!", newBalance: user.balance + parseFloat(amount_usd) });
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
+});
+
 // Play Game
 userApp.get('/games/:id/play', async (c) => {
   try {

@@ -143,6 +143,37 @@ app.get('/fuzz/api/init-db', async (c) => {
       );
     `).run();
 
+    // PAYMENT METHODS JADVALI
+    await c.env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS payment_methods (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        logo_url TEXT,
+        enabled INTEGER DEFAULT 0,
+        discount INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `).run();
+
+    // Standart to'lov usullarini qo'shish
+    const existingMethods = await c.env.DB.prepare('SELECT * FROM payment_methods LIMIT 1').first();
+    if (!existingMethods) {
+      const methods = [
+        { id: 'click', name: 'Click', logo: '/image/paymentsLogo/click.png', enabled: 0, discount: 0 },
+        { id: 'payme', name: 'Payme', logo: '/image/paymentsLogo/payme.png', enabled: 0, discount: 0 },
+        { id: 'humo', name: 'Humo', logo: '/image/paymentsLogo/humo.png', enabled: 0, discount: 0 },
+        { id: 'uzcard', name: 'Uzcard', logo: '/image/paymentsLogo/uzcard.png', enabled: 0, discount: 0 },
+        { id: 'hamkorbank', name: 'HamkorBank', logo: '/image/paymentsLogo/hamkorbank.png', enabled: 0, discount: 0 },
+        { id: 'paypal', name: 'PayPal', logo: '/image/paymentsLogo/payPal.png', enabled: 0, discount: 0 },
+        { id: 'stars', name: 'Telegram Stars', logo: '/image/paymentsLogo/telegramStars.png', enabled: 1, discount: 0 },
+        { id: 'card', name: 'Karta', logo: '/image/paymentsLogo/humoUzcard.png', enabled: 1, discount: 0 },
+      ];
+      for (const m of methods) {
+        await c.env.DB.prepare('INSERT INTO payment_methods (id, name, logo_url, enabled, discount) VALUES (?, ?, ?, ?, ?)')
+          .bind(m.id, m.name, m.logo, m.enabled, m.discount).run();
+      }
+    }
+
     return c.json({ message: "Barcha jadvallar yaratildi!" });
   } catch (err) {
     return c.json({ error: "Xato: " + err.message }, 500);
@@ -351,7 +382,17 @@ app.post('/fuzz/api/admin/console', async (c) => {
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
-// Telegram Webhook (To'liq va xatosiz)
+// ==========================================
+// PUBLIC PAYMENT METHODS API (YANGI)
+// ==========================================
+app.get('/fuzz/api/payment-methods', async (c) => {
+  try {
+    const methods = await c.env.DB.prepare('SELECT * FROM payment_methods WHERE enabled = 1').all();
+    return c.json({ methods: methods.results || [] });
+  } catch (err) { return c.json({ methods: [] }); }
+});
+
+// Telegram Webhook
 app.post('/fuzz/telegram/webhook', async (c) => {
   try {
     const update = await c.req.json();
@@ -362,7 +403,6 @@ app.post('/fuzz/telegram/webhook', async (c) => {
     }
     const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
-    // 1. /start bosilganda
     if (update.message && update.message.text && update.message.text.startsWith('/start')) {
       const chatId = update.message.chat.id;
       const firstName = update.message.from.first_name || 'User';
@@ -411,7 +451,6 @@ app.post('/fuzz/telegram/webhook', async (c) => {
       }
     }
 
-    // 2. Oddiy xabar (support_messages ga saqlash)
     if (update.message && update.message.text && !update.message.text.startsWith('/start')) {
       const chatId = update.message.chat.id;
       const text = update.message.text;
@@ -425,7 +464,6 @@ app.post('/fuzz/telegram/webhook', async (c) => {
       }
     }
 
-    // 3. Callback (til tanlash)
     if (update.callback_query) {
       const chatId = update.callback_query.message.chat.id;
       const data = update.callback_query.data;
@@ -458,7 +496,6 @@ app.post('/fuzz/telegram/webhook', async (c) => {
       }
     }
 
-    // 4. Pre-checkout
     if (update.pre_checkout_query) {
       await fetch(`${TELEGRAM_API}/answerPreCheckoutQuery`, {
         method: 'POST',
@@ -470,7 +507,6 @@ app.post('/fuzz/telegram/webhook', async (c) => {
       });
     }
 
-    // 5. Muvaffaqiyatli to'lov
     if (update.message && update.message.successful_payment) {
       const payment = update.message.successful_payment;
       const chatId = update.message.chat.id;
@@ -510,48 +546,5 @@ app.post('/fuzz/telegram/webhook', async (c) => {
 // Barcha user va admin API'larni ulash
 app.route('/fuzz/api', userApp);
 app.route('/fuzz/api', adminApp);
-
-// ... (index.js ning boshqa qismlari o'zgarishsiz qoladi)
-
-// DB Init ga qo'shish:
-app.get('/fuzz/api/init-db', async (c) => {
-  try {
-    // ... (boshqa jadvallar)
-
-    await c.env.DB.prepare(`
-      CREATE TABLE IF NOT EXISTS payment_methods (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        logo_url TEXT,
-        enabled INTEGER DEFAULT 0,
-        discount INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-    `).run();
-
-    // Standart to'lov turlarini qo'shish
-    const existing = await c.env.DB.prepare('SELECT * FROM payment_methods LIMIT 1').first();
-    if (!existing) {
-      const methods = [
-        { id: 'click', name: 'Click', logo: '/image/paymentsLogo/click.png', enabled: 0, discount: 0 },
-        { id: 'payme', name: 'Payme', logo: '/image/paymentsLogo/payme.png', enabled: 0, discount: 0 },
-        { id: 'humo', name: 'Humo', logo: '/image/paymentsLogo/humo.png', enabled: 0, discount: 0 },
-        { id: 'uzcard', name: 'Uzcard', logo: '/image/paymentsLogo/uzcard.png', enabled: 0, discount: 0 },
-        { id: 'hamkorbank', name: 'HamkorBank', logo: '/image/paymentsLogo/hamkorbank.png', enabled: 0, discount: 0 },
-        { id: 'paypal', name: 'PayPal', logo: '/image/paymentsLogo/payPal.png', enabled: 0, discount: 0 },
-        { id: 'stars', name: 'Telegram Stars', logo: '/image/paymentsLogo/telegramStars.png', enabled: 1, discount: 0 },
-        { id: 'card', name: 'Karta', logo: '/image/paymentsLogo/humoUzcard.png', enabled: 1, discount: 0 },
-      ];
-      for (const m of methods) {
-        await c.env.DB.prepare('INSERT INTO payment_methods (id, name, logo_url, enabled, discount) VALUES (?, ?, ?, ?, ?)')
-          .bind(m.id, m.name, m.logo, m.enabled, m.discount).run();
-      }
-    }
-
-    return c.json({ message: "Barcha jadvallar yaratildi!" });
-  } catch (err) {
-    return c.json({ error: "Xato: " + err.message }, 500);
-  }
-});
 
 export default app;

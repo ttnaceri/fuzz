@@ -4,9 +4,8 @@ import AdminConsole from '../admin/AdminConsole.jsx';
 
 const ADMIN_LINKS = [
   { to: '/admin', label: 'Dashboard', icon: 'fa-gauge', end: true },
-  { to: '/admin/payments', label: 'Payment Methods', icon: 'fa-credit-card' },
   { to: '/admin/users', label: 'Users', icon: 'fa-users' },
-  { to: '/admin/edit-user', label: 'Edit User', icon: 'fa-user-pen' }, // YANGI
+  { to: '/admin/edit-user', label: 'Edit User', icon: 'fa-user-pen' },
   { to: '/admin/new-game', label: 'Add Game', icon: 'fa-plus' },
   { to: '/admin/all-games', label: 'All Games', icon: 'fa-gamepad' },
   { to: '/admin/companies', label: 'Companies', icon: 'fa-building' },
@@ -16,6 +15,7 @@ const ADMIN_LINKS = [
   { to: '/admin/platform', label: 'Platform Finance', icon: 'fa-chart-line' },
   { to: '/admin/rate', label: 'Rates', icon: 'fa-money-bill-transfer' },
   { to: '/admin/stars-rate', label: 'Stars Rate', icon: 'fa-star' },
+  { to: '/admin/payments', label: 'Payment Methods', icon: 'fa-credit-card' }, // YANGI
   { to: '/admin/server', label: 'Server Status', icon: 'fa-server' },
   { to: '/admin/telegram', label: 'Telegram & Support', icon: 'fa-paper-plane' },
   { to: '/admin/api', label: 'API Keys', icon: 'fa-key' },

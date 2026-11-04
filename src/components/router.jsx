@@ -40,7 +40,6 @@ import NotFoundPage from './pages/NotFoundPage.jsx';
 import WalletHistoryPage from './pages/WalletHistoryPage.jsx';
 import WalletTopUpPage from './pages/WalletTopUpPage.jsx';
 import WalletRefundPage from './pages/WalletRefundPage.jsx';
-import AdminPayments from './admin/AdminPayments.jsx';
 
 // --- AUTH PAGES ---
 import LoginPage from './pages/LoginPage.jsx';
@@ -64,7 +63,7 @@ import LanguagePage from './pages/LanguagePage.jsx';
 import AdminDashboard from './admin/AdminDashboard.jsx';
 import AdminGames from './admin/AdminGames.jsx';
 import AdminUsers from './admin/AdminUsers.jsx';
-import AdminEditUser from './admin/AdminEditUser.jsx'; // YANGI
+import AdminEditUser from './admin/AdminEditUser.jsx';
 import AdminOrders from './admin/AdminOrders.jsx';
 import AdminReports from './admin/AdminReports.jsx';
 import AdminReviews from './admin/AdminReviews.jsx';
@@ -89,6 +88,7 @@ import AdminEvents from './admin/AdminEvents.jsx';
 import AdminCompanies from './admin/AdminCompanies.jsx';
 import AdminNewCompany from './admin/AdminNewCompany.jsx';
 import AdminStarsRate from './admin/AdminStarsRate.jsx';
+import AdminPayments from './admin/AdminPayments.jsx'; // YANGI
 
 // --- FOOTER PAGES ---
 import FooterAboutPage from '../footer/AboutPage.jsx';
@@ -213,6 +213,7 @@ export const router = createBrowserRouter([
       { path: 'companies', element: <AdminCompanies /> },
       { path: 'new-company', element: <AdminNewCompany /> },
       { path: 'stars-rate', element: <AdminStarsRate /> },
+      { path: 'payments', element: <AdminPayments /> }, // YANGI
     ],
   },
 ]);

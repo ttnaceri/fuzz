@@ -21,7 +21,7 @@ const isNameValid = (name) => {
 // Health Check
 app.get('/fuzz/api/health', (c) => c.json({ status: 'ok', time: new Date().toISOString() }));
 
-// DB Init
+// DB Init (Barcha jadvallar)
 app.get('/fuzz/api/init-db', async (c) => {
   try {
     await c.env.DB.prepare(`
@@ -345,12 +345,18 @@ app.post('/fuzz/api/admin/console', async (c) => {
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
-// Telegram Webhook (To'liq tuzatilgan)
+// Telegram Webhook (TO'LIQ TUZATILGAN)
 app.post('/fuzz/telegram/webhook', async (c) => {
   try {
     const update = await c.req.json();
+    console.log("=== TELEGRAM UPDATE ===");
+    console.log(JSON.stringify(update, null, 2));
+    
     const BOT_TOKEN = c.env.BOT_TOKEN;
-    if (!BOT_TOKEN) return c.json({ error: 'Bot token yo\'q' }, 500);
+    if (!BOT_TOKEN) {
+      console.error("BOT_TOKEN topilmadi!");
+      return c.json({ error: 'Bot token yo\'q' }, 500);
+    }
     const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
     // 1. /start bosilganda
@@ -358,28 +364,39 @@ app.post('/fuzz/telegram/webhook', async (c) => {
       const chatId = update.message.chat.id;
       const firstName = update.message.from.first_name || 'User';
       const lastName = update.message.from.last_name || '';
-      const startParam = update.message.text.split(' ')[1];
+      const textParts = update.message.text.split(' ');
+      const startParam = textParts.length > 1 ? textParts[1] : null;
+
+      console.log("Chat ID:", chatId, "Start Param:", startParam);
 
       // Agar /start pay_... bo'lsa, Stars to'lovini yuborish
       if (startParam && startParam.startsWith('pay_')) {
-        const [_, amountStr, starsStr] = startParam.split('_');
-        const amountUsd = parseFloat(amountStr);
-        const starsAmount = parseInt(starsStr);
+        const parts = startParam.split('_');
+        const amountUsd = parseFloat(parts[1]);
+        const starsAmount = parseInt(parts[2]);
 
-        // Telegram Stars Invoice yuborish
-        await fetch(`${TELEGRAM_API}/sendInvoice`, {
+        console.log(`Stars to'lovi: $${amountUsd} = ${starsAmount} Stars`);
+
+        const invoiceRes = await fetch(`${TELEGRAM_API}/sendInvoice`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: chatId,
             title: `Fuzz Balans +$${amountUsd}`,
             description: `Balansingizni $${amountUsd} ga to'ldirish`,
-            payload: `stars_pay:${chatId}:${amountUsd}`,
+            payload: `stars_pay|${chatId}|${amountUsd}`, // '|' belgisi bilan ajratamiz
             provider_token: "",
             currency: "XTR",
             prices: [{ label: `${amountUsd} USD`, amount: starsAmount }],
           }),
         });
+        
+        const invoiceJson = await invoiceRes.json();
+        console.log("SendInvoice Response:", JSON.stringify(invoiceJson));
+        
+        if (!invoiceJson.ok) {
+          console.error("Invoice xatosi:", invoiceJson.description);
+        }
       } else {
         // Oddiy /start (til tanlash)
         const existing = await c.env.DB.prepare('SELECT * FROM users WHERE telegram_id = ?').bind(chatId).first();
@@ -404,7 +421,7 @@ app.post('/fuzz/telegram/webhook', async (c) => {
       }
     }
 
-    // 2. Callback (til tanlash yoki Stars to'lov tugmasi)
+    // 2. Callback (til tanlash)
     if (update.callback_query) {
       const chatId = update.callback_query.message.chat.id;
       const data = update.callback_query.data;
@@ -437,10 +454,13 @@ app.post('/fuzz/telegram/webhook', async (c) => {
       }
     }
 
-    // 3. Pre-checkout (Telegram to'lovni tasdiqlashdan oldin so'raydi)
+    // 3. Pre-checkout
     if (update.pre_checkout_query) {
+      console.log("=== PRE-CHECKOUT QUERY ===");
+      console.log(JSON.stringify(update.pre_checkout_query, null, 2));
+      
       try {
-        await fetch(`${TELEGRAM_API}/answerPreCheckoutQuery`, {
+        const preCheckoutRes = await fetch(`${TELEGRAM_API}/answerPreCheckoutQuery`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -448,42 +468,72 @@ app.post('/fuzz/telegram/webhook', async (c) => {
             ok: true,
           }),
         });
+        const preCheckoutJson = await preCheckoutRes.json();
+        console.log("PreCheckout Response:", JSON.stringify(preCheckoutJson));
       } catch (err) {
-        console.error("Pre-checkout xatosi:", err);
+        console.error("PreCheckout xatosi:", err);
       }
     }
 
-    // 4. Muvaffaqiyatli to'lov (Stars yechildi)
+    // 4. Muvaffaqiyatli to'lov
     if (update.message && update.message.successful_payment) {
+      console.log("=== SUCCESSFUL PAYMENT ===");
+      console.log(JSON.stringify(update.message.successful_payment, null, 2));
+      
       const payment = update.message.successful_payment;
       const chatId = update.message.chat.id;
       const payload = payment.invoice_payload;
 
-      const parts = payload.split(':');
-      const userId = parts[1];
+      console.log("Payload:", payload);
+      
+      // Payload: "stars_pay|CHAT_ID|AMOUNT"
+      const parts = payload.split('|');
+      if (parts.length !== 3) {
+        console.error("Payload formati noto'g'ri:", payload);
+        return c.json({ error: 'Payload formati noto\'g\'ri' }, 400);
+      }
+      
       const amountUsd = parseFloat(parts[2]);
+      console.log("To'lov summasi: $" + amountUsd);
 
+      // Foydalanuvchini telegram_id orqali topish
       const user = await c.env.DB.prepare('SELECT * FROM users WHERE telegram_id = ?').bind(chatId.toString()).first();
+      console.log("Foydalanuvchi:", user ? user.username : 'topilmadi');
+      
       if (user) {
+        // Balansni oshirish
         await c.env.DB.prepare('UPDATE users SET balance = balance + ? WHERE telegram_id = ?')
           .bind(amountUsd, chatId.toString()).run();
         
+        // To'lovni yozish
         await c.env.DB.prepare('INSERT INTO payments (id, user_id, amount_usd, stars_paid) VALUES (?, ?, ?, ?)')
           .bind(crypto.randomUUID(), user.id, amountUsd, payment.total_amount).run();
 
+        console.log("Balans yangilandi va to'lov yozildi!");
+
+        // Foydalanuvchiga xabar
         await fetch(`${TELEGRAM_API}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: chatId,
-            text: `✅ To'lov muvaffaqiyatli!\n\nBalansingiz +$${amountUsd} ga to'ldirildi.`,
+            text: `✅ To'lov muvaffaqiyatli!\n\nBalansingiz +$${amountUsd} ga to'ldirildi.\nJoriy balans: $${(user.balance + amountUsd).toFixed(2)}`,
           }),
         });
+      } else {
+        console.error("Foydalanuvchi telegram_id bilan topilmadi:", chatId);
+        // Foydalanuvchi bo'lmasa ham, to'lovni saqlaymiz
+        await c.env.DB.prepare('INSERT INTO payments (id, user_id, amount_usd, stars_paid) VALUES (?, ?, ?, ?)')
+          .bind(crypto.randomUUID(), 'unknown', amountUsd, payment.total_amount).run();
       }
     }
 
     return c.json({ ok: true });
-  } catch (err) { return c.json({ error: 'Webhook xatosi' }, 500); }
+  } catch (err) { 
+    console.error("=== WEBHOOK XATOSI ===");
+    console.error(err);
+    return c.json({ error: 'Webhook xatosi: ' + err.message }, 500); 
+  }
 });
 
 // Barcha user va admin API'larni ulash

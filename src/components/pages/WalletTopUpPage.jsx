@@ -9,7 +9,7 @@ import Modal from '../common/Modal.jsx';
 
 export default function WalletTopUpPage() {
   const { t } = useLanguage();
-  const { user, refreshUser } = useAuth();
+  const { user } = useAuth();
   const { info, success } = useToast();
   
   const [amount, setAmount] = useState('');
@@ -58,7 +58,7 @@ export default function WalletTopUpPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Stars to'lovni boshlash (Telegram botga yo'naltirish)
+  // Stars to'lovni boshlash
   const handleStarsPay = () => {
     if (!selectedStars || !user) return;
     const botUrl = `https://t.me/FuzzAppBot?start=pay_${selectedStars.amount_usd}_${selectedStars.stars_amount}`;
@@ -134,30 +134,36 @@ export default function WalletTopUpPage() {
             <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>Telegram Stars orqali to'ldirish</h3>
             <p className="text-muted mb-2">Telegram Stars yordamida tez va oson to'ldiring.</p>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              {starsRates.map(sr => (
-                <div 
-                  key={sr.id} 
-                  onClick={() => { setSelectedStars(sr); setIsModalOpen(true); }}
-                  style={{ 
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '1rem', backgroundColor: '#100b0a', border: '1px solid #48201a', 
-                    borderRadius: '8px', cursor: 'pointer', transition: 'border-color 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.borderColor = '#8a1200'}
-                  onMouseLeave={(e) => e.currentTarget.style.borderColor = '#48201a'}
-                >
-                  <div>
-                    <div style={{ color: '#43b581', fontWeight: 'bold', fontSize: '1.2rem' }}>${sr.amount_usd}</div>
-                    <div style={{ color: '#b9a6a2', fontSize: '0.8rem' }}>Fuzz Balans</div>
+            {starsRates.length === 0 ? (
+              <div style={{ color: '#b9a6a2', fontSize: '0.9rem', marginTop: '1rem' }}>
+                Hozircha Stars kurslari mavjud emas.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                {starsRates.map(sr => (
+                  <div 
+                    key={sr.id} 
+                    onClick={() => { setSelectedStars(sr); setIsModalOpen(true); }}
+                    style={{ 
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '1rem', backgroundColor: '#100b0a', border: '1px solid #48201a', 
+                      borderRadius: '8px', cursor: 'pointer', transition: 'border-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = '#8a1200'}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = '#48201a'}
+                  >
+                    <div>
+                      <div style={{ color: '#43b581', fontWeight: 'bold', fontSize: '1.2rem' }}>${sr.amount_usd}</div>
+                      <div style={{ color: '#b9a6a2', fontSize: '0.8rem' }}>Fuzz Balans</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ color: '#f0b44d', fontWeight: 'bold', fontSize: '1.2rem' }}>{sr.stars_amount} ⭐</div>
+                      <div style={{ color: '#b9a6a2', fontSize: '0.8rem' }}>Stars</div>
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ color: '#f0b44d', fontWeight: 'bold', fontSize: '1.2rem' }}>{sr.stars_amount} ⭐</div>
-                    <div style={{ color: '#b9a6a2', fontSize: '0.8rem' }}>Stars</div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

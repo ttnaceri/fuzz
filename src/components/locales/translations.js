@@ -8,11 +8,14 @@ export const translations = {
       quickLinks: "Quick links", newReleases: "New Releases", specialOffers: "Special Offers",
       freeGames: "Free Games", topSellers: "Top Sellers", categories: "Categories", community: "Community"
     },
-    store: {
-      title: "Featured", wishlist: "Wishlist", news: "News", charts: "Charts"
-    },
     wallet: {
-      history: "My History", topUp: "Top Up Balance", refund: "Refund"
+      history: "My History", topUp: "Top Up Balance", refund: "Refund",
+      balance: "Balance", paymentSoon: "Online payment coming soon!",
+      currentBalance: "Current Balance", amount: "Amount", submit: "Submit",
+      topUpInfo: "Currently, you can transfer money to the admin card. Admin will approve manually.",
+      refundRule: "You can only request a refund if your balance is > 50,000 UZS.",
+      refundSuccess: "Refund request submitted!", notEnoughBalance: "Balance too low.",
+      loginRequired: "You must be logged in to manage your wallet."
     },
     register: {
       step1: "Enter your Telegram ID", step2: "Complete your account",
@@ -34,11 +37,14 @@ export const translations = {
       quickLinks: "Tezkor havolalar", newReleases: "Yangi chiqqanlar", specialOffers: "Maxsus takliflar",
       freeGames: "Bepul o'yinlar", topSellers: "Eng ko'p sotilganlar", categories: "Kategoriyalar", community: "Hamjamiyat"
     },
-    store: {
-      title: "Tanlanganlar", wishlist: "Istaklar ro'yxati", news: "Yangiliklar", charts: "Jadvallar"
-    },
     wallet: {
-      history: "Mening tarixim", topUp: "Balansni to'ldirish", refund: "Pulni qaytarish"
+      history: "Mening tarixim", topUp: "Balansni to'ldirish", refund: "Pulni qaytarish",
+      balance: "Balans", paymentSoon: "Online to'lov tez kunda!",
+      currentBalance: "Joriy balans", amount: "Miqdor", submit: "Yuborish",
+      topUpInfo: "Hozircha pulni admin kartasiga o'tkazing. Admin qo'lda tasdiqlaydi.",
+      refundRule: "Pulni qaytarish uchun balansingiz 50,000 so'mdan ko'p bo'lishi shart!",
+      refundSuccess: "So'rov muvaffaqiyatli yuborildi!", notEnoughBalance: "Balans juda kam.",
+      loginRequired: "Hamyonni boshqarish uchun tizimga kiring."
     },
     register: {
       step1: "Telegram ID ingizni kiriting", step2: "Akkauntingizni yakunlang",
@@ -46,7 +52,7 @@ export const translations = {
       password: "Parol", confirmPassword: "Parolni tasdiqlang", submit: "Ro'yxatdan o'tishni yakunlash"
     },
     reset: {
-      title: "Parolni tiklash", subtitle: "Kod olish uchun Telegram ID ingizni kiriting",
+      title: "Parolni tiklash", subtitle: "Kod olish uchun Telegram ID kiriting",
       forgotId: "ID raqamimni eslolmayapman", codeTitle: "Tasdiqlash kodini kiriting",
       newPassword: "Yangi parol yarating", backToLogin: "Kirish sahifasiga qaytish"
     }
@@ -60,11 +66,14 @@ export const translations = {
       quickLinks: "Быстрые ссылки", newReleases: "Новинки", specialOffers: "Спецпредложения",
       freeGames: "Бесплатные игры", topSellers: "Лидеры продаж", categories: "Категории", community: "Сообщество"
     },
-    store: {
-      title: "Избранное", wishlist: "Список желаемого", news: "Новости", charts: "Чарты"
-    },
     wallet: {
-      history: "Моя история", topUp: "Пополнить баланс", refund: "Возврат средств"
+      history: "Моя история", topUp: "Пополнить баланс", refund: "Возврат средств",
+      balance: "Баланс", paymentSoon: "Онлайн-оплата скоро!",
+      currentBalance: "Текущий баланс", amount: "Сумма", submit: "Отправить",
+      topUpInfo: "Пока переведите деньги на карту админа. Админ подтвердит вручную.",
+      refundRule: "Возврат доступен, если баланс > 50,000 UZS.",
+      refundSuccess: "Запрос на возврат отправлен!", notEnoughBalance: "Недостаточно средств.",
+      loginRequired: "Войдите, чтобы управлять кошельком."
     },
     register: {
       step1: "Введите ваш Telegram ID", step2: "Завершите настройку аккаунта",

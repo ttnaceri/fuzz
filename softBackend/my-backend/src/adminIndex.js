@@ -28,7 +28,7 @@ adminApp.get('/admin/payments', async (c) => {
   } catch (err) { return c.json({ payments: [] }); }
 });
 
-// Admin Users (Barcha foydalanuvchilar)
+// Admin Users
 adminApp.get('/admin/users', async (c) => {
   try {
     const users = await c.env.DB.prepare('SELECT id, username, email, role, balance, telegram_id, language, created_at FROM users').all();
@@ -36,21 +36,17 @@ adminApp.get('/admin/users', async (c) => {
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
-// Admin Users: Qidirish (Username, Email yoki Telegram ID orqali)
 adminApp.get('/admin/users/search', async (c) => {
   try {
     const query = c.req.query('q');
     if (!query) return c.json({ users: [] });
-
     const users = await c.env.DB.prepare(
       'SELECT id, username, email, role, balance, telegram_id, language, created_at FROM users WHERE username LIKE ? OR email LIKE ? OR telegram_id LIKE ?'
     ).bind(`%${query}%`, `%${query}%`, `%${query}%`).all();
-    
     return c.json({ users: users.results || [] });
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
-// Admin Users: Tahrirlash
 adminApp.put('/admin/users/:id', async (c) => {
   try {
     const { username, email, balance, role, telegram_id } = await c.req.json();
@@ -372,12 +368,51 @@ adminApp.get('/admin/server', async (c) => {
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
-// Telegram Support (Barcha telegram_id bo'lgan userlar)
+// ==========================================
+// TELEGRAM SUPPORT
+// ==========================================
+
+// Telegram userlari ro'yxati
 adminApp.get('/admin/telegram/users', async (c) => {
   try {
     const users = await c.env.DB.prepare('SELECT id, username, telegram_id, balance, created_at FROM users WHERE telegram_id IS NOT NULL').all();
     return c.json({ users: users.results || [] });
   } catch (err) { return c.json({ users: [] }); }
+});
+
+// Telegram xabarlari (support_messages dan)
+adminApp.get('/admin/telegram/messages', async (c) => {
+  try {
+    const messages = await c.env.DB.prepare('SELECT * FROM support_messages ORDER BY created_at DESC').all();
+    return c.json({ messages: messages.results || [] });
+  } catch (err) { return c.json({ messages: [] }); }
+});
+
+// Telegramga javob yuborish
+adminApp.post('/admin/telegram/reply', async (c) => {
+  try {
+    const { chatId, text } = await c.req.json();
+    if (!chatId || !text) return c.json({ error: 'Chat ID va xabar matni kerak!' }, 400);
+
+    const BOT_TOKEN = c.env.BOT_TOKEN;
+    if (!BOT_TOKEN) return c.json({ error: 'Bot token yo\'q' }, 500);
+
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text })
+    });
+    
+    const resJson = await res.json();
+    if (!resJson.ok) return c.json({ error: 'Telegram xatosi: ' + resJson.description }, 500);
+
+    // Javobni bazaga saqlash
+    const id = crypto.randomUUID();
+    await c.env.DB.prepare('INSERT INTO support_messages (id, chat_id, username, message) VALUES (?, ?, ?, ?)')
+      .bind(id, chatId, 'Admin', text).run();
+
+    return c.json({ success: true });
+  } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
 export default adminApp;

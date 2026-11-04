@@ -10,19 +10,27 @@ export default function AdminTelegram() {
   const { success, error: toastError } = useToast();
 
   useEffect(() => {
-    // Telegram ID ga ega foydalanuvchilar
     api.get('/api/admin/telegram/users').then(data => setUsers(data.users || [])).catch(() => {});
-    // Xabarlar
     api.get('/api/admin/telegram/messages').then(data => setMessages(data.messages || [])).catch(() => {});
   }, []);
 
   const handleReply = async () => {
-    if (!replyText || !selectedChat) return;
+    if (!replyText.trim() || !selectedChat) return;
     try {
       await api.post('/api/admin/telegram/reply', { chatId: selectedChat, text: replyText });
       success("Xabar yuborildi!");
       setReplyText('');
+      // Xabarlarni yangilash
+      const res = await api.get('/api/admin/telegram/messages');
+      setMessages(res.messages || []);
     } catch { toastError("Xato"); }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleReply();
+    }
   };
 
   return (
@@ -30,7 +38,6 @@ export default function AdminTelegram() {
       <h1 style={{ color: '#f5eeee', marginBottom: '1.5rem' }}>Telegram Support</h1>
       
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem' }}>
-        {/* Chatlar (Telegram ID ga ega barcha userlar) */}
         <div style={{ backgroundColor: '#241411', borderRadius: '8px', border: '1px solid #48201a', padding: '1rem' }}>
           <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>Chatlar ({users.length})</h3>
           {users.length === 0 ? <p style={{ color: '#b9a6a2' }}>Chatlar yo'q</p> : users.map(u => (
@@ -41,7 +48,6 @@ export default function AdminTelegram() {
           ))}
         </div>
         
-        {/* Chat oynasi */}
         <div style={{ backgroundColor: '#241411', borderRadius: '8px', border: '1px solid #48201a', padding: '1rem', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>Xabarlar</h3>
           <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #48201a', borderRadius: '4px', padding: '1rem', minHeight: '300px' }}>
@@ -54,8 +60,17 @@ export default function AdminTelegram() {
           </div>
           {selectedChat && (
             <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-              <input type="text" value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Javob yozing..." style={{ flex: 1, padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
-              <button onClick={handleReply} style={{ padding: '0.8rem 1.5rem', backgroundColor: '#8a1200', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Yuborish</button>
+              <input 
+                type="text" 
+                value={replyText} 
+                onChange={e => setReplyText(e.target.value)} 
+                onKeyDown={handleKeyDown}
+                placeholder="Javob yozing va Enter bosing..." 
+                style={{ flex: 1, padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} 
+              />
+              <button onClick={handleReply} style={{ padding: '0.8rem 1.5rem', backgroundColor: '#8a1200', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+                Yuborish
+              </button>
             </div>
           )}
         </div>

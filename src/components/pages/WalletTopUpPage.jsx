@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
 import { config } from '../config/config.js';
-import { useLanguage } from '../context/useLanguage.js'; // To'g'rilandi: named import
+import { useLanguage } from '../context/useLanguage.js';
 import useAuth from '../hooks/useAuth.js';
 import Sidebar from '../common/Sidebar.jsx';
 import useToast from '../hooks/useToast.js';
@@ -20,7 +20,6 @@ export default function WalletTopUpPage() {
   const [starsRates, setStarsRates] = useState([]);
   const [selectedStars, setSelectedStars] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     fetch(config.payment.exchangeApiUrl)
@@ -59,25 +58,13 @@ export default function WalletTopUpPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Stars orqali to'lov qilish
-  const handleStarsPay = async () => {
+  // Stars to'lovni boshlash (Telegram botga yo'naltirish)
+  const handleStarsPay = () => {
     if (!selectedStars || !user) return;
-    setProcessing(true);
-    try {
-      await api.post('/api/store/pay-stars', {
-        userId: user.id,
-        amount_usd: selectedStars.amount_usd,
-        stars_paid: selectedStars.stars_amount
-      });
-      
-      success(`To'lov muvaffaqiyatli! Balansingiz +$${selectedStars.amount_usd} ga oshdi.`);
-      setIsModalOpen(false);
-      if (refreshUser) refreshUser(); // Balansni yangilash
-    } catch (err) {
-      info(err.message || "To'lovda xatolik");
-    } finally {
-      setProcessing(false);
-    }
+    const botUrl = `https://t.me/FuzzAppBot?start=pay_${selectedStars.amount_usd}_${selectedStars.stars_amount}`;
+    window.open(botUrl, '_blank');
+    setIsModalOpen(false);
+    info("Telegram botga o'ting va to'lovni tasdiqlang.");
   };
 
   const cleanAmount = amount.replace(/\s/g, '');
@@ -181,10 +168,13 @@ export default function WalletTopUpPage() {
               <p style={{ color: '#f5eeee', marginBottom: '1rem' }}>
                 Siz <strong>${selectedStars.amount_usd}</strong> Fuzz balansini <strong>{selectedStars.stars_amount} Stars</strong> evaziga sotib olmoqchisiz.
               </p>
+              <p style={{ color: '#b9a6a2', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                Telegram bot ochiladi va to'lovni tasdiqlaysiz.
+              </p>
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
                 <button className="btn btn-secondary" onClick={() => setIsModalOpen(false)} style={{ flex: 1 }}>Bekor qilish</button>
-                <button className="btn btn-primary" onClick={handleStarsPay} disabled={processing} style={{ flex: 1 }}>
-                  {processing ? 'Yuborilmoqda...' : 'To\'lash'}
+                <button className="btn btn-primary" onClick={handleStarsPay} style={{ flex: 1 }}>
+                  Telegramga o'tish
                 </button>
               </div>
             </div>

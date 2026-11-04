@@ -345,7 +345,7 @@ app.post('/fuzz/api/admin/console', async (c) => {
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
-// Telegram Webhook
+// Telegram Webhook (To'liq tuzatilgan)
 app.post('/fuzz/telegram/webhook', async (c) => {
   try {
     const update = await c.req.json();
@@ -439,14 +439,18 @@ app.post('/fuzz/telegram/webhook', async (c) => {
 
     // 3. Pre-checkout (Telegram to'lovni tasdiqlashdan oldin so'raydi)
     if (update.pre_checkout_query) {
-      await fetch(`${TELEGRAM_API}/answerPreCheckoutQuery`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pre_checkout_query_id: update.pre_checkout_query.id,
-          ok: true,
-        }),
-      });
+      try {
+        await fetch(`${TELEGRAM_API}/answerPreCheckoutQuery`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pre_checkout_query_id: update.pre_checkout_query.id,
+            ok: true,
+          }),
+        });
+      } catch (err) {
+        console.error("Pre-checkout xatosi:", err);
+      }
     }
 
     // 4. Muvaffaqiyatli to'lov (Stars yechildi)

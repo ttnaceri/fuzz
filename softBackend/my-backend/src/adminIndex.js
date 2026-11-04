@@ -331,4 +331,21 @@ adminApp.get('/admin/users', async (c) => {
   }
 });
 
+// Admin Users - Tahrirlash
+adminApp.put('/admin/users/:id', async (c) => {
+  try {
+    const { username, email, balance, role } = await c.req.json();
+    
+    // Email band emasligini tekshirish (o'zidan boshqa)
+    if (email) {
+      const existing = await c.env.DB.prepare('SELECT id FROM users WHERE email = ? AND id != ?').bind(email, c.req.param('id')).first();
+      if (existing) return c.json({ error: 'Bu email band!' }, 409);
+    }
+
+    await c.env.DB.prepare('UPDATE users SET username = ?, email = ?, balance = ?, role = ? WHERE id = ?')
+      .bind(username, email || null, parseFloat(balance), role, c.req.param('id')).run();
+    return c.json({ success: true });
+  } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
+});
+
 export default adminApp;

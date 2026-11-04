@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
 import { config } from '../config/config.js';
-import useLanguage from '../context/useLanguage.js';
+import { useLanguage } from '../context/useLanguage.js'; // To'g'rilandi: named import
 import useAuth from '../hooks/useAuth.js';
 import Sidebar from '../common/Sidebar.jsx';
 import useToast from '../hooks/useToast.js';
@@ -72,7 +72,7 @@ export default function WalletTopUpPage() {
       
       success(`To'lov muvaffaqiyatli! Balansingiz +$${selectedStars.amount_usd} ga oshdi.`);
       setIsModalOpen(false);
-      refreshUser(); // Balansni yangilash
+      if (refreshUser) refreshUser(); // Balansni yangilash
     } catch (err) {
       info(err.message || "To'lovda xatolik");
     } finally {

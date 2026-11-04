@@ -56,7 +56,7 @@ import CompanyDetailsPage from './pages/CompanyDetailsPage.jsx';
 // --- GAMEPLAY PAGE ---
 import GamePlayerPage from './pages/GamePlayerPage.jsx';
 
-// --- LANGUAGE PAGE (YANGI) ---
+// --- LANGUAGE PAGE ---
 import LanguagePage from './pages/LanguagePage.jsx';
 
 // --- ADMIN PAGES ---
@@ -82,6 +82,7 @@ import AdminPermissions from './admin/AdminPermissions.jsx';
 import AdminNewGame from './admin/AdminNewGame.jsx';
 import AdminAllGames from './admin/AdminAllGames.jsx';
 import AdminBundles from './admin/AdminBundles.jsx';
+import AdminNewBundle from './admin/AdminNewBundle.jsx';
 import AdminEvents from './admin/AdminEvents.jsx';
 import AdminCompanies from './admin/AdminCompanies.jsx';
 import AdminNewCompany from './admin/AdminNewCompany.jsx';
@@ -203,6 +204,7 @@ export const router = createBrowserRouter([
       { path: 'new-game', element: <AdminNewGame /> },
       { path: 'all-games', element: <AdminAllGames /> },
       { path: 'bundles', element: <AdminBundles /> },
+      { path: 'new-bundle', element: <AdminNewBundle /> },
       { path: 'events', element: <AdminEvents /> },
       { path: 'companies', element: <AdminCompanies /> },
       { path: 'new-company', element: <AdminNewCompany /> },

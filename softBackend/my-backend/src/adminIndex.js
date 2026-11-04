@@ -321,4 +321,14 @@ adminApp.get('/admin/server', async (c) => {
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
+// Admin Users (language ustunisiz)
+adminApp.get('/admin/users', async (c) => {
+  try {
+    const users = await c.env.DB.prepare('SELECT id, username, email, role, balance, telegram_id, created_at FROM users').all();
+    return c.json({ users: users.results || [] });
+  } catch (err) { 
+    return c.json({ error: 'Foydalanuvchilarni olishda xato: ' + err.message }, 500); 
+  }
+});
+
 export default adminApp;

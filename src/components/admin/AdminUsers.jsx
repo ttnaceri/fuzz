@@ -50,8 +50,6 @@ export default function AdminUsers() {
             <th style={{ padding: '1rem' }}>Telegram ID</th>
             <th style={{ padding: '1rem' }}>Role</th>
             <th style={{ padding: '1rem' }}>Balance</th>
-            <th style={{ padding: '1rem' }}>Status</th>
-            <th style={{ padding: '1rem' }}>Amallar</th>
           </tr>
         </thead>
         <tbody>
@@ -60,13 +58,8 @@ export default function AdminUsers() {
               <td style={{ padding: '1rem' }}>{u.username}</td>
               <td style={{ padding: '1rem' }}>{u.email}</td>
               <td style={{ padding: '1rem' }}>{u.telegram_id || '—'}</td>
-              <td style={{ padding: '1rem' }}>{u.role}</td>
+              <td style={{ padding: '1rem', color: u.role === 'banned' ? '#ed5555' : (u.role === 'admin' ? '#43b581' : '#f5eeee') }}>{u.role}</td>
               <td style={{ padding: '1rem', color: '#43b581' }}>${u.balance}</td>
-              <td style={{ padding: '1rem', color: u.role === 'admin' ? '#43b581' : '#b9a6a2' }}>{u.role === 'admin' ? 'Admin' : 'User'}</td>
-              <td style={{ padding: '1rem' }}>
-                <button onClick={() => handleEdit(u)} style={{ background: 'none', border: 'none', color: '#f0b44d', cursor: 'pointer', marginRight: '0.5rem' }}><i className="fa-solid fa-pen"></i></button>
-                <button onClick={() => handleDelete(u.id)} style={{ background: 'none', border: 'none', color: '#ed5555', cursor: 'pointer' }}><i className="fa-solid fa-trash"></i></button>
-              </td>
             </tr>
           ))}
         </tbody>

@@ -34,14 +34,10 @@ export default function WalletTopUpPage() {
     // To'lov usullarini yuklash
     api.get('/api/payment-methods')
       .then(data => {
-        console.log("To'lov usullari:", data);
         setPaymentMethods(data.methods || []);
         setLoading(false);
       })
-      .catch((err) => {
-        console.error("To'lov usullarini yuklashda xato:", err);
-        setLoading(false);
-      });
+      .catch(() => setLoading(false));
 
     // Stars kurslarini yuklash
     api.get('/api/admin/stars-rates')
@@ -122,7 +118,24 @@ export default function WalletTopUpPage() {
                     -{m.discount}%
                   </div>
                 )}
-                <img src={m.logo_url} alt={m.name} style={{ height: '50px', objectFit: 'contain', marginBottom: '1rem' }} onError={(e) => e.currentTarget.style.display = 'none'} />
+                
+                {/* RASM - To'g'ri kvadrat shaklda */}
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80px', marginBottom: '1rem' }}>
+                  <img 
+                    src={m.logo_url} 
+                    alt={m.name} 
+                    style={{ 
+                      width: '80px', 
+                      height: '80px', 
+                      objectFit: 'contain',
+                      borderRadius: '8px'
+                    }} 
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }} 
+                  />
+                </div>
+                
                 <div style={{ color: '#f5eeee', fontWeight: 'bold' }}>{m.name}</div>
               </div>
             ))}
@@ -135,7 +148,14 @@ export default function WalletTopUpPage() {
             </button>
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-              <img src={selectedMethod.logo_url} alt={selectedMethod.name} style={{ height: '40px' }} onError={(e) => e.currentTarget.style.display = 'none'} />
+              <div style={{ width: '60px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img 
+                  src={selectedMethod.logo_url} 
+                  alt={selectedMethod.name} 
+                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
+                  onError={(e) => e.currentTarget.style.display = 'none'} 
+                />
+              </div>
               <h3 style={{ color: '#f5eeee', margin: 0 }}>{selectedMethod.name}</h3>
               {selectedMethod.discount > 0 && (
                 <span style={{ backgroundColor: '#f0b44d', color: '#000', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>-{selectedMethod.discount}% chegirma</span>

@@ -3,16 +3,18 @@ import { api } from '../services/api.js';
 import useToast from '../hooks/useToast.js';
 
 export default function AdminTelegram() {
+  const [users, setUsers] = useState([]);
   const [messages, setMessages] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
   const [replyText, setReplyText] = useState('');
   const { success, error: toastError } = useToast();
 
   useEffect(() => {
+    // Telegram ID ga ega foydalanuvchilar
+    api.get('/api/admin/telegram/users').then(data => setUsers(data.users || [])).catch(() => {});
+    // Xabarlar
     api.get('/api/admin/telegram/messages').then(data => setMessages(data.messages || [])).catch(() => {});
   }, []);
-
-  const chats = [...new Set(messages.map(m => m.chat_id))];
 
   const handleReply = async () => {
     if (!replyText || !selectedChat) return;
@@ -28,14 +30,18 @@ export default function AdminTelegram() {
       <h1 style={{ color: '#f5eeee', marginBottom: '1.5rem' }}>Telegram Support</h1>
       
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem' }}>
+        {/* Chatlar (Telegram ID ga ega barcha userlar) */}
         <div style={{ backgroundColor: '#241411', borderRadius: '8px', border: '1px solid #48201a', padding: '1rem' }}>
-          <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>Chatlar</h3>
-          {chats.length === 0 ? <p style={{ color: '#b9a6a2' }}>Chatlar yo'q</p> : chats.map(chatId => (
-            <div key={chatId} onClick={() => setSelectedChat(chatId)} style={{ padding: '0.8rem', borderBottom: '1px solid #48201a', cursor: 'pointer', backgroundColor: selectedChat === chatId ? '#100b0a' : 'transparent' }}>
-              <div style={{ color: '#f5eeee' }}>Chat ID: {chatId}</div>
+          <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>Chatlar ({users.length})</h3>
+          {users.length === 0 ? <p style={{ color: '#b9a6a2' }}>Chatlar yo'q</p> : users.map(u => (
+            <div key={u.id} onClick={() => setSelectedChat(u.telegram_id)} style={{ padding: '0.8rem', borderBottom: '1px solid #48201a', cursor: 'pointer', backgroundColor: selectedChat === u.telegram_id ? '#100b0a' : 'transparent' }}>
+              <div style={{ color: '#f5eeee' }}>{u.username}</div>
+              <div style={{ color: '#b9a6a2', fontSize: '0.8rem' }}>TG: {u.telegram_id}</div>
             </div>
           ))}
         </div>
+        
+        {/* Chat oynasi */}
         <div style={{ backgroundColor: '#241411', borderRadius: '8px', border: '1px solid #48201a', padding: '1rem', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>Xabarlar</h3>
           <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #48201a', borderRadius: '4px', padding: '1rem', minHeight: '300px' }}>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api.js';
 import useToast from '../hooks/useToast.js';
+import ImageUploader from '../common/ImageUploader.jsx';
 
 export default function AdminAllGames() {
   const [games, setGames] = useState([]);
@@ -53,6 +54,7 @@ export default function AdminAllGames() {
         <h1 style={{ color: '#f5eeee', margin: 0 }}>Barcha O'yinlar</h1>
         <Link to="/admin/new-game" style={{ backgroundColor: '#8a1200', color: '#fff', padding: '0.6rem 1.2rem', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold' }}>+ Yangi Qo'shish</Link>
       </div>
+      
       <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#241411', borderRadius: '8px', border: '1px solid #48201a' }}>
         <thead>
           <tr style={{ backgroundColor: '#19100e', color: '#b9a6a2', textAlign: 'left' }}>
@@ -88,7 +90,7 @@ export default function AdminAllGames() {
 
       {editGame && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', border: '1px solid #48201a', width: '500px' }}>
+          <div style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', border: '1px solid #48201a', width: '500px', maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>O'yinni Tahrirlash</h3>
             <div style={{ marginBottom: '1rem' }}>
               <label style={{ color: '#b9a6a2', fontSize: '0.8rem', marginBottom: '0.3rem', display: 'block' }}>Nomi</label>
@@ -108,6 +110,16 @@ export default function AdminAllGames() {
               <label style={{ color: '#b9a6a2', fontSize: '0.8rem', marginBottom: '0.3rem', display: 'block' }}>O'yin URL</label>
               <input type="url" value={editGame.game_url} onChange={e => setEditGame({ ...editGame, game_url: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
             </div>
+            
+            {/* RASM YUKLASH */}
+            <div style={{ marginBottom: '1.5rem', backgroundColor: '#19100e', padding: '1rem', borderRadius: '4px', border: '1px dashed #48201a' }}>
+              <ImageUploader 
+                label="O'yin Rasmi" 
+                value={editGame.image} 
+                onChange={(url) => setEditGame({ ...editGame, image: url })} 
+              />
+            </div>
+
             <div style={{ display: 'flex', gap: '1rem' }}>
               <button onClick={handleSave} style={{ flex: 1, padding: '0.8rem', backgroundColor: '#43b581', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Saqlash</button>
               <button onClick={() => setEditGame(null)} style={{ flex: 1, padding: '0.8rem', backgroundColor: '#48201a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Bekor qilish</button>

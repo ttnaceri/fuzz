@@ -5,6 +5,7 @@ import AdminConsole from '../admin/AdminConsole.jsx';
 const ADMIN_LINKS = [
   { to: '/admin', label: 'Dashboard', icon: 'fa-gauge', end: true },
   { to: '/admin/users', label: 'Users', icon: 'fa-users' },
+  { to: '/admin/edit-user', label: 'Edit User', icon: 'fa-user-pen' }, // YANGI
   { to: '/admin/new-game', label: 'Add Game', icon: 'fa-plus' },
   { to: '/admin/all-games', label: 'All Games', icon: 'fa-gamepad' },
   { to: '/admin/companies', label: 'Companies', icon: 'fa-building' },

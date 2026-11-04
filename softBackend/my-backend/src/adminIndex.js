@@ -20,7 +20,7 @@ adminApp.get('/admin/stats', async (c) => {
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
-// Admin Payments (Stars statistikasi)
+// Admin Payments
 adminApp.get('/admin/payments', async (c) => {
   try {
     const payments = await c.env.DB.prepare('SELECT * FROM payments').all();
@@ -28,23 +28,38 @@ adminApp.get('/admin/payments', async (c) => {
   } catch (err) { return c.json({ payments: [] }); }
 });
 
-// Admin Users
+// Admin Users (Barcha foydalanuvchilar)
 adminApp.get('/admin/users', async (c) => {
   try {
     const users = await c.env.DB.prepare('SELECT id, username, email, role, balance, telegram_id, language, created_at FROM users').all();
     return c.json({ users: users.results || [] });
-  } catch (err) { return c.json({ error: 'Foydalanuvchilarni olishda xato: ' + err.message }, 500); }
+  } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
+// Admin Users: Qidirish (Username, Email yoki Telegram ID orqali)
+adminApp.get('/admin/users/search', async (c) => {
+  try {
+    const query = c.req.query('q');
+    if (!query) return c.json({ users: [] });
+
+    const users = await c.env.DB.prepare(
+      'SELECT id, username, email, role, balance, telegram_id, language, created_at FROM users WHERE username LIKE ? OR email LIKE ? OR telegram_id LIKE ?'
+    ).bind(`%${query}%`, `%${query}%`, `%${query}%`).all();
+    
+    return c.json({ users: users.results || [] });
+  } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
+});
+
+// Admin Users: Tahrirlash
 adminApp.put('/admin/users/:id', async (c) => {
   try {
-    const { username, email, balance, role } = await c.req.json();
+    const { username, email, balance, role, telegram_id } = await c.req.json();
     if (email) {
       const existing = await c.env.DB.prepare('SELECT id FROM users WHERE email = ? AND id != ?').bind(email, c.req.param('id')).first();
       if (existing) return c.json({ error: 'Bu email band!' }, 409);
     }
-    await c.env.DB.prepare('UPDATE users SET username = ?, email = ?, balance = ?, role = ? WHERE id = ?')
-      .bind(username, email || null, parseFloat(balance), role, c.req.param('id')).run();
+    await c.env.DB.prepare('UPDATE users SET username = ?, email = ?, balance = ?, role = ?, telegram_id = ? WHERE id = ?')
+      .bind(username, email || null, parseFloat(balance), role, telegram_id || null, c.req.param('id')).run();
     return c.json({ success: true });
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
@@ -355,6 +370,14 @@ adminApp.get('/admin/server', async (c) => {
       errors: Math.floor(Math.random() * 5),
     });
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
+});
+
+// Telegram Support (Barcha telegram_id bo'lgan userlar)
+adminApp.get('/admin/telegram/users', async (c) => {
+  try {
+    const users = await c.env.DB.prepare('SELECT id, username, telegram_id, balance, created_at FROM users WHERE telegram_id IS NOT NULL').all();
+    return c.json({ users: users.results || [] });
+  } catch (err) { return c.json({ users: [] }); }
 });
 
 export default adminApp;

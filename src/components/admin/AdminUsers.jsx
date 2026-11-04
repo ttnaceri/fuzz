@@ -4,8 +4,7 @@ import useToast from '../hooks/useToast.js';
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
-  const [editUser, setEditUser] = useState(null);
-  const { success, error: toastError } = useToast();
+  const { error: toastError } = useToast();
 
   const loadUsers = () => {
     api.get('/api/admin/users')
@@ -14,22 +13,6 @@ export default function AdminUsers() {
   };
 
   useEffect(() => { loadUsers(); }, []);
-
-  const handleEdit = (user) => setEditUser({ ...user });
-
-  const handleSave = async () => {
-    try {
-      await api.put(`/api/admin/users/${editUser.id}`, {
-        username: editUser.username,
-        email: editUser.email, // Email qo'shildi
-        balance: editUser.balance,
-        role: editUser.role
-      });
-      success("Saqlandi");
-      setEditUser(null);
-      loadUsers();
-    } catch { toastError("Xato"); }
-  };
 
   return (
     <div>
@@ -42,7 +25,6 @@ export default function AdminUsers() {
             <th style={{ padding: '1rem' }}>Telegram ID</th>
             <th style={{ padding: '1rem' }}>Role</th>
             <th style={{ padding: '1rem' }}>Balance</th>
-            <th style={{ padding: '1rem' }}>Amallar</th>
           </tr>
         </thead>
         <tbody>
@@ -53,50 +35,10 @@ export default function AdminUsers() {
               <td style={{ padding: '1rem' }}>{u.telegram_id || '—'}</td>
               <td style={{ padding: '1rem', color: u.role === 'banned' ? '#ed5555' : (u.role === 'admin' ? '#43b581' : '#f5eeee') }}>{u.role}</td>
               <td style={{ padding: '1rem', color: '#43b581' }}>${u.balance}</td>
-              <td style={{ padding: '1rem' }}>
-                <button onClick={() => handleEdit(u)} style={{ background: 'none', border: 'none', color: '#f0b44d', cursor: 'pointer', marginRight: '0.5rem' }}><i className="fa-solid fa-pen"></i></button>
-              </td>
             </tr>
           ))}
         </tbody>
       </table>
-
-      {editUser && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', border: '1px solid #48201a', width: '400px' }}>
-            <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>Foydalanuvchini Tahrirlash</h3>
-            
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ color: '#b9a6a2', fontSize: '0.8rem', marginBottom: '0.3rem', display: 'block' }}>Username</label>
-              <input type="text" value={editUser.username} onChange={e => setEditUser({ ...editUser, username: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
-            </div>
-
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ color: '#b9a6a2', fontSize: '0.8rem', marginBottom: '0.3rem', display: 'block' }}>Email</label>
-              <input type="email" value={editUser.email || ''} onChange={e => setEditUser({ ...editUser, email: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
-            </div>
-
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ color: '#b9a6a2', fontSize: '0.8rem', marginBottom: '0.3rem', display: 'block' }}>Balance ($)</label>
-              <input type="number" value={editUser.balance} onChange={e => setEditUser({ ...editUser, balance: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ color: '#b9a6a2', fontSize: '0.8rem', marginBottom: '0.3rem', display: 'block' }}>Role</label>
-              <select value={editUser.role} onChange={e => setEditUser({ ...editUser, role: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }}>
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-                <option value="banned">Banned</option>
-              </select>
-            </div>
-
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button onClick={handleSave} style={{ flex: 1, padding: '0.8rem', backgroundColor: '#43b581', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Saqlash</button>
-              <button onClick={() => setEditUser(null)} style={{ flex: 1, padding: '0.8rem', backgroundColor: '#48201a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Bekor qilish</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

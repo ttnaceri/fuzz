@@ -63,6 +63,7 @@ import LanguagePage from './pages/LanguagePage.jsx';
 import AdminDashboard from './admin/AdminDashboard.jsx';
 import AdminGames from './admin/AdminGames.jsx';
 import AdminUsers from './admin/AdminUsers.jsx';
+import AdminEditUser from './admin/AdminEditUser.jsx'; // YANGI
 import AdminOrders from './admin/AdminOrders.jsx';
 import AdminReports from './admin/AdminReports.jsx';
 import AdminReviews from './admin/AdminReviews.jsx';
@@ -186,6 +187,7 @@ export const router = createBrowserRouter([
       { index: true, element: <AdminDashboard /> },
       { path: 'games', element: <AdminGames /> },
       { path: 'users', element: <AdminUsers /> },
+      { path: 'edit-user', element: <AdminEditUser /> },
       { path: 'orders', element: <AdminOrders /> },
       { path: 'reports', element: <AdminReports /> },
       { path: 'reviews', element: <AdminReviews /> },

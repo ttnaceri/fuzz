@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
 import useToast from '../hooks/useToast.js';
+import ImageUploader from '../common/ImageUploader.jsx';
 
 export default function AdminPayments() {
   const [methods, setMethods] = useState([]);
   const [editMethod, setEditMethod] = useState(null);
-  const [form, setForm] = useState({ name: '', logo_url: '', enabled: 0, discount: 0 });
+  const [form, setForm] = useState({ name: '', logo_url: '', api_url: '', enabled: 0, discount: 0 });
   const { success, error: toastError } = useToast();
 
   const loadMethods = () => {
@@ -20,7 +21,7 @@ export default function AdminPayments() {
       await api.post('/api/admin/payment-methods', form);
       success("To'lov usuli qo'shildi!");
       loadMethods();
-      setForm({ name: '', logo_url: '', enabled: 0, discount: 0 });
+      setForm({ name: '', logo_url: '', api_url: '', enabled: 0, discount: 0 });
     } catch { toastError("Xato"); }
   };
 
@@ -52,12 +53,15 @@ export default function AdminPayments() {
           <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
         </div>
         <div style={{ flex: 1, minWidth: '150px' }}>
-          <label style={{ color: '#b9a6a2', fontSize: '0.8rem', display: 'block', marginBottom: '0.3rem' }}>Logo URL</label>
-          <input type="text" value={form.logo_url} onChange={e => setForm({...form, logo_url: e.target.value})} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
+          <label style={{ color: '#b9a6a2', fontSize: '0.8rem', display: 'block', marginBottom: '0.3rem' }}>API URL</label>
+          <input type="text" value={form.api_url} onChange={e => setForm({...form, api_url: e.target.value})} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} placeholder="https://..." />
         </div>
         <div style={{ flex: 1, minWidth: '100px' }}>
           <label style={{ color: '#b9a6a2', fontSize: '0.8rem', display: 'block', marginBottom: '0.3rem' }}>Chegirma (%)</label>
           <input type="number" value={form.discount} onChange={e => setForm({...form, discount: e.target.value})} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
+        </div>
+        <div style={{ flex: 2, minWidth: '200px' }}>
+          <ImageUploader label="Logo" value={form.logo_url} onChange={(url) => setForm({...form, logo_url: url})} />
         </div>
         <button type="submit" style={{ padding: '0.8rem 1.5rem', backgroundColor: '#8a1200', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Qo'shish</button>
       </form>
@@ -91,19 +95,22 @@ export default function AdminPayments() {
       {/* Tahrirlash modali */}
       {editMethod && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', border: '1px solid #48201a', width: '400px' }}>
+          <div style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', border: '1px solid #48201a', width: '500px', maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>Tahrirlash</h3>
             <div style={{ marginBottom: '1rem' }}>
               <label style={{ color: '#b9a6a2', fontSize: '0.8rem', display: 'block', marginBottom: '0.3rem' }}>Nomi</label>
               <input type="text" value={editMethod.name} onChange={e => setEditMethod({...editMethod, name: e.target.value})} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
             </div>
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ color: '#b9a6a2', fontSize: '0.8rem', display: 'block', marginBottom: '0.3rem' }}>Logo URL</label>
-              <input type="text" value={editMethod.logo_url} onChange={e => setEditMethod({...editMethod, logo_url: e.target.value})} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
+              <label style={{ color: '#b9a6a2', fontSize: '0.8rem', display: 'block', marginBottom: '0.3rem' }}>API URL</label>
+              <input type="text" value={editMethod.api_url || ''} onChange={e => setEditMethod({...editMethod, api_url: e.target.value})} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
             </div>
             <div style={{ marginBottom: '1rem' }}>
               <label style={{ color: '#b9a6a2', fontSize: '0.8rem', display: 'block', marginBottom: '0.3rem' }}>Chegirma (%)</label>
               <input type="number" value={editMethod.discount} onChange={e => setEditMethod({...editMethod, discount: e.target.value})} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
+            </div>
+            <div style={{ marginBottom: '1.5rem', backgroundColor: '#19100e', padding: '1rem', borderRadius: '4px', border: '1px dashed #48201a' }}>
+              <ImageUploader label="Logo" value={editMethod.logo_url} onChange={(url) => setEditMethod({...editMethod, logo_url: url})} />
             </div>
             <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <input type="checkbox" id="enabled" checked={editMethod.enabled === 1} onChange={e => setEditMethod({...editMethod, enabled: e.target.checked ? 1 : 0})} style={{ accentColor: '#8a1200' }} />

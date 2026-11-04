@@ -20,7 +20,7 @@ adminApp.get('/admin/stats', async (c) => {
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
-// Admin Payments
+// Admin Payments (Stars statistikasi)
 adminApp.get('/admin/payments', async (c) => {
   try {
     const payments = await c.env.DB.prepare('SELECT * FROM payments').all();
@@ -353,6 +353,41 @@ adminApp.delete('/admin/stars-rates/:id', async (c) => {
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
+// Admin Payment Methods (api_url bilan)
+adminApp.get('/admin/payment-methods', async (c) => {
+  try {
+    const methods = await c.env.DB.prepare('SELECT * FROM payment_methods').all();
+    return c.json({ methods: methods.results || [] });
+  } catch (err) { return c.json({ methods: [] }); }
+});
+
+adminApp.post('/admin/payment-methods', async (c) => {
+  try {
+    const { name, logo_url, api_url, enabled, discount } = await c.req.json();
+    if (!name) return c.json({ error: 'Nomni kiriting!' }, 400);
+    const id = crypto.randomUUID();
+    await c.env.DB.prepare('INSERT INTO payment_methods (id, name, logo_url, api_url, enabled, discount) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(id, name, logo_url || '', api_url || '', enabled ? 1 : 0, parseInt(discount) || 0).run();
+    return c.json({ message: "To'lov usuli qo'shildi!", id }, 201);
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
+});
+
+adminApp.put('/admin/payment-methods/:id', async (c) => {
+  try {
+    const { name, logo_url, api_url, enabled, discount } = await c.req.json();
+    await c.env.DB.prepare('UPDATE payment_methods SET name = ?, logo_url = ?, api_url = ?, enabled = ?, discount = ? WHERE id = ?')
+      .bind(name, logo_url || '', api_url || '', enabled ? 1 : 0, parseInt(discount) || 0, c.req.param('id')).run();
+    return c.json({ success: true });
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
+});
+
+adminApp.delete('/admin/payment-methods/:id', async (c) => {
+  try {
+    await c.env.DB.prepare('DELETE FROM payment_methods WHERE id = ?').bind(c.req.param('id')).run();
+    return c.json({ success: true });
+  } catch (err) { return c.json({ error: 'Xato' }, 500); }
+});
+
 // Admin Server
 adminApp.get('/admin/server', async (c) => {
   try {
@@ -368,11 +403,7 @@ adminApp.get('/admin/server', async (c) => {
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
-// ==========================================
-// TELEGRAM SUPPORT
-// ==========================================
-
-// Telegram userlari ro'yxati
+// Telegram Support
 adminApp.get('/admin/telegram/users', async (c) => {
   try {
     const users = await c.env.DB.prepare('SELECT id, username, telegram_id, balance, created_at FROM users WHERE telegram_id IS NOT NULL').all();
@@ -380,7 +411,6 @@ adminApp.get('/admin/telegram/users', async (c) => {
   } catch (err) { return c.json({ users: [] }); }
 });
 
-// Telegram xabarlari (support_messages dan)
 adminApp.get('/admin/telegram/messages', async (c) => {
   try {
     const messages = await c.env.DB.prepare('SELECT * FROM support_messages ORDER BY created_at DESC').all();
@@ -388,7 +418,6 @@ adminApp.get('/admin/telegram/messages', async (c) => {
   } catch (err) { return c.json({ messages: [] }); }
 });
 
-// Telegramga javob yuborish
 adminApp.post('/admin/telegram/reply', async (c) => {
   try {
     const { chatId, text } = await c.req.json();
@@ -406,48 +435,12 @@ adminApp.post('/admin/telegram/reply', async (c) => {
     const resJson = await res.json();
     if (!resJson.ok) return c.json({ error: 'Telegram xatosi: ' + resJson.description }, 500);
 
-    // Javobni bazaga saqlash
     const id = crypto.randomUUID();
     await c.env.DB.prepare('INSERT INTO support_messages (id, chat_id, username, message) VALUES (?, ?, ?, ?)')
       .bind(id, chatId, 'Admin', text).run();
 
     return c.json({ success: true });
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
-});
-
-// Payment Methods API (Admin)
-adminApp.get('/admin/payment-methods', async (c) => {
-  try {
-    const methods = await c.env.DB.prepare('SELECT * FROM payment_methods').all();
-    return c.json({ methods: methods.results || [] });
-  } catch (err) { return c.json({ methods: [] }); }
-});
-
-adminApp.post('/admin/payment-methods', async (c) => {
-  try {
-    const { name, logo_url, enabled, discount } = await c.req.json();
-    if (!name) return c.json({ error: 'Nomni kiriting!' }, 400);
-    const id = crypto.randomUUID();
-    await c.env.DB.prepare('INSERT INTO payment_methods (id, name, logo_url, enabled, discount) VALUES (?, ?, ?, ?, ?)')
-      .bind(id, name, logo_url || '', enabled ? 1 : 0, parseInt(discount) || 0).run();
-    return c.json({ message: "To'lov usuli qo'shildi!", id }, 201);
-  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
-});
-
-adminApp.put('/admin/payment-methods/:id', async (c) => {
-  try {
-    const { name, logo_url, enabled, discount } = await c.req.json();
-    await c.env.DB.prepare('UPDATE payment_methods SET name = ?, logo_url = ?, enabled = ?, discount = ? WHERE id = ?')
-      .bind(name, logo_url || '', enabled ? 1 : 0, parseInt(discount) || 0, c.req.param('id')).run();
-    return c.json({ success: true });
-  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
-});
-
-adminApp.delete('/admin/payment-methods/:id', async (c) => {
-  try {
-    await c.env.DB.prepare('DELETE FROM payment_methods WHERE id = ?').bind(c.req.param('id')).run();
-    return c.json({ success: true });
-  } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
 export default adminApp;

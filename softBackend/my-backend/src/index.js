@@ -143,34 +143,29 @@ app.get('/fuzz/api/init-db', async (c) => {
       );
     `).run();
 
-    // PAYMENT METHODS JADVALI
+    // PAYMENT METHODS JADVALI (api_url qo'shildi)
     await c.env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS payment_methods (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         logo_url TEXT,
+        api_url TEXT,
         enabled INTEGER DEFAULT 0,
         discount INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `).run();
 
-    // Standart to'lov usullarini qo'shish
+    // Default 2 ta to'lov turi (Stars, Karta) agar yo'q bo'lsa
     const existingMethods = await c.env.DB.prepare('SELECT * FROM payment_methods LIMIT 1').first();
     if (!existingMethods) {
-      const methods = [
-        { id: 'click', name: 'Click', logo: '/image/paymentsLogo/click.png', enabled: 0, discount: 0 },
-        { id: 'payme', name: 'Payme', logo: '/image/paymentsLogo/payme.png', enabled: 0, discount: 0 },
-        { id: 'humo', name: 'Humo', logo: '/image/paymentsLogo/humo.png', enabled: 0, discount: 0 },
-        { id: 'uzcard', name: 'Uzcard', logo: '/image/paymentsLogo/uzcard.png', enabled: 0, discount: 0 },
-        { id: 'hamkorbank', name: 'HamkorBank', logo: '/image/paymentsLogo/hamkorbank.png', enabled: 0, discount: 0 },
-        { id: 'paypal', name: 'PayPal', logo: '/image/paymentsLogo/payPal.png', enabled: 0, discount: 0 },
-        { id: 'stars', name: 'Telegram Stars', logo: '/image/paymentsLogo/telegramStars.png', enabled: 1, discount: 0 },
-        { id: 'card', name: 'Karta', logo: '/image/paymentsLogo/humoUzcard.png', enabled: 1, discount: 0 },
+      const defaults = [
+        { id: 'stars', name: 'Telegram Stars', logo: '/image/paymentsLogo/telegramStars.png', api: '', enabled: 1, discount: 0 },
+        { id: 'card', name: 'Karta', logo: '/image/paymentsLogo/humoUzcard.png', api: '', enabled: 1, discount: 0 },
       ];
-      for (const m of methods) {
-        await c.env.DB.prepare('INSERT INTO payment_methods (id, name, logo_url, enabled, discount) VALUES (?, ?, ?, ?, ?)')
-          .bind(m.id, m.name, m.logo, m.enabled, m.discount).run();
+      for (const m of defaults) {
+        await c.env.DB.prepare('INSERT INTO payment_methods (id, name, logo_url, api_url, enabled, discount) VALUES (?, ?, ?, ?, ?, ?)')
+          .bind(m.id, m.name, m.logo, m.api, m.enabled, m.discount).run();
       }
     }
 
@@ -382,9 +377,7 @@ app.post('/fuzz/api/admin/console', async (c) => {
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
-// ==========================================
-// PUBLIC PAYMENT METHODS API (YANGI)
-// ==========================================
+// PUBLIC PAYMENT METHODS API
 app.get('/fuzz/api/payment-methods', async (c) => {
   try {
     const methods = await c.env.DB.prepare('SELECT * FROM payment_methods WHERE enabled = 1').all();

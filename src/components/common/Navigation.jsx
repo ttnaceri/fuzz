@@ -1,37 +1,27 @@
-import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useLanguage } from '../context/useLanguage.js';
+import useAuth from '../hooks/useAuth.js';
 
 export default function Navigation() {
-  const { t } = useLanguage();
-  const [balance] = useState();
-  const [rate, setRate] = useState(12500);
+  const { t, lang } = useLanguage();
+  const { user, isAuthenticated } = useAuth();
 
-  useEffect(() => {
-    fetch("https://v6.exchangerate-api.com/v6/6a1dd308edeaccd55c853818/latest/USD")
-      .then(res => res.json())
-      .then(data => {
-        if (data?.conversion_rates?.UZS) setRate(data.conversion_rates.UZS);
-      })
-      .catch(err => console.warn("API xatosi:", err));
-  }, []);
+  // Balans mavjud bo'lsa, uni formatlaymiz
+  const balance = user?.balance ? `$${Number(user.balance).toFixed(1)}` : '';
 
   return (
     <nav className="header__nav" style={{ display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', gap: '0.2rem' }}>
       <NavLink to="/" end style={{ whiteSpace: 'nowrap' }}>{t('nav.home')}</NavLink>
 
-      {/* STORE Dropdown */}
       <div className="nav-dropdown">
         <NavLink to="/store" className="nav-dropdown-btn" style={{ whiteSpace: 'nowrap' }}>{t('nav.store')}</NavLink>
         <div className="nav-dropdown-content">
           <NavLink to="/store">{t('store.title')}</NavLink>
-          <NavLink to="/wishlist">{t('store.wishlist')}</NavLink>
-          <NavLink to="/news">{t('store.news')}</NavLink>
-          <NavLink to="/top-sellers">{t('store.charts')}</NavLink>
+          <NavLink to="/new-releases">{t('home.newReleases')}</NavLink>
+          <NavLink to="/top-sellers">{t('home.topSellers')}</NavLink>
         </div>
       </div>
 
-      {/* LIBRARY Dropdown */}
       <div className="nav-dropdown">
         <NavLink to="/library" className="nav-dropdown-btn" style={{ whiteSpace: 'nowrap' }}>{t('nav.library')}</NavLink>
         <div className="nav-dropdown-content">
@@ -41,13 +31,23 @@ export default function Navigation() {
         </div>
       </div>
 
-      {/* WALLET Dropdown */}
+      {/* WALLET + BALANCE (YANGI) */}
       <div className="nav-dropdown">
-        <div className="nav-dropdown-btn" style={{ cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <div 
+          className="nav-dropdown-btn" 
+          style={{ 
+            cursor: 'pointer', 
+            whiteSpace: 'nowrap', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.5rem',
+            color: isAuthenticated ? '#43b581' : '#b9a6a2' 
+          }}
+        >
           <i className="fa-solid fa-wallet" style={{ fontSize: '0.9rem' }}></i>
           <span>
             {t('nav.wallet')} 
-            {balance > 0 && ` ($${balance.toFixed(2)})`}
+            {isAuthenticated && balance && ` (${balance})`}
           </span>
         </div>
         

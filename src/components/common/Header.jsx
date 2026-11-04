@@ -58,24 +58,6 @@ export default function Header() {
           
           {isAuthenticated ? (
             <>
-              {/* WALLET BALANSI (YANGI) */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.3rem 0.8rem',
-                backgroundColor: '#100b0a',
-                border: '1px solid #48201a',
-                borderRadius: '20px',
-                color: '#43b581',
-                fontWeight: 'bold',
-                fontSize: '0.85rem',
-                marginRight: '0.5rem'
-              }}>
-                <i className="fa-solid fa-wallet"></i>
-                <span>${user?.balance?.toFixed(2) || '0.00'}</span>
-              </div>
-
               <Link to={isAdmin ? "/admin" : "/account"} className="btn btn-ghost btn-sm">
                 <i className={isAdmin ? "fa-solid fa-shield" : "fa-solid fa-user"} /> 
                 <span className="d-none d-md-inline">{isAdmin ? 'Admin' : (user?.username || 'Account')}</span>

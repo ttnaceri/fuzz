@@ -209,7 +209,7 @@ export default function WalletTopUpPage() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Miqdor (UZS)</label>
-                  <input type="text" className="form-input" value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 '))} placeholder="50 000" />
+                  <input type="text" className="form-input" value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' '))} placeholder="50 000" />
                 </div>
                 <button className="btn btn-primary" onClick={handleCardPay} style={{ width: '100%' }}>
                   So'rov yuborish

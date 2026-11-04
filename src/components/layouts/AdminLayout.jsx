@@ -15,11 +15,12 @@ const ADMIN_LINKS = [
   { to: '/admin/platform', label: 'Platform Finance', icon: 'fa-chart-line' },
   { to: '/admin/rate', label: 'Rates', icon: 'fa-money-bill-transfer' },
   { to: '/admin/stars-rate', label: 'Stars Rate', icon: 'fa-star' },
-  { to: '/admin/payments', label: 'Payment Methods', icon: 'fa-credit-card' }, // YANGI
+  { to: '/admin/payments', label: 'Payment Methods', icon: 'fa-credit-card' },
+  { to: '/admin/payment-requests', label: 'Payment Requests', icon: 'fa-money-check' },
   { to: '/admin/server', label: 'Server Status', icon: 'fa-server' },
   { to: '/admin/telegram', label: 'Telegram & Support', icon: 'fa-paper-plane' },
   { to: '/admin/api', label: 'API Keys', icon: 'fa-key' },
-  { to: '/admin/webhooks', label: 'Webhooks', icon: 'fa-webhook' },
+  { to: '/admin/webhooks', label: 'Webhooks', icon: 'fa-link' }, // Icon qo'shildi
   { to: '/admin/backend', label: 'Backend Services', icon: 'fa-database' },
   { to: '/admin/logs', label: 'Admin Logs', icon: 'fa-list' },
   { to: '/admin/user-logs', label: 'User Logs', icon: 'fa-history' },
@@ -29,65 +30,68 @@ const ADMIN_LINKS = [
 
 export default function AdminLayout() {
   const navigate = useNavigate();
-  const [contextMenu, setContextMenu] = useState(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
-    const handleContextMenu = (e) => {
-      e.preventDefault();
-      setContextMenu({ x: e.clientX, y: e.clientY });
-    };
-    const handleClick = () => setContextMenu(null);
-    document.addEventListener('contextmenu', handleContextMenu);
-    document.addEventListener('click', handleClick);
-    return () => {
-      document.removeEventListener('contextmenu', handleContextMenu);
-      document.removeEventListener('click', handleClick);
-    };
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   return (
-    <div className="admin-layout" style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#100b0a' }}>
-      <aside style={{ width: '260px', backgroundColor: '#19100e', borderRight: '1px solid #48201a', padding: '1rem', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-        <Link to="/" style={{ color: '#8a1200', fontSize: '1.4rem', fontWeight: 'bold', marginBottom: '2rem', textDecoration: 'none' }}>
-          Fuzz Admin
-        </Link>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-          {ADMIN_LINKS.map((link) => (
-            <NavLink 
-              key={link.to} 
-              to={link.to} 
-              end={link.end}
-              style={({ isActive }) => ({
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.6rem 0.8rem',
-                borderRadius: '6px',
-                color: isActive ? '#f5eeee' : '#b9a6a2',
-                backgroundColor: isActive ? '#241411' : 'transparent',
-                textDecoration: 'none',
-                fontSize: '0.9rem',
-                fontWeight: '500'
-              })}
-            >
-              <i className={`fa-solid ${link.icon}`} style={{ width: '20px' }}></i>
-              {link.label}
-            </NavLink>
-          ))}
+    <div className="admin-layout" style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#100b0a', flexDirection: isMobile ? 'column' : 'row' }}>
+      
+      {/* Mobil burger tugmasi */}
+      {isMobile && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', backgroundColor: '#19100e', borderBottom: '1px solid #48201a' }}>
+          <Link to="/" style={{ color: '#8a1200', fontSize: '1.2rem', fontWeight: 'bold', textDecoration: 'none' }}>Fuzz Admin</Link>
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} style={{ background: 'none', border: 'none', color: '#f5eeee', fontSize: '1.5rem' }}>
+            <i className={`fa-solid ${isMobileMenuOpen ? 'fa-xmark' : 'fa-bars'}`}></i>
+          </button>
         </div>
-      </aside>
+      )}
+
+      {/* Sidebar */}
+      {(!isMobile || isMobileMenuOpen) && (
+        <aside style={{ width: isMobile ? '100%' : '260px', backgroundColor: '#19100e', borderRight: isMobile ? 'none' : '1px solid #48201a', padding: '1rem', display: 'flex', flexDirection: 'column', overflowY: 'auto', maxHeight: isMobile ? '50vh' : '100vh' }}>
+          {!isMobile && (
+            <Link to="/" style={{ color: '#8a1200', fontSize: '1.4rem', fontWeight: 'bold', marginBottom: '2rem', textDecoration: 'none' }}>
+              Fuzz Admin
+            </Link>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+            {ADMIN_LINKS.map((link) => (
+              <NavLink 
+                key={link.to} 
+                to={link.to} 
+                end={link.end}
+                onClick={() => isMobile && setIsMobileMenuOpen(false)}
+                style={({ isActive }) => ({
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.6rem 0.8rem',
+                  borderRadius: '6px',
+                  color: isActive ? '#f5eeee' : '#b9a6a2',
+                  backgroundColor: isActive ? '#241411' : 'transparent',
+                  textDecoration: 'none',
+                  fontSize: '0.9rem',
+                  fontWeight: '500'
+                })}
+              >
+                <i className={`fa-solid ${link.icon}`} style={{ width: '20px' }}></i>
+                {link.label}
+              </NavLink>
+            ))}
+          </div>
+        </aside>
+      )}
+
       <main style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
         <Outlet />
       </main>
       <AdminConsole />
-      {contextMenu && (
-        <div style={{ position: 'fixed', top: contextMenu.y, left: contextMenu.x, backgroundColor: '#241411', border: '1px solid #48201a', borderRadius: '6px', zIndex: 99999, padding: '0.5rem 0', width: '200px', boxShadow: '0 10px 30px rgba(0,0,0,0.8)' }}>
-          <div onClick={() => navigate('/admin')} style={{ padding: '0.5rem 1rem', color: '#f5eeee', cursor: 'pointer', fontSize: '0.9rem' }}>Dashboard</div>
-          <div onClick={() => navigate('/admin/companies')} style={{ padding: '0.5rem 1rem', color: '#f5eeee', cursor: 'pointer', fontSize: '0.9rem' }}>Companies</div>
-          <div onClick={() => navigate('/admin/all-games')} style={{ padding: '0.5rem 1rem', color: '#f5eeee', cursor: 'pointer', fontSize: '0.9rem' }}>Games</div>
-          <div onClick={() => navigate('/admin/events')} style={{ padding: '0.5rem 1rem', color: '#f5eeee', cursor: 'pointer', fontSize: '0.9rem' }}>Events</div>
-        </div>
-      )}
     </div>
   );
 }

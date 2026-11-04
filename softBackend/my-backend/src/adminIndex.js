@@ -20,7 +20,7 @@ adminApp.get('/admin/stats', async (c) => {
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
-// Admin Payments (Stars statistikasi)
+// Admin Payments
 adminApp.get('/admin/payments', async (c) => {
   try {
     const payments = await c.env.DB.prepare('SELECT * FROM payments').all();
@@ -353,7 +353,7 @@ adminApp.delete('/admin/stars-rates/:id', async (c) => {
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
-// Admin Payment Methods (api_url bilan)
+// Admin Payment Methods
 adminApp.get('/admin/payment-methods', async (c) => {
   try {
     const methods = await c.env.DB.prepare('SELECT * FROM payment_methods').all();
@@ -440,6 +440,63 @@ adminApp.post('/admin/telegram/reply', async (c) => {
       .bind(id, chatId, 'Admin', text).run();
 
     return c.json({ success: true });
+  } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
+});
+
+// ==========================================
+// PAYMENT REQUESTS (To'lov so'rovlari)
+// ==========================================
+adminApp.get('/admin/payment-requests', async (c) => {
+  try {
+    const requests = await c.env.DB.prepare(`
+      SELECT pr.*, u.username FROM payment_requests pr
+      JOIN users u ON pr.user_id = u.id
+      ORDER BY pr.created_at DESC
+    `).all();
+    return c.json({ requests: requests.results || [] });
+  } catch (err) { return c.json({ requests: [] }); }
+});
+
+adminApp.post('/admin/payment-requests/:id/approve', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const request = await c.env.DB.prepare('SELECT * FROM payment_requests WHERE id = ?').bind(id).first();
+    if (!request) return c.json({ error: 'So\'rov topilmadi!' }, 404);
+    if (request.status !== 'pending') return c.json({ error: 'Bu so\'rov allaqachon ko\'rib chiqilgan!' }, 400);
+
+    // 15 daqiqa qoidasi
+    const createdAt = new Date(request.created_at);
+    const now = new Date();
+    const diffMinutes = (now - createdAt) / (1000 * 60);
+
+    let finalAmount = request.amount_uzs;
+    if (diffMinutes > 15) {
+      finalAmount = request.amount_uzs * 1.15;
+    }
+
+    // Foydalanuvchi balansini oshirish
+    await c.env.DB.prepare('UPDATE users SET balance = balance + ? WHERE id = ?')
+      .bind(finalAmount / 12500, request.user_id).run();
+
+    // So'rovni tasdiqlash
+    await c.env.DB.prepare('UPDATE payment_requests SET status = ?, approved_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .bind('approved', id).run();
+
+    return c.json({ message: 'Tasdiqlandi!', amount: finalAmount });
+  } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
+});
+
+adminApp.post('/admin/payment-requests/:id/reject', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const request = await c.env.DB.prepare('SELECT * FROM payment_requests WHERE id = ?').bind(id).first();
+    if (!request) return c.json({ error: 'So\'rov topilmadi!' }, 404);
+    if (request.status !== 'pending') return c.json({ error: 'Bu so\'rov allaqachon ko\'rib chiqilgan!' }, 400);
+
+    await c.env.DB.prepare('UPDATE payment_requests SET status = ? WHERE id = ?')
+      .bind('rejected', id).run();
+
+    return c.json({ message: 'Rad etildi!' });
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 

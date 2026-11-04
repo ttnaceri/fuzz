@@ -88,7 +88,8 @@ import AdminEvents from './admin/AdminEvents.jsx';
 import AdminCompanies from './admin/AdminCompanies.jsx';
 import AdminNewCompany from './admin/AdminNewCompany.jsx';
 import AdminStarsRate from './admin/AdminStarsRate.jsx';
-import AdminPayments from './admin/AdminPayments.jsx'; // YANGI
+import AdminPayments from './admin/AdminPayments.jsx';
+import AdminPaymentRequests from './admin/AdminPaymentRequests.jsx'; // YANGI
 
 // --- FOOTER PAGES ---
 import FooterAboutPage from '../footer/AboutPage.jsx';
@@ -213,7 +214,8 @@ export const router = createBrowserRouter([
       { path: 'companies', element: <AdminCompanies /> },
       { path: 'new-company', element: <AdminNewCompany /> },
       { path: 'stars-rate', element: <AdminStarsRate /> },
-      { path: 'payments', element: <AdminPayments /> }, // YANGI
+      { path: 'payments', element: <AdminPayments /> },
+      { path: 'payment-requests', element: <AdminPaymentRequests /> },
     ],
   },
 ]);

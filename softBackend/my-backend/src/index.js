@@ -143,7 +143,6 @@ app.get('/fuzz/api/init-db', async (c) => {
       );
     `).run();
 
-    // PAYMENT METHODS JADVALI (api_url qo'shildi)
     await c.env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS payment_methods (
         id TEXT PRIMARY KEY,
@@ -156,7 +155,6 @@ app.get('/fuzz/api/init-db', async (c) => {
       );
     `).run();
 
-    // Default 2 ta to'lov turi (Stars, Karta) agar yo'q bo'lsa
     const existingMethods = await c.env.DB.prepare('SELECT * FROM payment_methods LIMIT 1').first();
     if (!existingMethods) {
       const defaults = [
@@ -168,6 +166,18 @@ app.get('/fuzz/api/init-db', async (c) => {
           .bind(m.id, m.name, m.logo, m.api, m.enabled, m.discount).run();
       }
     }
+
+    // YANGI: To'lov so'rovlari jadvali
+    await c.env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS payment_requests (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        amount_uzs REAL NOT NULL,
+        status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        approved_at DATETIME
+      );
+    `).run();
 
     return c.json({ message: "Barcha jadvallar yaratildi!" });
   } catch (err) {

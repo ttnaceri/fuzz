@@ -3,10 +3,10 @@ import { useLanguage } from '../context/useLanguage.js';
 import useAuth from '../hooks/useAuth.js';
 
 export default function Navigation() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { user, isAuthenticated } = useAuth();
 
-  // Balans mavjud bo'lsa, uni formatlaymiz
+  // Balansni formatlash
   const balance = user?.balance ? `$${Number(user.balance).toFixed(1)}` : '';
 
   return (
@@ -31,7 +31,7 @@ export default function Navigation() {
         </div>
       </div>
 
-      {/* WALLET + BALANCE (YANGI) */}
+      {/* WALLET + BALANCE */}
       <div className="nav-dropdown">
         <div 
           className="nav-dropdown-btn" 
@@ -40,8 +40,7 @@ export default function Navigation() {
             whiteSpace: 'nowrap', 
             display: 'flex', 
             alignItems: 'center', 
-            gap: '0.5rem',
-            color: isAuthenticated ? '#43b581' : '#b9a6a2' 
+            gap: '0.5rem'
           }}
         >
           <i className="fa-solid fa-wallet" style={{ fontSize: '0.9rem' }}></i>

@@ -11,13 +11,19 @@ export function useGames() {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
+    
     setLoading(true);
     setError(null);
+    
     try {
+      // Keshni tozalash (har safar yangi ma'lumot olish uchun)
+      gameService.clearCache();
       const data = await gameService.getAllGames({ signal: controller.signal });
       setGames(data);
     } catch (err) {
-      if (err.name !== 'AbortError') setError(err);
+      if (err.name !== 'AbortError') {
+        setError(err);
+      }
     } finally {
       setLoading(false);
     }

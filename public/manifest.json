@@ -1,7 +1,7 @@
 {
-  "name": "Fuzz Gaming Platform",
+  "name": "Fuzz",
   "short_name": "Fuzz",
-  "description": "Fuzz - Professional PC Gaming Platform",
+  "description": "Fuzz",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#100b0a",

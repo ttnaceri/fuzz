@@ -8,44 +8,55 @@ export const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // Foydalanuvchi ma'lumotlarini yangilash
-  const refreshUser = useCallback(async () => {
-    try {
-      const cached = storage.getAuth();
-      if (!cached?.user?.id) return;
-
-      const res = await api.get('/api/admin/users');
-      const currentUser = res.users?.find(u => u.id === cached.user.id);
-      
-      if (currentUser) {
-        setUser(currentUser);
-        storage.setAuth({ user: currentUser });
-      }
-    } catch (e) {
-      console.warn("Balansni yangilashda xato:", e);
-    }
-  }, []);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const cached = storage.getAuth();
-    if (cached?.user) {
-      setUser(cached.user);
-      refreshUser();
-    }
+    if (cached?.user) setUser(cached.user);
     setLoading(false);
-  }, [refreshUser]);
+  }, []);
 
   const login = useCallback(async (credentials) => {
-    const res = await authService.login(credentials);
-    if (!res || !res.user) throw new Error(res?.error || "Xatolik");
-    setUser(res.user);
-    storage.setAuth({ user: res.user });
-    return res.user;
+    setError(null);
+    if (!api.isConfigured()) {
+      throw new Error('Backend sozlanmagan.');
+    }
+    try {
+      const res = await authService.login(credentials);
+      if (!res || !res.user) {
+        throw new Error(res?.error || "Tizimga kirishda xatolik");
+      }
+      setUser(res.user);
+      storage.setAuth({ user: res.user });
+      return res.user;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }, []);
+
+  const register = useCallback(async (payload) => {
+    setError(null);
+    if (!api.isConfigured()) {
+      throw new Error('Registration is unavailable.');
+    }
+    try {
+      const res = await authService.register(payload);
+      const u = res?.user || res;
+      if (!u) throw new Error(res?.error || "Ro'yxatdan o'tishda xatolik");
+      setUser(u);
+      storage.setAuth({ user: u });
+      return u;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
   }, []);
 
   const logout = useCallback(async () => {
-    try { await authService.logout(); } catch (e) {}
+    try {
+      if (api.isConfigured()) await authService.logout();
+    } catch { /* ignore */ }
     setUser(null);
     storage.clearAuth();
   }, []);
@@ -54,13 +65,14 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       isAuthenticated: !!user,
-      isAdmin: !!user && (user.role === 'admin'),
+      isAdmin: !!user && (user.role === 'admin' || user.role === 'superAdmin' || user.isAdmin === true),
       loading,
+      error,
       login,
+      register,
       logout,
-      refreshUser,
     }),
-    [user, loading, login, logout, refreshUser]
+    [user, loading, error, login, register, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

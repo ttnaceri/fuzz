@@ -14,7 +14,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-
   const [qrToken, setQrToken] = useState('fuzz_qr_' + Math.random().toString(36).substring(7));
 
   useEffect(() => {
@@ -54,7 +53,7 @@ export default function LoginPage() {
 
   const styles = {
     wrapper: { minHeight: 'calc(100vh - 64px)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#100b0a', padding: '2rem 1rem' },
-    box: { backgroundColor: '#241411', border: '1px solid #48201a', borderRadius: '8px', width: '100%', maxWidth: '800px', boxShadow: '0 10px 40px rgba(0,0,0,0.8)' },
+    box: { backgroundColor: '#241411', border: '1px solid #48201a', borderRadius: '8px', width: '100%', maxWidth: '750px', boxShadow: '0 10px 40px rgba(0,0,0,0.8)' },
     body: { display: 'flex', flexWrap: 'wrap', padding: '2.5rem', gap: '3rem' },
     formSide: { flex: '1 1 300px', display: 'flex', flexDirection: 'column' },
     qrSide: { flex: '0 0 280px', borderLeft: '1px solid #48201a', paddingLeft: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },

@@ -1,118 +1,147 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { api } from '../services/api.js';
-import useAuth from '../hooks/useAuth.js';
+import { gameService } from '../services/gameService.js';
+import Loading from '../common/Loading.jsx';
+import ErrorState from '../common/ErrorState.jsx';
+import { formatPrice, formatDate } from '../utils/formatters.js';
+import { useCart } from '../context/useCart.js';
 import useToast from '../hooks/useToast.js';
 
 export default function GameDetailsPage() {
   const { id } = useParams();
-  const { user } = useAuth();
-  const { success, error: toastError } = useToast();
-  const navigate = useNavigate();
-  
   const [game, setGame] = useState(null);
-  const [owned, setOwned] = useState(false);
+  const [bundles, setBundles] = useState([]); // O'yin tegishli bo'lgan bundle'lar
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
+  
+  const { addItem } = useCart();
+  const { success } = useToast();
 
   useEffect(() => {
+    const controller = new AbortController();
     setLoading(true);
-    Promise.all([
-      api.get(`/api/games/${id}`),
-      user ? api.get(`/api/users/${user.id}/owns/${id}`) : Promise.resolve({ owned: false })
-    ])
-      .then(([gameData, ownsData]) => {
-        if (gameData.game) {
-          setGame(gameData.game);
-          setOwned(ownsData.owned);
-        } else {
-          setError("O'yin topilmadi");
+    setError(null);
+
+    // 1. O'yinni yuklash
+    gameService
+      .getGameById(id, { signal: controller.signal })
+      .then((g) => {
+        setGame(g);
+        // 2. Agar o'yin topsa, uni qaysi bundle'larga tegishli ekanligini qidirish
+        if (g) {
+          api.get('/api/bundles')
+            .then(async (res) => {
+              const allBundles = res.bundles || [];
+              const relatedBundles = [];
+              
+              // Har bir bundle ichidagi o'yinlarni tekshiramiz
+              for (const b of allBundles) {
+                try {
+                  const bGames = await api.get(`/api/bundles/${b.id}/games`);
+                  if (bGames.games?.some(bg => bg.id === g.id)) {
+                    relatedBundles.push(b);
+                  }
+                } catch { /* ignore */ }
+              }
+              setBundles(relatedBundles);
+            })
+            .catch(() => {});
         }
-        setLoading(false);
       })
-      .catch(() => {
-        setError("O'yin topilmadi yoki server xatosi");
-        setLoading(false);
-      });
-  }, [id, user]);
+      .catch((err) => {
+        if (err.name !== 'AbortError') setError(err);
+      })
+      .finally(() => setLoading(false));
 
-  const handlePurchase = async () => {
-    if (!user) {
-      toastError("Sotib olish uchun tizimga kiring!");
-      navigate('/login');
-      return;
-    }
+    return () => controller.abort();
+  }, [id]);
 
-    try {
-      await api.post('/api/store/buy', { userId: user.id, gameId: game.id });
-      success("O'yin sotib olindi!");
-      setOwned(true);
-    } catch (err) {
-      toastError(err.message || "Sotib olishda xato");
-    }
+  if (loading) return <Loading />;
+  if (error) return <ErrorState message={error.message} />;
+  if (!game) return <ErrorState title="Game not found" message="This game does not exist." />;
+
+  const cover = game.cover || game.image;
+  const unavailable = game.available === false || game.availability === 'unavailable';
+
+  const handleAdd = () => {
+    addItem(game);
+    success(`"${game.title}" added to cart`);
   };
 
-  if (loading) return <div style={{ color: '#fff', textAlign: 'center', marginTop: '20vh' }}>Yuklanmoqda...</div>;
-  if (error) return (
-    <div style={{ color: '#ed5555', textAlign: 'center', marginTop: '20vh' }}>
-      <h2>{error}</h2>
-      <Link to="/store" style={{ color: '#8a1200', marginTop: '1rem', display: 'inline-block' }}>Do'konga qaytish</Link>
-    </div>
-  );
-  if (!game) return null;
-
-  const finalPrice = game.discount > 0 
-    ? game.price - (game.price * (game.discount / 100)) 
-    : game.price;
-
   return (
-    <div style={{ padding: '2rem', color: '#f5eeee' }}>
-      <Link to="/store" style={{ color: '#b9a6a2', marginBottom: '1rem', display: 'inline-block' }}>
-        ← Do'konga qaytish
-      </Link>
+    <div className="page">
+      <Link to="/store" className="text-muted">← Back to store</Link>
       
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', backgroundColor: '#241411', borderRadius: '8px', border: '1px solid #48201a', padding: '2rem' }}>
-        {game.image && (
-          <img src={game.image} alt={game.title} style={{ width: '300px', borderRadius: '8px' }} />
-        )}
-        <div style={{ flex: 1, minWidth: '300px' }}>
-          <h1 style={{ margin: '0 0 1rem 0' }}>{game.title}</h1>
-          <p style={{ color: '#b9a6a2', marginBottom: '1rem' }}>{game.genre}</p>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-            {game.discount > 0 ? (
-              <>
-                <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#43b581' }}>${finalPrice.toFixed(2)}</span>
-                <span style={{ textDecoration: 'line-through', color: '#b9a6a2' }}>${game.price}</span>
-                <span style={{ backgroundColor: '#f0b44d', color: '#000', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>-{game.discount}%</span>
-              </>
-            ) : (
-              <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#43b581' }}>${game.price}</span>
-            )}
+      <div className="game-details">
+        <div>
+          <div className="game-details__hero">
+            <img src={cover} alt={game.title} />
           </div>
-
-          <div style={{ display: 'flex', gap: '1rem' }}>
-            {owned ? (
-              <Link to={`/game/${game.id}/play`} className="btn btn-primary" style={{ padding: '0.8rem 2rem', textDecoration: 'none', fontWeight: 'bold' }}>
-                <i className="fa-solid fa-play"></i> O'ynash
-              </Link>
-            ) : (
-              <>
-                <button onClick={handlePurchase} className="btn btn-primary" style={{ padding: '0.8rem 2rem', fontWeight: 'bold' }}>
-                  <i className="fa-solid fa-shopping-cart"></i> Sotib olish
-                </button>
-                <button 
-                  className="btn btn-secondary" 
-                  onClick={() => navigate('/store')}
-                  style={{ padding: '0.8rem 2rem', fontWeight: 'bold' }}
-                >
-                  Orqaga
-                </button>
-              </>
-            )}
+          <h1 style={{ marginTop: '1rem' }}>{game.title}</h1>
+          <p className="text-muted">{game.description}</p>
+          
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '1rem' }}>
+            {(game.genres || [game.genre]).filter(Boolean).map((g) => (
+              <span key={g} className="badge badge-warning" style={{ backgroundColor: 'rgba(240, 180, 77, 0.15)', color: '#f0b44d', padding: '0.2rem 0.6rem', borderRadius: '12px', border: '1px solid rgba(240, 180, 77, 0.3)' }}>
+                {g}
+              </span>
+            ))}
           </div>
         </div>
+        
+        <aside className="game-details__side">
+          <div className="game-details__price">{formatPrice(game.price, game.currency)}</div>
+          
+          {unavailable && (
+            <div className="unavailable-notice">
+              <i className="fa-solid fa-triangle-exclamation" /> Download unavailable — file not present.
+            </div>
+          )}
+          
+          <div className="game-details__actions">
+            <button className="btn btn-primary btn-block" onClick={handleAdd}>
+              <i className="fa-solid fa-cart-plus" /> Add to cart
+            </button>
+            {game.officialStore && (
+              <a className="btn btn-secondary btn-block" href={game.officialStore} target="_blank" rel="noreferrer noopener">
+                <i className="fa-solid fa-arrow-up-right-from-square" /> Official store
+              </a>
+            )}
+          </div>
+          
+          <div className="game-details__meta">
+            <div><span>Developer</span><strong>{game.developer || '—'}</strong></div>
+            <div><span>Publisher</span><strong>{game.publisher || '—'}</strong></div>
+            <div><span>Release</span><strong>{formatDate(game.releaseDate)}</strong></div>
+            <div><span>Genre</span><strong>{game.genre || '—'}</strong></div>
+          </div>
+        </aside>
       </div>
+
+      {/* YANGI: O'yin qaysi bundle'larga tegishli ekanligi */}
+      {bundles.length > 0 && (
+        <section className="section" style={{ marginTop: '3rem' }}>
+          <div className="section__header">
+            <h2 className="section__title">Ushbu o'yin kiritilgan Bundle'lar</h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
+            {bundles.map(b => (
+              <Link key={b.id} to={`/bundle/${b.id}`} style={{ textDecoration: 'none' }}>
+                <div className="card" style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ width: '50px', height: '50px', backgroundColor: '#100b0a', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="fa-solid fa-box-open" style={{ color: '#8a1200', fontSize: '1.5rem' }}></i>
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, color: '#f5eeee' }}>{b.name}</h3>
+                    <p style={{ margin: 0, color: '#b9a6a2', fontSize: '0.85rem' }}>{formatPrice(b.price)}</p>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

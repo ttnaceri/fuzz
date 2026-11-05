@@ -18,8 +18,60 @@ const isNameValid = (name) => {
   return !BANNED_WORDS.some(word => name.toLowerCase().includes(word));
 };
 
-// Health Check
+// Float xatolarini oldini olish uchun yaxlitlash
+const round2 = (num) => Math.round(Number(num) * 100) / 100;
+
+// ==========================================
+// TELEGRAM HELPER FUNKSIYALARI
+// ==========================================
+async function sendTelegramMessage(botToken, chatId, text, replyMarkup = null) {
+  const body = { chat_id: chatId, text };
+  if (replyMarkup) body.reply_markup = replyMarkup;
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return await res.json();
+  } catch (e) {
+    console.error("sendTelegramMessage xatosi:", e);
+    return { ok: false, error: e.message };
+  }
+}
+
+async function answerCallbackQuery(botToken, callbackQueryId, text = null) {
+  try {
+    const body = { callback_query_id: callbackQueryId };
+    if (text) body.text = text;
+    await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    console.error("answerCallbackQuery xatosi:", e);
+  }
+}
+
+// ==========================================
+// HEALTH CHECK
+// ==========================================
 app.get('/fuzz/api/health', (c) => c.json({ status: 'ok', time: new Date().toISOString() }));
+
+// Telegram webhook holatini tekshirish (debug uchun)
+app.get('/fuzz/api/telegram/status', async (c) => {
+  try {
+    const BOT_TOKEN = c.env.BOT_TOKEN;
+    if (!BOT_TOKEN) return c.json({ error: 'BOT_TOKEN yo\'q' });
+    
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getWebhookInfo`);
+    const data = await res.json();
+    return c.json(data);
+  } catch (err) {
+    return c.json({ error: err.message });
+  }
+});
 
 // ==========================================
 // DB INIT (Barcha jadvallar)
@@ -234,7 +286,7 @@ app.post('/fuzz/api/auth/login', async (c) => {
     }
 
     if (!user || user.password !== password) return c.json({ error: 'Parol yoki username xato!' }, 401);
-    return c.json({ user: { id: user.id, username: user.username, role: user.role, balance: user.balance || 0 } });
+    return c.json({ user: { id: user.id, username: user.username, role: user.role, balance: round2(user.balance || 0) } });
   } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
@@ -279,11 +331,7 @@ app.post('/fuzz/api/auth/reset-request', async (c) => {
 
     const BOT_TOKEN = c.env.BOT_TOKEN;
     if (BOT_TOKEN && user.telegram_id) {
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: user.telegram_id, text: `Fuzz parolni tiklash kodi: ${code}\n\nKod 10 daqiqa amal qiladi.` })
-      });
+      await sendTelegramMessage(BOT_TOKEN, user.telegram_id, `Fuzz parolni tiklash kodi: ${code}\n\nKod 10 daqiqa amal qiladi.`);
     }
     return c.json({ message: 'Kod yuborildi!' });
   } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
@@ -405,7 +453,7 @@ app.get('/fuzz/api/payment-methods', async (c) => {
 });
 
 // ==========================================
-// PUBLIC BUNDLES API (YANGI)
+// PUBLIC BUNDLES API
 // ==========================================
 app.get('/fuzz/api/bundles/:id', async (c) => {
   try {
@@ -431,122 +479,197 @@ app.get('/fuzz/api/bundles/:id/games', async (c) => {
 });
 
 // ==========================================
-// TELEGRAM WEBHOOK
+// TELEGRAM WEBHOOK (To'liq qayta yozildi)
 // ==========================================
 app.post('/fuzz/telegram/webhook', async (c) => {
   try {
     const update = await c.req.json();
+    console.log("Telegram update:", JSON.stringify(update).slice(0, 500));
+
     const BOT_TOKEN = c.env.BOT_TOKEN;
     if (!BOT_TOKEN) {
       console.error("BOT_TOKEN topilmadi!");
-      return c.json({ error: 'Bot token yo\'q' }, 500);
+      return c.json({ ok: false, error: 'Bot token yo\'q' }, 500);
     }
-    const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
-    if (update.message && update.message.text && update.message.text.startsWith('/start')) {
+    // ==========================================
+    // 1. XABARLAR (message)
+    // ==========================================
+    if (update.message) {
       const chatId = update.message.chat.id;
-      const firstName = update.message.from.first_name || 'User';
-      const lastName = update.message.from.last_name || '';
-      const textParts = update.message.text.split(' ');
-      const startParam = textParts.length > 1 ? textParts[1] : null;
+      const text = update.message.text || '';
+      const from = update.message.from;
+      const firstName = from.first_name || 'User';
+      const lastName = from.last_name || '';
+      const tgUsername = from.username || '';
 
-      if (startParam && startParam.startsWith('pay_')) {
-        const parts = startParam.split('_');
-        const amountUsd = parseFloat(parts[1]);
-        const starsAmount = parseInt(parts[2]);
+      // --- /start buyrug'i ---
+      if (text.startsWith('/start')) {
+        const textParts = text.split(' ');
+        const startParam = textParts.length > 1 ? textParts[1] : null;
 
-        await fetch(`${TELEGRAM_API}/sendInvoice`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: chatId,
-            title: `Fuzz Balans +$${amountUsd}`,
-            description: `Balansingizni $${amountUsd} ga to'ldirish`,
-            payload: `stars_pay|${chatId}|${amountUsd}`,
-            provider_token: "",
-            currency: "XTR",
-            prices: [{ label: `${amountUsd} USD`, amount: starsAmount }],
-          }),
-        });
-      } else {
-        const existing = await c.env.DB.prepare('SELECT * FROM users WHERE telegram_id = ?').bind(chatId).first();
-        if (!existing) {
-          const id = crypto.randomUUID();
-          await c.env.DB.prepare('INSERT INTO users (id, username, email, password, role, telegram_id) VALUES (?, ?, ?, ?, ?, ?)').bind(id, firstName + lastName, `${firstName}@temp.com`, '123456', 'user', chatId).run();
+        // Agar pay_ bilan boshlansa -> Stars invoice
+        if (startParam && startParam.startsWith('pay_')) {
+          const parts = startParam.split('_');
+          const amountUsd = parseFloat(parts[1]);
+          const starsAmount = parseInt(parts[2]);
+
+          if (isNaN(amountUsd) || isNaN(starsAmount)) {
+            await sendTelegramMessage(BOT_TOKEN, chatId, "❌ Noto'g'ri to'lov parametri.");
+            return c.json({ ok: true });
+          }
+
+          await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendInvoice`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: chatId,
+              title: `Fuzz Balans +$${amountUsd}`,
+              description: `Balansingizni $${amountUsd} ga to'ldirish`,
+              payload: `stars_pay|${chatId}|${amountUsd}`,
+              provider_token: "",
+              currency: "XTR",
+              prices: [{ label: `${amountUsd} USD`, amount: starsAmount }],
+            }),
+          });
+          return c.json({ ok: true });
         }
 
-        await fetch(`${TELEGRAM_API}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text: "Iltimos, tilingizni tanlang:\nPlease choose your language:\nПожалуйста, выберите ваш язык:",
-            reply_markup: {
-              inline_keyboard: [
-                [ { text: "🇺🇿 Uzb", callback_data: "lang_uz" }, { text: "🇬🇧 Eng", callback_data: "lang_en" }, { text: "🇷🇺 Rus", callback_data: "lang_ru" } ]
+        // Oddiy /start - foydalanuvchini bazaga qo'shish (agar yo'q bo'lsa)
+        const existing = await c.env.DB.prepare('SELECT * FROM users WHERE telegram_id = ?').bind(chatId.toString()).first();
+        if (!existing) {
+          const id = crypto.randomUUID();
+          await c.env.DB.prepare('INSERT INTO users (id, username, email, password, role, telegram_id) VALUES (?, ?, ?, ?, ?, ?)')
+            .bind(id, tgUsername || firstName, `${chatId}@tg.temp`, '123456', 'user', chatId.toString()).run();
+        }
+
+        // Til tanlash tugmalarini yuborish
+        await sendTelegramMessage(
+          BOT_TOKEN,
+          chatId,
+          "Iltimos, tilingizni tanlang:\nPlease choose your language:\nПожалуйста, выберите ваш язык:",
+          {
+            inline_keyboard: [
+              [
+                { text: "🇺🇿 Uzb", callback_data: "lang_uz" },
+                { text: "🇬🇧 Eng", callback_data: "lang_en" },
+                { text: "🇷🇺 Rus", callback_data: "lang_ru" }
               ]
-            }
-          }),
-        });
+            ]
+          }
+        );
+        return c.json({ ok: true });
       }
+
+      // --- Boshqa matnli xabarlar (support) ---
+      if (text && !text.startsWith('/')) {
+        try {
+          await c.env.DB.prepare('INSERT INTO support_messages (id, chat_id, username, message) VALUES (?, ?, ?, ?)')
+            .bind(crypto.randomUUID(), chatId.toString(), tgUsername || firstName, text).run();
+        } catch (e) {
+          console.error("Support message saqlashda xato:", e);
+        }
+
+        // Adminlarga bildirishnoma yuborish
+        try {
+          const ADMIN_IDS = c.env.ADMIN_IDS ? c.env.ADMIN_IDS.split(',').map(s => s.trim()) : [];
+          for (const adminId of ADMIN_IDS) {
+            await sendTelegramMessage(
+              BOT_TOKEN,
+              adminId,
+              `📩 Yangi xabar:\n\nKimdan: ${firstName} ${lastName} (@${tgUsername || 'yo\'q'})\nChat ID: ${chatId}\n\nXabar: ${text}`
+            );
+          }
+        } catch (e) {
+          console.error("Adminga bildirishnoma yuborishda xato:", e);
+        }
+
+        // Foydalanuvchiga tasdiq
+        await sendTelegramMessage(
+          BOT_TOKEN,
+          chatId,
+          "✅ Xabaringiz qabul qilindi. Admin tez orada javob beradi."
+        );
+        return c.json({ ok: true });
+      }
+
+      return c.json({ ok: true });
     }
 
-    if (update.message && update.message.text && !update.message.text.startsWith('/start')) {
-      const chatId = update.message.chat.id;
-      const text = update.message.text;
-      const username = update.message.from.username || update.message.from.first_name || 'User';
-
-      try {
-        await c.env.DB.prepare('INSERT INTO support_messages (id, chat_id, username, message) VALUES (?, ?, ?, ?)')
-          .bind(crypto.randomUUID(), chatId.toString(), username, text).run();
-      } catch (e) {
-        console.error("Support message saqlashda xato:", e);
-      }
-    }
-
+    // ==========================================
+    // 2. CALLBACK QUERY (tugma bosilganda)
+    // ==========================================
     if (update.callback_query) {
-      const chatId = update.callback_query.message.chat.id;
-      const data = update.callback_query.data;
+      const callbackQuery = update.callback_query;
+      const chatId = callbackQuery.message.chat.id;
+      const data = callbackQuery.data;
 
+      // Til tanlash
       if (data.startsWith('lang_')) {
         const lang = data.split('_')[1];
-        const firstName = update.callback_query.from.first_name || 'User';
-        const lastName = update.callback_query.from.last_name || '';
+        const firstName = callbackQuery.from.first_name || 'User';
+        const lastName = callbackQuery.from.last_name || '';
 
-        await c.env.DB.prepare('UPDATE users SET language = ? WHERE telegram_id = ?').bind(lang, chatId).run();
+        await c.env.DB.prepare('UPDATE users SET language = ? WHERE telegram_id = ?')
+          .bind(lang, chatId.toString()).run();
+
+        // Callback'ni tasdiqlash
+        await answerCallbackQuery(BOT_TOKEN, callbackQuery.id);
 
         let welcomeMessage = '';
-        if (lang === 'uz') welcomeMessage = `Salom, ${firstName} ${lastName}!\nFuzz App botiga xush kelibsiz.\nID: ${chatId}\nBizni tanlaganingiz uchun rahmat.`;
-        else if (lang === 'en') welcomeMessage = `Hi ${firstName} ${lastName}!\nWelcome to Fuzz App bot.\nID: ${chatId}\nThank you for choosing us.`;
-        else if (lang === 'ru') welcomeMessage = `Привет, ${firstName} ${lastName}!\nДобро пожаловать в бот Fuzz App.\nID: ${chatId}\nСпасибо, что выбрали нас.`;
+        if (lang === 'uz') {
+          welcomeMessage = `Salom, ${firstName} ${lastName}!\n\nFuzz App botiga xush kelibsiz.\nSizning ID: ${chatId}\n\nBizni tanlaganingiz uchun rahmat.`;
+        } else if (lang === 'en') {
+          welcomeMessage = `Hi ${firstName} ${lastName}!\n\nWelcome to Fuzz App bot.\nYour ID: ${chatId}\n\nThank you for choosing us.`;
+        } else if (lang === 'ru') {
+          welcomeMessage = `Привет, ${firstName} ${lastName}!\n\nДобро пожаловать в бот Fuzz App.\nВаш ID: ${chatId}\n\nСпасибо, что выбрали нас.`;
+        }
 
-        await fetch(`${TELEGRAM_API}/sendMessage`, {
+        await sendTelegramMessage(
+          BOT_TOKEN,
+          chatId,
+          welcomeMessage,
+          {
+            inline_keyboard: [
+              [
+                {
+                  text: "🚀 Fuzz App'ni ochish",
+                  web_app: { url: `https://fuzz-tau.vercel.app/register/form?tgId=${chatId}` }
+                }
+              ]
+            ]
+          }
+        );
+        return c.json({ ok: true });
+      }
+
+      // Boshqa callback'lar uchun
+      await answerCallbackQuery(BOT_TOKEN, callbackQuery.id);
+      return c.json({ ok: true });
+    }
+
+    // ==========================================
+    // 3. PRE-CHECKOUT QUERY (Stars to'lovdan oldin)
+    // ==========================================
+    if (update.pre_checkout_query) {
+      try {
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerPreCheckoutQuery`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            chat_id: chatId,
-            text: welcomeMessage,
-            reply_markup: {
-              inline_keyboard: [
-                [ { text: "🚀 Fuzz App'ni ochish", web_app: { url: `https://fuzz-tau.vercel.app/register/form?tgId=${chatId}` } } ]
-              ]
-            }
+            pre_checkout_query_id: update.pre_checkout_query.id,
+            ok: true,
           }),
         });
+      } catch (e) {
+        console.error("Pre-checkout xatosi:", e);
       }
+      return c.json({ ok: true });
     }
 
-    if (update.pre_checkout_query) {
-      await fetch(`${TELEGRAM_API}/answerPreCheckoutQuery`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pre_checkout_query_id: update.pre_checkout_query.id,
-          ok: true,
-        }),
-      });
-    }
-
+    // ==========================================
+    // 4. SUCCESSFUL PAYMENT (Stars to'lovi yakunlanganda)
+    // ==========================================
     if (update.message && update.message.successful_payment) {
       const payment = update.message.successful_payment;
       const chatId = update.message.chat.id;
@@ -556,30 +679,63 @@ app.post('/fuzz/telegram/webhook', async (c) => {
       if (parts.length === 3) {
         const amountUsd = parseFloat(parts[2]);
         const user = await c.env.DB.prepare('SELECT * FROM users WHERE telegram_id = ?').bind(chatId.toString()).first();
-        
+
         if (user) {
-          await c.env.DB.prepare('UPDATE users SET balance = balance + ? WHERE telegram_id = ?')
-            .bind(amountUsd, chatId.toString()).run();
-          
+          const currentBalance = Number(user.balance) || 0;
+          const newBalance = round2(currentBalance + amountUsd);
+
+          await c.env.DB.prepare('UPDATE users SET balance = ? WHERE telegram_id = ?')
+            .bind(newBalance, chatId.toString()).run();
+
           await c.env.DB.prepare('INSERT INTO payments (id, user_id, amount_usd, stars_paid) VALUES (?, ?, ?, ?)')
             .bind(crypto.randomUUID(), user.id, amountUsd, payment.total_amount).run();
 
-          await fetch(`${TELEGRAM_API}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: chatId,
-              text: `✅ To'lov muvaffaqiyatli!\n\nBalansingiz +$${amountUsd} ga to'ldirildi.\nJoriy balans: $${(user.balance + amountUsd).toFixed(2)}`,
-            }),
-          });
+          await sendTelegramMessage(
+            BOT_TOKEN,
+            chatId,
+            `✅ To'lov muvaffaqiyatli!\n\nBalansingiz +$${amountUsd} ga to'ldirildi.\nJoriy balans: $${newBalance}`
+          );
+        } else {
+          console.error("Successful payment: foydalanuvchi topilmadi, chatId =", chatId);
         }
       }
+      return c.json({ ok: true });
     }
 
     return c.json({ ok: true });
-  } catch (err) { 
+  } catch (err) {
     console.error("Webhook xatosi:", err);
-    return c.json({ error: 'Webhook xatosi' }, 500); 
+    // Telegram qayta yubormasligi uchun har doim 200 qaytaramiz
+    return c.json({ ok: true });
+  }
+});
+
+// ==========================================
+// TELEGRAM WEBHOOK'NI SOZLASH (Admin uchun)
+// ==========================================
+app.post('/fuzz/api/telegram/set-webhook', async (c) => {
+  try {
+    const BOT_TOKEN = c.env.BOT_TOKEN;
+    if (!BOT_TOKEN) return c.json({ error: 'BOT_TOKEN yo\'q' }, 500);
+
+    const webhookUrl = 'https://my-backend.updbackend.workers.dev/fuzz/telegram/webhook';
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${encodeURIComponent(webhookUrl)}`);
+    const data = await res.json();
+    return c.json(data);
+  } catch (err) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+app.post('/fuzz/api/telegram/delete-webhook', async (c) => {
+  try {
+    const BOT_TOKEN = c.env.BOT_TOKEN;
+    if (!BOT_TOKEN) return c.json({ error: 'BOT_TOKEN yo\'q' }, 500);
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/deleteWebhook`);
+    const data = await res.json();
+    return c.json(data);
+  } catch (err) {
+    return c.json({ error: err.message }, 500);
   }
 });
 

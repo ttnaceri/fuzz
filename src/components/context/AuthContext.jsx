@@ -9,16 +9,15 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Foydalanuvchi ma'lumotlarini yangilash (balansni olish)
+  // Foydalanuvchi ma'lumotlarini yangilash
   const refreshUser = useCallback(async () => {
     try {
       const cached = storage.getAuth();
       if (!cached?.user?.id) return;
+
+      const res = await api.get('/api/admin/users');
+      const currentUser = res.users?.find(u => u.id === cached.user.id);
       
-      // Backenddan userni qayta olish
-      const res = await api.get(`/api/admin/users`); // yoki maxsus /api/users/me
-      // Hozircha admin API dan foydalanamiz
-      const currentUser = res.users.find(u => u.id === cached.user.id);
       if (currentUser) {
         setUser(currentUser);
         storage.setAuth({ user: currentUser });
@@ -32,7 +31,6 @@ export function AuthProvider({ children }) {
     const cached = storage.getAuth();
     if (cached?.user) {
       setUser(cached.user);
-      // Sahifa yuklanganda balansni yangilash
       refreshUser();
     }
     setLoading(false);

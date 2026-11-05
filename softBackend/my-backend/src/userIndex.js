@@ -24,6 +24,36 @@ userApp.get('/users/:userId/owns/:gameId', async (c) => {
   } catch (err) { return c.json({ owned: false }); }
 });
 
+// ==========================================
+// YANGI: FAQAT USERNAME'NI YANGILASH
+// ==========================================
+userApp.put('/users/:id/username', async (c) => {
+  try {
+    const { username } = await c.req.json();
+    const userId = c.req.param('id');
+
+    if (!username || username.trim().length < 3) {
+      return c.json({ error: 'Username kamida 3 belgidan iborat bo\'lishi kerak!' }, 400);
+    }
+
+    // Band emasligini tekshirish
+    const existing = await c.env.DB.prepare(
+      'SELECT id FROM users WHERE username = ? AND id != ?'
+    ).bind(username.trim(), userId).first();
+
+    if (existing) {
+      return c.json({ error: 'Bu username band!' }, 409);
+    }
+
+    await c.env.DB.prepare('UPDATE users SET username = ? WHERE id = ?')
+      .bind(username.trim(), userId).run();
+
+    return c.json({ success: true, username: username.trim() });
+  } catch (err) {
+    return c.json({ error: 'Xato: ' + err.message }, 500);
+  }
+});
+
 // Buy Game
 userApp.post('/store/buy', async (c) => {
   try {

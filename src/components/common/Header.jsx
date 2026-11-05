@@ -5,17 +5,20 @@ import { useCart } from '../context/useCart.js';
 import { useLanguage } from '../context/useLanguage.js';
 import Navigation from './Navigation.jsx';
 import SearchBar from './SearchBar.jsx';
+import useToast from '../hooks/useToast.js';
 
 export default function Header() {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const { count } = useCart();
   const { lang, setLang, t } = useLanguage();
   const navigate = useNavigate();
+  const { info } = useToast();
   
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  // 1024px ga o'zgartirildi
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    const handleResize = () => setIsMobile(window.innerWidth <= 1024);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -40,7 +43,6 @@ export default function Header() {
         {!isMobile && <SearchBar />}
         
         <div className="header__actions" style={{ marginLeft: '1rem' }}>
-          
           {!isMobile && (
             <button 
               onClick={() => setLang(lang === 'uz' ? 'ru' : lang === 'ru' ? 'en' : 'uz')} 

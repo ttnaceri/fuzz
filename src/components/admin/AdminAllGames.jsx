@@ -8,10 +8,12 @@ export default function AdminAllGames() {
   const [games, setGames] = useState([]);
   const [bundles, setBundles] = useState([]);
   const [editGame, setEditGame] = useState(null);
-  
-  // Bundle tanlash uchun state (gameId -> bundleId)
-  const [bundleSelections, setBundleSelections] = useState({});
-  
+
+  // Har bir o'yin uchun: qaysi bundle'da ekanligi (gameId -> bundleId)
+  // va agar tanlangan bo'lsa, hali saqlanmagan tanlov (gameId -> bundleId)
+  const [existingBundleMap, setExistingBundleMap] = useState({});
+  const [pendingSelection, setPendingSelection] = useState({});
+
   // O'ng tugma menyusi
   const [contextMenu, setContextMenu] = useState(null);
   const contextMenuRef = useRef(null);
@@ -19,19 +21,44 @@ export default function AdminAllGames() {
   const { success, error: toastError } = useToast();
 
   const loadGames = () => {
-    api.get('/api/admin/all-games').then(data => setGames(data.games || [])).catch(() => toastError("O'yinlarni yuklashda xato"));
+    api.get('/api/admin/all-games')
+      .then(data => setGames(data.games || []))
+      .catch(() => toastError("O'yinlarni yuklashda xato"));
   };
 
   const loadBundles = () => {
-    api.get('/api/admin/bundles').then(data => setBundles(data.bundles || [])).catch(() => {});
+    api.get('/api/admin/bundles')
+      .then(data => setBundles(data.bundles || []))
+      .catch(() => {});
+  };
+
+  // Har bir bundle ichidagi o'yinlarni yuklab, "qaysi o'yin qaysi bundle'da" xaritasini tuzamiz
+  const loadExistingBundleGames = async () => {
+    try {
+      const bundleList = await api.get('/api/admin/bundles');
+      const map = {};
+      for (const b of bundleList.bundles || []) {
+        try {
+          const res = await api.get(`/api/admin/bundles/${b.id}/games`);
+          for (const g of res.games || []) {
+            map[g.id] = b.id; // Agar bir nechta bundle'da bo'lsa, oxirgisi yoziladi (bizda 1 ta deb hisoblaymiz)
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+      setExistingBundleMap(map);
+    } catch (err) {
+      console.warn("Bundle ichidagi o'yinlarni yuklashda xato:", err);
+    }
   };
 
   useEffect(() => {
     loadGames();
     loadBundles();
+    loadExistingBundleGames();
   }, []);
 
-  // O'ng tugma menyusini yopish
   useEffect(() => {
     const handleClick = () => setContextMenu(null);
     document.addEventListener('click', handleClick);
@@ -40,12 +67,12 @@ export default function AdminAllGames() {
 
   const handleDelete = async (id) => {
     if (!window.confirm("O'yinni o'chirishni tasdiqlaysizmi?")) return;
-    try { 
-      await api.delete(`/api/admin/games/${id}`); 
-      success("O'chirildi"); 
-      loadGames(); 
-    } catch (err) { 
-      toastError("O'chirishda xato: " + err.message); 
+    try {
+      await api.delete(`/api/admin/games/${id}`);
+      success("O'chirildi");
+      loadGames();
+    } catch (err) {
+      toastError("O'chirishda xato: " + err.message);
     }
   };
 
@@ -62,47 +89,56 @@ export default function AdminAllGames() {
         game_url: editGame.game_url,
         discount: editGame.discount
       });
-      success("O'yin ma'lumotlari saqlandi"); 
-      setEditGame(null); 
+      success("O'yin ma'lumotlari saqlandi");
+      setEditGame(null);
       loadGames();
-    } catch (err) { 
-      toastError(err.message || "Saqlashda xato"); 
+    } catch (err) {
+      toastError(err.message || "Saqlashda xato");
     }
   };
 
-  // Bundle tanlash (select dan)
   const handleBundleSelect = (gameId, bundleId) => {
-    setBundleSelections(prev => ({
-      ...prev,
-      [gameId]: bundleId
-    }));
+    setPendingSelection(prev => ({ ...prev, [gameId]: bundleId }));
   };
 
-  // Bundlega qo'shishni saqlash
   const handleSaveBundle = async (gameId) => {
-    const bundleId = bundleSelections[gameId];
+    const bundleId = pendingSelection[gameId];
     if (!bundleId) {
       toastError("Iltimos, bundle'ni tanlang!");
       return;
     }
 
     try {
-      console.log(`Bundlega qo'shilmoqda: Game ID = ${gameId}, Bundle ID = ${bundleId}`);
       await api.post(`/api/admin/bundles/${bundleId}/games`, { gameId });
-      
       success("O'yin bundlega muvaffaqiyatli qo'shildi!");
-      setBundleSelections(prev => {
+      // Yangilash
+      setPendingSelection(prev => {
+        const copy = { ...prev };
+        delete copy[gameId];
+        return copy;
+      });
+      setExistingBundleMap(prev => ({ ...prev, [gameId]: bundleId }));
+    } catch (err) {
+      toastError(err.message || "Xato yuz berdi");
+    }
+  };
+
+  // Bundle'dan o'yinni olib tashlash (agar xohlasangiz)
+  const handleRemoveFromBundle = async (gameId, bundleId) => {
+    if (!window.confirm("O'yinni bundle'dan olib tashlaysizmi?")) return;
+    try {
+      await api.delete(`/api/admin/bundles/${bundleId}/games/${gameId}`);
+      success("Bundle'dan olib tashlandi");
+      setExistingBundleMap(prev => {
         const copy = { ...prev };
         delete copy[gameId];
         return copy;
       });
     } catch (err) {
-      console.error("Bundlega qo'shishda xato:", err);
-      toastError(err.message || "Xato yuz berdi (Ehtimol, o'yin allaqachon bu bundle'da)");
+      toastError(err.message || "O'chirishda xato");
     }
   };
 
-  // O'ng tugma menyusi
   const handleContextMenu = (e, game) => {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, game });
@@ -122,38 +158,53 @@ export default function AdminAllGames() {
             <th style={{ padding: '1rem' }}>Nomi</th>
             <th style={{ padding: '1rem' }}>Narxi</th>
             <th style={{ padding: '1rem' }}>Chegirma</th>
-            <th style={{ padding: '1rem' }}>Bundlega qo'shish</th>
+            <th style={{ padding: '1rem' }}>Bundle</th>
             <th style={{ padding: '1rem' }}>Amallar</th>
           </tr>
         </thead>
         <tbody>
           {games.map(g => {
-            const selectedBundle = bundleSelections[g.id];
+            const existingBundleId = existingBundleMap[g.id];
+            const pendingBundleId = pendingSelection[g.id];
+            const currentValue = pendingBundleId || existingBundleId || '';
+            const isAlreadyInBundle = Boolean(existingBundleId) && !pendingBundleId;
+
             return (
               <tr key={g.id} style={{ borderBottom: '1px solid #48201a', color: '#f5eeee' }} onContextMenu={(e) => handleContextMenu(e, g)}>
                 <td style={{ padding: '1rem' }}>{g.image ? <img src={g.image} style={{ width: 50, height: 30, objectFit: 'cover', borderRadius: 4 }} alt="" /> : 'Yo\'q'}</td>
                 <td style={{ padding: '1rem', fontWeight: 'bold' }}>{g.title}</td>
                 <td style={{ padding: '1rem', color: '#43b581' }}>${g.price}</td>
                 <td style={{ padding: '1rem', color: '#f0b44d' }}>{g.discount > 0 ? `${g.discount}%` : '—'}</td>
-                
-                {/* Bundle Select va Saqlash tugmasi */}
+
                 <td style={{ padding: '1rem' }}>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <select
-                      value={selectedBundle || ''}
+                      value={currentValue}
                       onChange={(e) => handleBundleSelect(g.id, e.target.value)}
-                      style={{ padding: '0.4rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', flex: 1 }}
+                      style={{ padding: '0.4rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', flex: 1, minWidth: '120px' }}
                     >
                       <option value="">Tanlang...</option>
                       {bundles.map(b => (
                         <option key={b.id} value={b.id}>{b.name}</option>
                       ))}
                     </select>
-                    {selectedBundle && (
-                      <button onClick={() => handleSaveBundle(g.id)} style={{ backgroundColor: '#43b581', border: 'none', color: '#fff', padding: '0.4rem 0.6rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+
+                    {isAlreadyInBundle ? (
+                      <button
+                        onClick={() => handleRemoveFromBundle(g.id, existingBundleId)}
+                        style={{ backgroundColor: '#43b581', border: 'none', color: '#fff', padding: '0.4rem 0.6rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap', fontSize: '0.75rem' }}
+                        title="Bundle'dan olib tashlash"
+                      >
+                        <i className="fa-solid fa-check"></i> Qo'shilgan
+                      </button>
+                    ) : pendingBundleId ? (
+                      <button
+                        onClick={() => handleSaveBundle(g.id)}
+                        style={{ backgroundColor: '#f0b44d', border: 'none', color: '#000', padding: '0.4rem 0.6rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' }}
+                      >
                         Saqlash
                       </button>
-                    )}
+                    ) : null}
                   </div>
                 </td>
 
@@ -167,7 +218,7 @@ export default function AdminAllGames() {
         </tbody>
       </table>
 
-      {/* Tahrirlash modali (oldingidek qoladi, faqat ImageUploader bilan) */}
+      {/* Tahrirlash modali */}
       {editGame && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', border: '1px solid #48201a', width: '500px', maxHeight: '90vh', overflowY: 'auto' }}>

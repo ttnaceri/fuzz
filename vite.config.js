@@ -4,39 +4,44 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 /**
- * Root-level `game`, `image`, `sound` papkalarini
- * production build ichiga ko'chirish.
+ * Build vaqtida config.example.js -> config.js nusxalash.
+ * (Vercel'da config.js .gitignore tufayli mavjud emas)
  */
+function ensureConfigExists() {
+  return {
+    name: 'ensure-config-exists',
+    buildStart() {
+      const configPath = path.resolve(process.cwd(), 'src/components/config/config.js');
+      const examplePath = path.resolve(process.cwd(), 'src/components/config/config.example.js');
+      
+      if (!fs.existsSync(configPath)) {
+        if (fs.existsSync(examplePath)) {
+          fs.copyFileSync(examplePath, configPath);
+          console.log('[ensure-config-exists] config.example.js -> config.js nusxalandi');
+        } else {
+          console.warn('[ensure-config-exists] config.example.js topilmadi!');
+        }
+      } else {
+        console.log('[ensure-config-exists] config.js mavjud, o\'zgartirilmadi');
+      }
+    },
+  };
+}
+
 function copyRootAssets() {
+  const rootAssets = ['game', 'image', 'sound'];
   return {
     name: 'copy-root-assets',
     apply: 'build',
     closeBundle() {
       const outDir = path.resolve(process.cwd(), 'dist');
-      
-      // Vercel'da bo'lsak, 16GB'lik game papkasini ko'chirmaymiz.
-      // Lekin image va sound doim ko'chirilishi shart!
-      let dirsToCopy = ['game', 'image', 'sound'];
-      
-      if (process.env.VERCEL) {
-        dirsToCopy = ['image', 'sound']; // Vercel uchun faqat shular
-        console.log('[copy-root-assets] Vercel aniqlanди. Faqat image va sound nusxalanadi.');
-      }
-
-      for (const dir of dirsToCopy) {
+      for (const dir of rootAssets) {
         const src = path.resolve(process.cwd(), dir);
         const dest = path.join(outDir, dir);
-        
         if (!fs.existsSync(src)) {
-          console.log(`[copy-root-assets] Skipped: ${dir} (topilmadi)`);
+          console.warn(`[copy-root-assets] Missing: ${src}`);
           continue;
         }
-        
-        // Agar dist ichida eski papka bo'lsa, uni tozalab, yangisini ko'chiramiz
-        if (fs.existsSync(dest)) {
-          fs.rmSync(dest, { recursive: true, force: true });
-        }
-        
         fs.cpSync(src, dest, { recursive: true });
         console.log(`[copy-root-assets] Copied ${dir} -> dist/${dir}`);
       }
@@ -44,9 +49,6 @@ function copyRootAssets() {
   };
 }
 
-/**
- * Dev server: root-level `game`, `image`, `sound` URL'larini serve qilish.
- */
 function serveRootAssets() {
   const rootAssets = ['game', 'image', 'sound'];
   return {
@@ -88,8 +90,7 @@ function serveRootAssets() {
 }
 
 export default defineConfig({
-  plugins: [react(), serveRootAssets(), copyRootAssets()],
-  base: '/',
+  plugins: [react(), ensureConfigExists(), serveRootAssets(), copyRootAssets()],
   server: {
     port: 5173,
     open: false,

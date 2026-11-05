@@ -168,4 +168,25 @@ userApp.get('/events', async (c) => {
   } catch (err) { return c.json({ events: [] }); }
 });
 
+// ... (oldingi user API'lar)
+
+// Public: Bundle ichidagi o'yinlar
+userApp.get('/bundles/:id/games', async (c) => {
+  try {
+    const games = await c.env.DB.prepare(`
+      SELECT g.* FROM games g
+      JOIN bundle_games bg ON g.id = bg.game_id
+      WHERE bg.bundle_id = ?
+    `).bind(c.req.param('id')).all();
+    return c.json({ games: games.results || [] });
+  } catch (err) { return c.json({ games: [] }); }
+});
+
+userApp.get('/bundles', async (c) => {
+  try {
+    const bundles = await c.env.DB.prepare('SELECT * FROM bundles').all();
+    return c.json({ bundles: bundles.results || [] });
+  } catch (err) { return c.json({ bundles: [] }); }
+});
+
 export default userApp;

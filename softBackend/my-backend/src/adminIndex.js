@@ -510,4 +510,15 @@ adminApp.post('/admin/payment-requests/reject', async (c) => {
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
+adminApp.get('/admin/bundles/:id/games', async (c) => {
+  try {
+    const games = await c.env.DB.prepare(`
+      SELECT g.* FROM games g
+      JOIN bundle_games bg ON g.id = bg.game_id
+      WHERE bg.bundle_id = ?
+    `).bind(c.req.param('id')).all();
+    return c.json({ games: games.results || [] });
+  } catch (err) { return c.json({ games: [] }); }
+});
+
 export default adminApp;

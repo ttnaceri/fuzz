@@ -464,6 +464,9 @@ adminApp.post('/admin/payment-requests/approve', async (c) => {
     const { ids } = await c.req.json();
     if (!ids || !Array.isArray(ids) || ids.length === 0) return c.json({ error: 'ID lar kerak!' }, 400);
 
+    // Joriy kursni olish (dollar -> so'm)
+    const rate = 12500; // Statik kurs (yoki API dan olish mumkin)
+
     for (const id of ids) {
       const request = await c.env.DB.prepare('SELECT * FROM payment_requests WHERE id = ?').bind(id).first();
       if (!request || request.status !== 'pending') continue;
@@ -473,13 +476,17 @@ adminApp.post('/admin/payment-requests/approve', async (c) => {
       const now = new Date();
       const diffMinutes = (now - createdAt) / (1000 * 60);
 
-      let finalAmount = request.amount_uzs;
+      let finalUzs = request.amount_uzs;
       if (diffMinutes > 15) {
-        finalAmount = request.amount_uzs * 1.15;
+        finalUzs = request.amount_uzs * 1.15;
       }
 
+      // So'mni dollarga aylantirish
+      const usdAmount = finalUzs / rate;
+
+      // Foydalanuvchi balansini oshirish
       await c.env.DB.prepare('UPDATE users SET balance = balance + ? WHERE id = ?')
-        .bind(finalAmount / 12500, request.user_id).run();
+        .bind(usdAmount, request.user_id).run();
 
       // So'rovni o'chirish
       await c.env.DB.prepare('DELETE FROM payment_requests WHERE id = ?').bind(id).run();
@@ -503,4 +510,4 @@ adminApp.post('/admin/payment-requests/reject', async (c) => {
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
-export default adminApp;  
+export default adminApp;

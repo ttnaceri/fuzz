@@ -1,62 +1,78 @@
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { authService } from '../services/authService.js';
-import { storage } from '../utils/storage.js';
 import { api } from '../services/api.js';
+import { storage } from '../utils/storage.js';
 
 export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
+  // Backenddan foydalanuvchining eng yangi ma'lumotlarini olish
+  const refreshUser = useCallback(async () => {
+    try {
+      const cached = storage.getAuth();
+      if (!cached?.user?.id) return null;
+
+      // Backenddan barcha userlarni olib, o'zimiznikini topamiz
+      const res = await api.get('/api/admin/users');
+      const currentUser = (res.users || []).find(u => u.id === cached.user.id);
+
+      if (currentUser) {
+        setUser(currentUser);
+        storage.setAuth({ user: currentUser });
+        return currentUser;
+      }
+      return null;
+    } catch (e) {
+      console.warn("Balansni yangilashda xato:", e);
+      return null;
+    }
+  }, []);
+
+  // Sahifa yuklanganda keshdan foydalanuvchini olish va yangilash
   useEffect(() => {
     const cached = storage.getAuth();
-    if (cached?.user) setUser(cached.user);
+    if (cached?.user) {
+      setUser(cached.user);
+      refreshUser();
+    }
     setLoading(false);
-  }, []);
+  }, [refreshUser]);
+
+  // Foydalanuvchi boshqa tabdan qaytganda yoki sahifa fokus olganda balansni yangilash
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshUser();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Har 60 soniyada balansni avtomatik yangilab turish
+    const interval = setInterval(() => {
+      refreshUser();
+    }, 60000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(interval);
+    };
+  }, [refreshUser]);
 
   const login = useCallback(async (credentials) => {
-    setError(null);
-    if (!api.isConfigured()) {
-      throw new Error('Backend sozlanmagan.');
-    }
-    try {
-      const res = await authService.login(credentials);
-      if (!res || !res.user) {
-        throw new Error(res?.error || "Tizimga kirishda xatolik");
-      }
-      setUser(res.user);
-      storage.setAuth({ user: res.user });
-      return res.user;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  }, []);
-
-  const register = useCallback(async (payload) => {
-    setError(null);
-    if (!api.isConfigured()) {
-      throw new Error('Registration is unavailable.');
-    }
-    try {
-      const res = await authService.register(payload);
-      const u = res?.user || res;
-      if (!u) throw new Error(res?.error || "Ro'yxatdan o'tishda xatolik");
-      setUser(u);
-      storage.setAuth({ user: u });
-      return u;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  }, []);
+    const res = await authService.login(credentials);
+    if (!res || !res.user) throw new Error(res?.error || "Xatolik");
+    setUser(res.user);
+    storage.setAuth({ user: res.user });
+    // Login bo'lgandan keyin darhol to'liq ma'lumotlarni olish
+    setTimeout(() => refreshUser(), 100);
+    return res.user;
+  }, [refreshUser]);
 
   const logout = useCallback(async () => {
-    try {
-      if (api.isConfigured()) await authService.logout();
-    } catch { /* ignore */ }
+    try { await authService.logout(); } catch (e) {}
     setUser(null);
     storage.clearAuth();
   }, []);
@@ -65,14 +81,13 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       isAuthenticated: !!user,
-      isAdmin: !!user && (user.role === 'admin' || user.role === 'superAdmin' || user.isAdmin === true),
+      isAdmin: !!user && (user.role === 'admin'),
       loading,
-      error,
       login,
-      register,
       logout,
+      refreshUser,
     }),
-    [user, loading, error, login, register, logout]
+    [user, loading, login, logout, refreshUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

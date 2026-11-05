@@ -5,24 +5,36 @@ import { storage } from '../utils/storage.js';
 
 export const AuthContext = createContext(null);
 
+// Backenddan kelgan userni normalize qilish funksiyasi
+// bu float xatolarini oldini oladi va balansni to'g'ri saqlaydi
+function normalizeUser(rawUser) {
+  if (!rawUser) return null;
+  const balanceNum = rawUser.balance != null ? Number(rawUser.balance) : 0;
+  return {
+    ...rawUser,
+    // Balansni aniq raqamga aylantiramiz. toFixed(2) bilan emas,
+    // chunki toFixed string qaytaradi va keyingi hisob-kitoblarni buzadi
+    balance: isNaN(balanceNum) ? 0 : Math.round(balanceNum * 100) / 100,
+  };
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Backenddan foydalanuvchining eng yangi ma'lumotlarini olish
   const refreshUser = useCallback(async () => {
     try {
       const cached = storage.getAuth();
       if (!cached?.user?.id) return null;
 
-      // Backenddan barcha userlarni olib, o'zimiznikini topamiz
       const res = await api.get('/api/admin/users');
       const currentUser = (res.users || []).find(u => u.id === cached.user.id);
 
       if (currentUser) {
-        setUser(currentUser);
-        storage.setAuth({ user: currentUser });
-        return currentUser;
+        const normalized = normalizeUser(currentUser);
+        setUser(normalized);
+        storage.setAuth({ user: normalized });
+        return normalized;
       }
       return null;
     } catch (e) {
@@ -31,17 +43,15 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Sahifa yuklanganda keshdan foydalanuvchini olish va yangilash
   useEffect(() => {
     const cached = storage.getAuth();
     if (cached?.user) {
-      setUser(cached.user);
+      setUser(normalizeUser(cached.user));
       refreshUser();
     }
     setLoading(false);
   }, [refreshUser]);
 
-  // Foydalanuvchi boshqa tabdan qaytganda yoki sahifa fokus olganda balansni yangilash
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -50,10 +60,9 @@ export function AuthProvider({ children }) {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Har 60 soniyada balansni avtomatik yangilab turish
     const interval = setInterval(() => {
       refreshUser();
-    }, 60000);
+    }, 30000); // har 30 soniyada yangilash
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -64,11 +73,11 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (credentials) => {
     const res = await authService.login(credentials);
     if (!res || !res.user) throw new Error(res?.error || "Xatolik");
-    setUser(res.user);
-    storage.setAuth({ user: res.user });
-    // Login bo'lgandan keyin darhol to'liq ma'lumotlarni olish
+    const normalized = normalizeUser(res.user);
+    setUser(normalized);
+    storage.setAuth({ user: normalized });
     setTimeout(() => refreshUser(), 100);
-    return res.user;
+    return normalized;
   }, [refreshUser]);
 
   const logout = useCallback(async () => {

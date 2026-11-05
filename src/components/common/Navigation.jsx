@@ -6,10 +6,11 @@ export default function Navigation() {
   const { t } = useLanguage();
   const { user, isAuthenticated, refreshUser } = useAuth();
 
-  // Balansni har doim eng yangi user obyektidan olamiz
-  const rawBalance = user?.balance;
-  const balance = (typeof rawBalance === 'number' && rawBalance >= 0)
-    ? `$${Number(rawBalance).toFixed(2)}`
+  // Balansni hech qanday yaxlitlashsiz, to'liq ko'rsatamiz
+  // Float muammosini oldini olish uchun Number() ishlatamiz
+  const balanceNum = user?.balance != null ? Number(user.balance) : null;
+  const balance = (balanceNum != null && !isNaN(balanceNum))
+    ? `$${balanceNum.toFixed(2)}`
     : null;
 
   return (
@@ -46,7 +47,6 @@ export default function Navigation() {
             gap: '0.5rem'
           }}
           onClick={() => {
-            // Ustiga bosganda balansni yangilash
             if (isAuthenticated) refreshUser();
           }}
         >

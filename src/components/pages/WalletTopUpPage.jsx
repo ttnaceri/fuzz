@@ -9,7 +9,7 @@ import Modal from '../common/Modal.jsx';
 
 export default function WalletTopUpPage() {
   const { t } = useLanguage();
-  const { user, refreshUser } = useAuth();
+  const { user } = useAuth();
   const { info, success } = useToast();
   
   const [paymentMethods, setPaymentMethods] = useState([]);
@@ -17,7 +17,6 @@ export default function WalletTopUpPage() {
   const [rate, setRate] = useState(12500);
   const [amount, setAmount] = useState('');
   
-  // Stars
   const [starsRates, setStarsRates] = useState([]);
   const [usdAmount, setUsdAmount] = useState('');
   const [starsAmount, setStarsAmount] = useState('');
@@ -25,13 +24,11 @@ export default function WalletTopUpPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Valyuta kursini yuklash
     fetch(config.payment.exchangeApiUrl)
       .then(res => res.json())
       .then(data => { if (data?.conversion_rates?.UZS) setRate(data.conversion_rates.UZS); })
       .catch(() => {});
 
-    // To'lov usullarini yuklash
     api.get('/api/payment-methods')
       .then(data => {
         setPaymentMethods(data.methods || []);
@@ -39,7 +36,6 @@ export default function WalletTopUpPage() {
       })
       .catch(() => setLoading(false));
 
-    // Stars kurslarini yuklash
     api.get('/api/admin/stars-rates')
       .then(data => setStarsRates(data.rates || []))
       .catch(() => {});
@@ -54,15 +50,24 @@ export default function WalletTopUpPage() {
     info("Telegram botga o'ting va to'lovni tasdiqlang.");
   };
 
-  const handleCardPay = () => {
+  const handleCardPay = async () => {
     const cleanAmount = amount.replace(/\s/g, '');
     if (!cleanAmount || Number(cleanAmount) <= 0) {
       info("Iltimos, to'g'ri miqdor kiriting.");
       return;
     }
-    success("So'rov yuborildi! Admin tasdiqlagach balansingiz to'ladi.");
-    setAmount('');
-    setSelectedMethod(null);
+
+    try {
+      await api.post('/api/payment-request', {
+        userId: user.id,
+        amount_uzs: Number(cleanAmount)
+      });
+      success("So'rov yuborildi! Admin 15 daqiqa ichida tasdiqlaydi.");
+      setAmount('');
+      setSelectedMethod(null);
+    } catch (err) {
+      info("So'rov yuborishda xato: " + (err.message || "Server xatosi"));
+    }
   };
 
   if (!user) {
@@ -87,7 +92,6 @@ export default function WalletTopUpPage() {
         {loading ? (
           <p style={{ color: '#b9a6a2' }}>Yuklanmoqda...</p>
         ) : !selectedMethod ? (
-          // To'lov usullari ro'yxati
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
             {paymentMethods.map(m => (
               <div 
@@ -119,20 +123,12 @@ export default function WalletTopUpPage() {
                   </div>
                 )}
                 
-                {/* RASM - To'g'ri kvadrat shaklda */}
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80px', marginBottom: '1rem' }}>
                   <img 
                     src={m.logo_url} 
                     alt={m.name} 
-                    style={{ 
-                      width: '80px', 
-                      height: '80px', 
-                      objectFit: 'contain',
-                      borderRadius: '8px'
-                    }} 
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }} 
+                    style={{ width: '80px', height: '80px', objectFit: 'contain', borderRadius: '8px' }} 
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }} 
                   />
                 </div>
                 
@@ -141,7 +137,6 @@ export default function WalletTopUpPage() {
             ))}
           </div>
         ) : (
-          // Tanlangan to'lov usuli
           <div style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', border: '1px solid #48201a', maxWidth: '600px', margin: '0 auto' }}>
             <button onClick={() => setSelectedMethod(null)} style={{ background: 'none', border: 'none', color: '#b9a6a2', cursor: 'pointer', marginBottom: '1rem', padding: 0 }}>
               <i className="fa-solid fa-arrow-left"></i> Orqaga
@@ -149,17 +144,9 @@ export default function WalletTopUpPage() {
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
               <div style={{ width: '60px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img 
-                  src={selectedMethod.logo_url} 
-                  alt={selectedMethod.name} 
-                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
-                  onError={(e) => e.currentTarget.style.display = 'none'} 
-                />
+                <img src={selectedMethod.logo_url} alt={selectedMethod.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} onError={(e) => e.currentTarget.style.display = 'none'} />
               </div>
               <h3 style={{ color: '#f5eeee', margin: 0 }}>{selectedMethod.name}</h3>
-              {selectedMethod.discount > 0 && (
-                <span style={{ backgroundColor: '#f0b44d', color: '#000', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>-{selectedMethod.discount}% chegirma</span>
-              )}
             </div>
 
             {selectedMethod.id === 'stars' && (
@@ -209,7 +196,13 @@ export default function WalletTopUpPage() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Miqdor (UZS)</label>
-                  <input type="text" className="form-input" value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' '))} placeholder="50 000" />
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    value={amount} 
+                    onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' '))} 
+                    placeholder="50 000" 
+                  />
                 </div>
                 <button className="btn btn-primary" onClick={handleCardPay} style={{ width: '100%' }}>
                   So'rov yuborish
@@ -219,7 +212,6 @@ export default function WalletTopUpPage() {
           </div>
         )}
 
-        {/* Stars Modal */}
         <Modal open={isModalOpen} title="Telegram Stars orqali to'lov" onClose={() => setIsModalOpen(false)}>
           {selectedMethod && (
             <div>

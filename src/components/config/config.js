@@ -17,7 +17,7 @@ export const config = {
   },
 
   qrLogin: {
-    scanUrl: 'https://fuzz-dun.vercel.app/qr-auth' 
+    scanUrl: 'https://fuzz-tau.vercel.app/qr-auth' 
   },
 
   telegram: {

@@ -14,6 +14,16 @@ userApp.get('/users/:userId/library', async (c) => {
   } catch (err) { return c.json({ games: [] }); }
 });
 
+// O'yin sotib olinganligini tekshirish
+userApp.get('/users/:userId/owns/:gameId', async (c) => {
+  try {
+    const owned = await c.env.DB.prepare(
+      'SELECT * FROM user_library WHERE user_id = ? AND game_id = ?'
+    ).bind(c.req.param('userId'), c.req.param('gameId')).first();
+    return c.json({ owned: !!owned });
+  } catch (err) { return c.json({ owned: false }); }
+});
+
 // Buy Game
 userApp.post('/store/buy', async (c) => {
   try {
@@ -33,22 +43,41 @@ userApp.post('/store/buy', async (c) => {
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
-// Pay with Stars
-userApp.post('/store/pay-stars', async (c) => {
+// ==========================================
+// WISHLIST API'LARI
+// ==========================================
+userApp.get('/users/:userId/wishlist', async (c) => {
   try {
-    const { userId, amount_usd, stars_paid } = await c.req.json();
-    if (!userId || !amount_usd || !stars_paid) return c.json({ error: 'Ma\'lumot yetarli emas' }, 400);
+    const wishlist = await c.env.DB.prepare(`
+      SELECT g.* FROM games g
+      JOIN user_wishlist uw ON g.id = uw.game_id
+      WHERE uw.user_id = ?
+    `).bind(c.req.param('userId')).all();
+    return c.json({ games: wishlist.results || [] });
+  } catch (err) { return c.json({ games: [] }); }
+});
 
-    const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first();
-    if (!user) return c.json({ error: 'Foydalanuvchi topilmadi' }, 404);
+userApp.post('/wishlist', async (c) => {
+  try {
+    const { userId, gameId } = await c.req.json();
+    if (!userId || !gameId) return c.json({ error: 'Ma\'lumot yetarli emas' }, 400);
 
-    await c.env.DB.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').bind(parseFloat(amount_usd), userId).run();
-    
-    const id = crypto.randomUUID();
-    await c.env.DB.prepare('INSERT INTO payments (id, user_id, amount_usd, stars_paid) VALUES (?, ?, ?, ?)').bind(id, userId, parseFloat(amount_usd), parseInt(stars_paid)).run();
+    const existing = await c.env.DB.prepare('SELECT * FROM user_wishlist WHERE user_id = ? AND game_id = ?').bind(userId, gameId).first();
+    if (existing) return c.json({ error: 'Allaqachon wishlistda!' }, 400);
 
-    return c.json({ message: "To'lov muvaffaqiyatli amalga oshirildi!", newBalance: user.balance + parseFloat(amount_usd) });
-  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
+    await c.env.DB.prepare('INSERT INTO user_wishlist (id, user_id, game_id) VALUES (?, ?, ?)')
+      .bind(crypto.randomUUID(), userId, gameId).run();
+
+    return c.json({ message: "Wishlistga qo'shildi!" });
+  } catch (err) { return c.json({ error: 'Xato' }, 500); }
+});
+
+userApp.delete('/wishlist/:userId/:gameId', async (c) => {
+  try {
+    await c.env.DB.prepare('DELETE FROM user_wishlist WHERE user_id = ? AND game_id = ?')
+      .bind(c.req.param('userId'), c.req.param('gameId')).run();
+    return c.json({ success: true });
+  } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
 // Play Game

@@ -1,18 +1,31 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/useLanguage.js';
 import useAuth from '../hooks/useAuth.js';
 
 export default function Navigation() {
   const { t } = useLanguage();
   const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
-  // Balansni formatlash
   const balance = user?.balance ? `$${Number(user.balance).toFixed(1)}` : '';
 
   return (
     <nav className="header__nav" style={{ display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', gap: '0.2rem' }}>
-      <NavLink to="/" end style={{ whiteSpace: 'nowrap' }}>{t('nav.home')}</NavLink>
+      {/* Bosh sahifa + dropdown */}
+      <div className="nav-dropdown">
+        <NavLink to="/" end className="nav-dropdown-btn" style={{ whiteSpace: 'nowrap' }}>{t('nav.home')}</NavLink>
+        <div className="nav-dropdown-content">
+          {isAuthenticated && (
+            <>
+              <NavLink to="/account">{t('auth.account')}</NavLink>
+              <NavLink to="/edit-profile">Edit Profile</NavLink>
+              <NavLink to="/wishlist">{t('nav.wishlist') || 'Wishlist'}</NavLink>
+            </>
+          )}
+        </div>
+      </div>
 
+      {/* Store */}
       <div className="nav-dropdown">
         <NavLink to="/store" className="nav-dropdown-btn" style={{ whiteSpace: 'nowrap' }}>{t('nav.store')}</NavLink>
         <div className="nav-dropdown-content">
@@ -22,6 +35,7 @@ export default function Navigation() {
         </div>
       </div>
 
+      {/* Library */}
       <div className="nav-dropdown">
         <NavLink to="/library" className="nav-dropdown-btn" style={{ whiteSpace: 'nowrap' }}>{t('nav.library')}</NavLink>
         <div className="nav-dropdown-content">
@@ -31,25 +45,12 @@ export default function Navigation() {
         </div>
       </div>
 
-      {/* WALLET + BALANCE */}
+      {/* Wallet */}
       <div className="nav-dropdown">
-        <div 
-          className="nav-dropdown-btn" 
-          style={{ 
-            cursor: 'pointer', 
-            whiteSpace: 'nowrap', 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '0.5rem'
-          }}
-        >
+        <div className="nav-dropdown-btn" style={{ cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <i className="fa-solid fa-wallet" style={{ fontSize: '0.9rem' }}></i>
-          <span>
-            {t('nav.wallet')} 
-            {isAuthenticated && balance && ` (${balance})`}
-          </span>
+          <span>{t('nav.wallet')} {isAuthenticated && balance && ` (${balance})`}</span>
         </div>
-        
         <div className="nav-dropdown-content">
           <NavLink to="/wallet/history">{t('wallet.history')}</NavLink>
           <NavLink to="/wallet/topup">{t('wallet.topUp')}</NavLink>

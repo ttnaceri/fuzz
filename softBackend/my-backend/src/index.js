@@ -60,6 +60,13 @@ app.get('/fuzz/api/init-db', async (c) => {
       );
     `).run();
 
+    // WISHLIST JADVALI (YANGI)
+    await c.env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS user_wishlist (
+        id TEXT PRIMARY KEY, user_id TEXT, game_id TEXT, added_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `).run();
+
     await c.env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS images (
         id TEXT PRIMARY KEY, base64_data TEXT NOT NULL, mime_type TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -167,7 +174,6 @@ app.get('/fuzz/api/init-db', async (c) => {
       }
     }
 
-    // PAYMENT REQUESTS (Karta orqali to'lov so'rovlari)
     await c.env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS payment_requests (
         id TEXT PRIMARY KEY,
@@ -393,23 +399,6 @@ app.get('/fuzz/api/payment-methods', async (c) => {
     const methods = await c.env.DB.prepare('SELECT * FROM payment_methods WHERE enabled = 1').all();
     return c.json({ methods: methods.results || [] });
   } catch (err) { return c.json({ methods: [] }); }
-});
-
-// ==========================================
-// KARTA ORQALI TO'LOV SO'ROVI (USER)
-// ==========================================
-app.post('/fuzz/api/payment-request', async (c) => {
-  try {
-    const { userId, amount_uzs } = await c.req.json();
-    if (!userId || !amount_uzs) return c.json({ error: 'Ma\'lumot yetarli emas' }, 400);
-
-    const id = crypto.randomUUID();
-    await c.env.DB.prepare(
-      'INSERT INTO payment_requests (id, user_id, amount_uzs, status) VALUES (?, ?, ?, ?)'
-    ).bind(id, userId, parseFloat(amount_uzs), 'pending').run();
-
-    return c.json({ message: "So'rov yuborildi! Admin tasdiqlagach balansingiz to'ladi." });
-  } catch (err) { return c.json({ error: 'Server xatosi: ' + err.message }, 500); }
 });
 
 // Telegram Webhook

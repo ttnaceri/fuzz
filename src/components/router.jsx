@@ -21,6 +21,7 @@ import CartPage from './pages/CartPage.jsx';
 import PurchasesPage from './pages/PurchasesPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import AccountPage from './pages/AccountPage.jsx';
+import EditProfilePage from './pages/EditProfilePage.jsx'; // YANGI
 import SettingsPage from './pages/SettingsPage.jsx';
 import SecurityPage from './pages/SecurityPage.jsx';
 import CommunityPage from './pages/CommunityPage.jsx';
@@ -89,7 +90,7 @@ import AdminCompanies from './admin/AdminCompanies.jsx';
 import AdminNewCompany from './admin/AdminNewCompany.jsx';
 import AdminStarsRate from './admin/AdminStarsRate.jsx';
 import AdminPayments from './admin/AdminPayments.jsx';
-import AdminPaymentRequests from './admin/AdminPaymentRequests.jsx'; // YANGI
+import AdminPaymentRequests from './admin/AdminPaymentRequests.jsx';
 
 // --- FOOTER PAGES ---
 import FooterAboutPage from '../footer/AboutPage.jsx';
@@ -139,6 +140,7 @@ export const router = createBrowserRouter([
       { path: 'cart', element: <CartPage /> },
       { path: 'purchases', element: <ProtectedRoute><PurchasesPage /></ProtectedRoute> },
       { path: 'profile', element: <ProtectedRoute><ProfilePage /></ProtectedRoute> },
+      { path: 'edit-profile', element: <ProtectedRoute><EditProfilePage /></ProtectedRoute> }, // YANGI
       { path: 'account', element: <ProtectedRoute><AccountPage /></ProtectedRoute> },
       { path: 'settings', element: <ProtectedRoute><SettingsPage /></ProtectedRoute> },
       { path: 'security', element: <ProtectedRoute><SecurityPage /></ProtectedRoute> },

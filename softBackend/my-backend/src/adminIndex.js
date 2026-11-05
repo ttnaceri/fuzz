@@ -215,6 +215,19 @@ adminApp.get('/admin/bundles/:id/games', async (c) => {
   } catch (err) { return c.json({ games: [] }); }
 });
 
+// Bundle'dan o'yinni olib tashlash (YANGI)
+adminApp.delete('/admin/bundles/:bundleId/games/:gameId', async (c) => {
+  try {
+    const bundleId = c.req.param('bundleId');
+    const gameId = c.req.param('gameId');
+    await c.env.DB.prepare('DELETE FROM bundle_games WHERE bundle_id = ? AND game_id = ?')
+      .bind(bundleId, gameId).run();
+    return c.json({ success: true });
+  } catch (err) { 
+    return c.json({ error: 'Xato: ' + err.message }, 500); 
+  }
+});
+
 // ==========================================
 // EVENTS
 // ==========================================

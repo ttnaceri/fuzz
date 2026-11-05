@@ -30,7 +30,7 @@ export default function LoginPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const qrUrl = `https://fuzz-tau.vercel.app/qr-auth?token=${qrToken}`;
+  const qrUrl = `https://fuzz-dun.vercel.app/qr-auth?token=${qrToken}`;
 
   const handleLogin = async (e) => {
     e.preventDefault();

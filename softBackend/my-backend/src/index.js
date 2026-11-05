@@ -497,7 +497,7 @@ app.post('/fuzz/telegram/webhook', async (c) => {
             text: welcomeMessage,
             reply_markup: {
               inline_keyboard: [
-                [ { text: "🚀 Fuzz App'ni ochish", web_app: { url: `https://fuzz-tau.vercel.app/register/form?tgId=${chatId}` } } ]
+                [ { text: "🚀 Fuzz App'ni ochish", web_app: { url: `https://fuzz-dun.vercel.app/register/form?tgId=${chatId}` } } ]
               ]
             }
           }),

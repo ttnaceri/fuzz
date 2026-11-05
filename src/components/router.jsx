@@ -4,7 +4,7 @@ import AdminLayout from './layouts/AdminLayout.jsx';
 import AuthLayout from './layouts/AuthLayout.jsx';
 import ProtectedRoute from './common/ProtectedRoute.jsx';
 
-// --- PUBLIC PAGES ---
+// --- PUBLIC & USER PAGES ---
 import HomePage from './pages/HomePage.jsx';
 import StorePage from './pages/StorePage.jsx';
 import CategoriesPage from './pages/CategoriesPage.jsx';
@@ -21,7 +21,6 @@ import CartPage from './pages/CartPage.jsx';
 import PurchasesPage from './pages/PurchasesPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import AccountPage from './pages/AccountPage.jsx';
-import EditProfilePage from './pages/EditProfilePage.jsx'; // YANGI
 import SettingsPage from './pages/SettingsPage.jsx';
 import SecurityPage from './pages/SecurityPage.jsx';
 import CommunityPage from './pages/CommunityPage.jsx';
@@ -36,6 +35,7 @@ import SupportPage from './pages/SupportPage.jsx';
 import AboutPage from './pages/AboutPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
+import BundleDetailsPage from './pages/BundleDetailsPage.jsx'; // YANGI IMPORT
 
 // --- WALLET PAGES ---
 import WalletHistoryPage from './pages/WalletHistoryPage.jsx';
@@ -131,6 +131,7 @@ export const router = createBrowserRouter([
       { path: 'top-sellers', element: <TopSellersPage /> },
       { path: 'search', element: <SearchPage /> },
       { path: 'game/:id', element: <GameDetailsPage /> },
+      { path: 'bundle/:id', element: <BundleDetailsPage /> }, // YANGI ROUTE
       { path: 'companies', element: <CompaniesPage /> },
       { path: 'company/:id', element: <CompanyDetailsPage /> },
       
@@ -140,7 +141,6 @@ export const router = createBrowserRouter([
       { path: 'cart', element: <CartPage /> },
       { path: 'purchases', element: <ProtectedRoute><PurchasesPage /></ProtectedRoute> },
       { path: 'profile', element: <ProtectedRoute><ProfilePage /></ProtectedRoute> },
-      { path: 'edit-profile', element: <ProtectedRoute><EditProfilePage /></ProtectedRoute> }, // YANGI
       { path: 'account', element: <ProtectedRoute><AccountPage /></ProtectedRoute> },
       { path: 'settings', element: <ProtectedRoute><SettingsPage /></ProtectedRoute> },
       { path: 'security', element: <ProtectedRoute><SecurityPage /></ProtectedRoute> },

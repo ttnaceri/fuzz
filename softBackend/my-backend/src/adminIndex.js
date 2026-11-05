@@ -451,53 +451,56 @@ adminApp.get('/admin/payment-requests', async (c) => {
     const requests = await c.env.DB.prepare(`
       SELECT pr.*, u.username FROM payment_requests pr
       JOIN users u ON pr.user_id = u.id
+      WHERE pr.status = 'pending'
       ORDER BY pr.created_at DESC
     `).all();
     return c.json({ requests: requests.results || [] });
   } catch (err) { return c.json({ requests: [] }); }
 });
 
-adminApp.post('/admin/payment-requests/:id/approve', async (c) => {
+// Bir nechta so'rovni tasdiqlash (bulk)
+adminApp.post('/admin/payment-requests/approve', async (c) => {
   try {
-    const id = c.req.param('id');
-    const request = await c.env.DB.prepare('SELECT * FROM payment_requests WHERE id = ?').bind(id).first();
-    if (!request) return c.json({ error: 'So\'rov topilmadi!' }, 404);
-    if (request.status !== 'pending') return c.json({ error: 'Bu so\'rov allaqachon ko\'rib chiqilgan!' }, 400);
+    const { ids } = await c.req.json();
+    if (!ids || !Array.isArray(ids) || ids.length === 0) return c.json({ error: 'ID lar kerak!' }, 400);
 
-    // 15 daqiqa qoidasi
-    const createdAt = new Date(request.created_at);
-    const now = new Date();
-    const diffMinutes = (now - createdAt) / (1000 * 60);
+    for (const id of ids) {
+      const request = await c.env.DB.prepare('SELECT * FROM payment_requests WHERE id = ?').bind(id).first();
+      if (!request || request.status !== 'pending') continue;
 
-    let finalAmount = request.amount_uzs;
-    if (diffMinutes > 15) {
-      finalAmount = request.amount_uzs * 1.15;
+      // 15 daqiqa qoidasi
+      const createdAt = new Date(request.created_at);
+      const now = new Date();
+      const diffMinutes = (now - createdAt) / (1000 * 60);
+
+      let finalAmount = request.amount_uzs;
+      if (diffMinutes > 15) {
+        finalAmount = request.amount_uzs * 1.15;
+      }
+
+      await c.env.DB.prepare('UPDATE users SET balance = balance + ? WHERE id = ?')
+        .bind(finalAmount / 12500, request.user_id).run();
+
+      // So'rovni o'chirish
+      await c.env.DB.prepare('DELETE FROM payment_requests WHERE id = ?').bind(id).run();
     }
 
-    // Foydalanuvchi balansini oshirish
-    await c.env.DB.prepare('UPDATE users SET balance = balance + ? WHERE id = ?')
-      .bind(finalAmount / 12500, request.user_id).run();
-
-    // So'rovni tasdiqlash
-    await c.env.DB.prepare('UPDATE payment_requests SET status = ?, approved_at = CURRENT_TIMESTAMP WHERE id = ?')
-      .bind('approved', id).run();
-
-    return c.json({ message: 'Tasdiqlandi!', amount: finalAmount });
+    return c.json({ message: 'Tasdiqlandi!' });
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
-adminApp.post('/admin/payment-requests/:id/reject', async (c) => {
+// Bir nechta so'rovni rad etish (bulk)
+adminApp.post('/admin/payment-requests/reject', async (c) => {
   try {
-    const id = c.req.param('id');
-    const request = await c.env.DB.prepare('SELECT * FROM payment_requests WHERE id = ?').bind(id).first();
-    if (!request) return c.json({ error: 'So\'rov topilmadi!' }, 404);
-    if (request.status !== 'pending') return c.json({ error: 'Bu so\'rov allaqachon ko\'rib chiqilgan!' }, 400);
+    const { ids } = await c.req.json();
+    if (!ids || !Array.isArray(ids) || ids.length === 0) return c.json({ error: 'ID lar kerak!' }, 400);
 
-    await c.env.DB.prepare('UPDATE payment_requests SET status = ? WHERE id = ?')
-      .bind('rejected', id).run();
+    for (const id of ids) {
+      await c.env.DB.prepare('DELETE FROM payment_requests WHERE id = ?').bind(id).run();
+    }
 
     return c.json({ message: 'Rad etildi!' });
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
-export default adminApp;
+export default adminApp;  

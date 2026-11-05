@@ -67,6 +67,14 @@ export default function LoginPage() {
   return (
     <div style={styles.wrapper}>
       <div style={styles.box}>
+        {/* Sarlavha qismi */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', borderBottom: '1px solid #48201a' }}>
+          <img src="/image/logo.png" alt="Fuzz" style={{ height: '40px' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+          <h1 style={{ margin: 0, fontSize: '1.5rem', color: '#f5eeee', letterSpacing: '2px' }}>FUZZ</h1>
+          <div style={{ flex: 1 }}></div>
+          <Link to="/" style={{ color: '#b9a6a2', fontSize: '1.5rem' }}>&times;</Link>
+        </div>
+
         <div style={styles.body}>
           <div style={styles.formSide}>
             <h3 style={styles.title}>SIGN IN WITH ACCOUNT NAME</h3>
@@ -87,7 +95,7 @@ export default function LoginPage() {
             </form>
             
             <div style={{ marginTop: '1rem', fontSize: '0.85rem' }}>
-              <Link to="/reset-password" style={{ color: '#b9a6a2', textDecoration: 'underline' }}>Forgot password?</Link>
+              <Link to="/reset-password" style={{ color: '#b9a6a2', textDecoration: 'underline' }}>Help, I can't sign in</Link>
             </div>
           </div>
 

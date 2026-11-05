@@ -15,9 +15,19 @@ export default function GamePlayerPage() {
   const [secondsPlayed, setSecondsPlayed] = useState(0);
   const [isBreakMenuOpen, setIsBreakMenuOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  
-  const iframeRef = useRef(null);
-  const containerRef = useRef(null);
+
+  // Shift + Tab ni ushlash
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.shiftKey && e.key === 'Tab') {
+        e.preventDefault();
+        setIsBreakMenuOpen(prev => !prev);
+        setIsPaused(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
@@ -26,42 +36,12 @@ export default function GamePlayerPage() {
       .catch(() => { setError("O'yinni yuklab bo'lmadi."); setLoading(false); });
   }, [id, user, navigate]);
 
-  // Shift + Tab ni ushlash va to'g'ri ishlashi uchun
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Shift + Tab bosilganda
-      if (e.shiftKey && e.key === 'Tab') {
-        e.preventDefault(); // Brauzer o'zining "orqaga o'tish"ini to'xtatamiz
-        setIsBreakMenuOpen(prev => !prev);
-        setIsPaused(prev => !prev);
-      }
-    };
-
-    // Hodisani to'g'ridan-to'g'ri oynaga (window) ulaymiz
-    window.addEventListener('keydown', handleKeyDown);
-    
-    // Muammo: iframe ichida fokus bo'lsa, window eventni eshitmaydi.
-    // Yechim: iframe ustiga sichqoncha kelganda yoki har 1 soniyada fokusni o'zimizga qaytaramiz
-    // Yoki iframe ustiga shaffof div qo'yamiz (lekin bu o'yinni o'ynashga xalaqit beradi).
-    // Eng yaxshisi: iframe ga fokus berganda, foydalanuvchi Shift+Tab bosishidan oldin
-    // sichqonchani tashqariga olib chiqishi kerak. Buni avtomatlashtirish qiyin.
-    
-    // Alternativ: iframe yuklanganda, unga fokus beramiz, lekin klavishalarni window da ushlaymiz
-    const handleIframeFocus = () => {
-        // Bu funksiya iframe fokus olganda ishga tushadi, lekin bizda bunday event yo'q.
-    };
-
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  // Vaqt hisoblagichi
   useEffect(() => {
     if (!gameUrl || isPaused || isBreakMenuOpen) return;
     const interval = setInterval(() => setSecondsPlayed(prev => prev + 1), 1000);
     return () => clearInterval(interval);
   }, [gameUrl, isPaused, isBreakMenuOpen]);
 
-  // Sahifadan chiqishda vaqtni saqlash
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (secondsPlayed > 5) {
@@ -88,34 +68,43 @@ export default function GamePlayerPage() {
   if (error) return <div style={{ color: '#ed5555', textAlign: 'center', marginTop: '20vh', backgroundColor: '#000', height: '100vh' }}>{error}</div>;
 
   return (
-    <div ref={containerRef} style={{ position: 'fixed', inset: 0, backgroundColor: '#000', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: '#000', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
+      
       {isBreakMenuOpen ? (
         <BreakMenu secondsPlayed={secondsPlayed} onReturn={handleReturnToFuzz} onClose={() => { setIsBreakMenuOpen(false); setIsPaused(false); }} />
       ) : (
-        <iframe 
-          ref={iframeRef}
-          src={gameUrl} 
-          title="Fuzz Web Game" 
-          style={{ flex: 1, width: '100%', height: '100%', border: 'none' }}
-          allowFullScreen
-        />
+        <div style={{ flex: 1, position: 'relative' }}>
+          {/* Ko'rinmas div: faqat klaviatura hodisalarini ushlab qolish uchun */}
+          <div 
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 10,
+              pointerEvents: 'none', // Sichqoncha o'yindan o'tishi uchun
+              outline: 'none'
+            }}
+            tabIndex={-1}
+            ref={(el) => el && el.focus()} // Avtomatik fokus olish
+          ></div>
+          
+          <iframe 
+            src={gameUrl} 
+            title="Fuzz Web Game" 
+            style={{ width: '100%', height: '100%', border: 'none' }}
+            allowFullScreen
+          />
+        </div>
       )}
     </div>
   );
 }
 
-// Break Menu Komponenti
 function BreakMenu({ secondsPlayed, onReturn, onClose }) {
   return (
     <div style={{ flex: 1, backgroundColor: 'rgba(16, 11, 10, 0.95)', display: 'flex', flexDirection: 'column', padding: '2rem', color: '#f5eeee', overflowY: 'auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '1px solid #48201a', paddingBottom: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <h1 style={{ margin: 0, fontSize: '1.5rem', color: '#8a1200' }}>Fuzz Break Menu</h1>
-          <span style={{ color: '#43b581', fontSize: '1.2rem', fontFamily: 'monospace' }}>
-            <i className="fa-solid fa-clock"></i> {Math.floor(secondsPlayed / 60)}m {secondsPlayed % 60}s
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <h1 style={{ margin: 0, fontSize: '1.5rem', color: '#8a1200' }}>Fuzz Break Menu</h1>
+        <div style={{ display: 'flex', gap: '1rem' }}>
           <button onClick={onReturn} style={{ backgroundColor: '#8a1200', color: '#fff', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
             <i className="fa-solid fa-arrow-left"></i> Fuzz ga qaytish
           </button>
@@ -125,7 +114,7 @@ function BreakMenu({ secondsPlayed, onReturn, onClose }) {
         </div>
       </div>
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b9a6a2' }}>
-        <p>Bu yerda o'yin statistikasi, notepad va boshqa asboblar bo'lishi mumkin (oldingi kodlaringizda bor edi).</p>
+        <p>O'yin vaqti: {Math.floor(secondsPlayed / 60)} daqiqa {secondsPlayed % 60} soniya</p>
       </div>
     </div>
   );

@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
-import { config } from '../config/config.js'; // Config import
+import { config } from '../config/config.js';
 import { useLanguage } from '../context/useLanguage.js';
 import useAuth from '../hooks/useAuth.js';
 import Sidebar from '../common/Sidebar.jsx';
 import useToast from '../hooks/useToast.js';
-import Modal from '../common/Modal.jsx';
 
 export default function WalletTopUpPage() {
   const { t } = useLanguage();
@@ -17,55 +16,32 @@ export default function WalletTopUpPage() {
   const [rate, setRate] = useState(12500);
   const [amount, setAmount] = useState('');
   const [copied, setCopied] = useState(false);
-  
-  // Stars
-  const [starsRates, setStarsRates] = useState([]);
-  const [usdAmount, setUsdAmount] = useState('');
-  const [starsAmount, setStarsAmount] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Konsolga chiqarib tekshiramiz (F12 -> Console)
-    console.log("Config'dan olingan karta raqami:", config.payment?.cardNumber);
-    console.log("Config'dan olingan karta egasi:", config.payment?.cardHolder);
-
+    // Valyuta kursini yuklash
     fetch(config.payment.exchangeApiUrl)
       .then(res => res.json())
       .then(data => { if (data?.conversion_rates?.UZS) setRate(data.conversion_rates.UZS); })
       .catch(() => {});
 
+    // To'lov usullarini yuklash
     api.get('/api/payment-methods')
       .then(data => {
         setPaymentMethods(data.methods || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-
-    api.get('/api/admin/stars-rates')
-      .then(data => setStarsRates(data.rates || []))
-      .catch(() => {});
   }, []);
 
+  // Karta raqamini nusxalash
   const copyCardNumber = () => {
-    const cardNum = (config.payment?.cardNumber || '').replace(/\s/g, '');
-    if (!cardNum) {
-      info("Karta raqami topilmadi!");
-      return;
-    }
-    navigator.clipboard.writeText(cardNum);
+    // Bo'shliqlarni olib tashlab nusxalaymiz
+    const cleanNumber = config.payment.cardNumber.replace(/\s/g, '');
+    navigator.clipboard.writeText(cleanNumber);
     setCopied(true);
     info("Karta raqami nusxalandi!");
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleStarsPay = () => {
-    if (!selectedMethod || selectedMethod.id !== 'stars') return;
-    if (!usdAmount || !starsAmount || !user) return;
-    const botUrl = `https://t.me/FuzzAppBot?start=pay_${usdAmount}_${starsAmount}`;
-    window.open(botUrl, '_blank');
-    setIsModalOpen(false);
-    info("Telegram botga o'ting va to'lovni tasdiqlang.");
   };
 
   const handleCardPay = async () => {
@@ -76,11 +52,12 @@ export default function WalletTopUpPage() {
     }
 
     try {
+      // Backendga so'rov yuborish
       await api.post('/api/payment-request', {
         userId: user.id,
         amount_uzs: Number(cleanAmount)
       });
-      success("So'rov yuborildi! Admin 15 daqiqa ichida tasdiqlaydi.");
+      success("So'rov yuborildi! Admin tasdiqlagach balansingiz to'ladi.");
       setAmount('');
       setSelectedMethod(null);
     } catch (err) {
@@ -110,6 +87,7 @@ export default function WalletTopUpPage() {
         {loading ? (
           <p style={{ color: '#b9a6a2' }}>Yuklanmoqda...</p>
         ) : !selectedMethod ? (
+          /* To'lov usullari ro'yxati */
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
             {paymentMethods.map(m => (
               <div 
@@ -125,7 +103,6 @@ export default function WalletTopUpPage() {
                   opacity: m.enabled ? 1 : 0.5,
                   position: 'relative',
                   transition: 'transform 0.2s, border-color 0.2s',
-                  borderColor: selectedMethod?.id === m.id ? '#8a1200' : '#48201a'
                 }}
                 onMouseEnter={(e) => m.enabled && (e.currentTarget.style.transform = 'translateY(-3px)')}
                 onMouseLeave={(e) => m.enabled && (e.currentTarget.style.transform = 'translateY(0)')}
@@ -135,19 +112,9 @@ export default function WalletTopUpPage() {
                     {t('wallet.soon')}
                   </div>
                 )}
-                {m.discount > 0 && (
-                  <div style={{ position: 'absolute', top: 10, left: 10, backgroundColor: '#f0b44d', color: '#000', padding: '0.1rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold' }}>
-                    -{m.discount}%
-                  </div>
-                )}
                 
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80px', marginBottom: '1rem' }}>
-                  <img 
-                    src={m.logo_url} 
-                    alt={m.name} 
-                    style={{ width: '80px', height: '80px', objectFit: 'contain', borderRadius: '8px' }} 
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }} 
-                  />
+                  <img src={m.logo_url} alt={m.name} style={{ width: '80px', height: '80px', objectFit: 'contain', borderRadius: '8px' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                 </div>
                 
                 <div style={{ color: '#f5eeee', fontWeight: 'bold' }}>{m.name}</div>
@@ -155,6 +122,7 @@ export default function WalletTopUpPage() {
             ))}
           </div>
         ) : (
+          /* Tanlangan to'lov usuli (Karta) */
           <div style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', border: '1px solid #48201a', maxWidth: '600px', margin: '0 auto' }}>
             <button onClick={() => setSelectedMethod(null)} style={{ background: 'none', border: 'none', color: '#b9a6a2', cursor: 'pointer', marginBottom: '1rem', padding: 0 }}>
               <i className="fa-solid fa-arrow-left"></i> Orqaga
@@ -165,64 +133,32 @@ export default function WalletTopUpPage() {
                 <img src={selectedMethod.logo_url} alt={selectedMethod.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} onError={(e) => e.currentTarget.style.display = 'none'} />
               </div>
               <h3 style={{ color: '#f5eeee', margin: 0 }}>{selectedMethod.name}</h3>
-              {selectedMethod.discount > 0 && (
-                <span style={{ backgroundColor: '#f0b44d', color: '#000', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>-{selectedMethod.discount}% chegirma</span>
-              )}
             </div>
-
-            {selectedMethod.id === 'stars' && (
-              <div>
-                <div className="form-group" style={{ marginBottom: '1rem' }}>
-                  <label className="form-label">Kursni tanlang</label>
-                  <select 
-                    onChange={(e) => {
-                      const r = starsRates[e.target.value];
-                      if (r) {
-                        setUsdAmount(r.amount_usd.toString());
-                        setStarsAmount(r.stars_amount.toString());
-                      }
-                    }}
-                    style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }}
-                  >
-                    {starsRates.map((r, idx) => (
-                      <option key={r.id} value={idx}>${r.amount_usd} = {r.stars_amount} Stars</option>
-                    ))}
-                  </select>
-                </div>
-                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                    <label className="form-label">Fuzz Balans ($)</label>
-                    <input type="number" className="form-input" value={usdAmount} onChange={(e) => setUsdAmount(e.target.value)} placeholder="1.00" />
-                  </div>
-                  <div style={{ flex: 1, textAlign: 'center', paddingTop: '1.8rem' }}><i className="fa-solid fa-arrow-right"></i></div>
-                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                    <label className="form-label">Telegram Stars</label>
-                    <input type="number" className="form-input" value={starsAmount} onChange={(e) => setStarsAmount(e.target.value)} placeholder="10" />
-                  </div>
-                </div>
-                <button className="btn btn-primary" onClick={() => setIsModalOpen(true)} style={{ width: '100%' }}>
-                  Telegram Stars orqali to'lash
-                </button>
-              </div>
-            )}
 
             {selectedMethod.id === 'card' && (
               <div>
-                {/* KARTA RAQAMI CONFIGDAN OLINADI */}
+                {/* Karta raqami qismi (Configdan olinadi) */}
                 <div style={{ background: 'var(--color-bg-alt)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontSize: '0.8rem', color: '#b9a6a2' }}>Karta raqami:</div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: '1px' }}>
-                      {config.payment.cardNumber || "Karta raqami sozlanmagan"}
+                    <div style={{ fontSize: '0.8rem', color: '#b9a6a2', marginBottom: '0.2rem' }}>Karta raqami:</div>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: '1px', color: '#f5eeee' }}>
+                      {config.payment.cardNumber}
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#b9a6a2' }}>
-                      {config.payment.cardHolder || "Egasi ko'rsatilmagan"}
+                    <div style={{ fontSize: '0.8rem', color: '#b9a6a2', marginTop: '0.2rem' }}>
+                      {config.payment.cardHolder}
                     </div>
                   </div>
-                  <button className="btn btn-secondary btn-sm" onClick={copyCardNumber}>
+                  
+                  {/* Nusxalash tugmasi */}
+                  <button 
+                    onClick={copyCardNumber}
+                    style={{ background: '#100b0a', border: '1px solid #48201a', color: copied ? '#43b581' : '#b9a6a2', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer', transition: '0.2s' }}
+                    title="Karta raqamini nusxalash"
+                  >
                     <i className={`fa-solid ${copied ? 'fa-check' : 'fa-copy'}`}></i>
                   </button>
                 </div>
+
                 <div className="form-group">
                   <label className="form-label">Miqdor (UZS)</label>
                   <input 
@@ -232,31 +168,17 @@ export default function WalletTopUpPage() {
                     onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' '))} 
                     placeholder="50 000" 
                   />
-                  <div style={{ fontSize: '0.8rem', color: '#43b581', marginTop: '0.5rem' }}>
-                    ~ ${amount ? (Number(amount.replace(/\s/g, '')) / rate).toFixed(2) : '0.00'}
+                  <div style={{ textAlign: 'right', fontSize: '0.8rem', color: '#43b581', marginTop: '0.3rem' }}>
+                    ≈ ${(Number(amount.replace(/\s/g, '')) / rate).toFixed(2)}
                   </div>
                 </div>
-                <button className="btn btn-primary" onClick={handleCardPay} style={{ width: '100%' }}>
+                <button className="btn btn-primary" onClick={handleCardPay} style={{ width: '100%', marginTop: '1rem' }}>
                   So'rov yuborish
                 </button>
               </div>
             )}
           </div>
         )}
-
-        <Modal open={isModalOpen} title="Telegram Stars orqali to'lov" onClose={() => setIsModalOpen(false)}>
-          {selectedMethod && (
-            <div>
-              <p style={{ color: '#f5eeee', marginBottom: '1rem' }}>
-                Siz <strong>${usdAmount}</strong> Fuzz balansini <strong>{starsAmount} Stars</strong> evaziga sotib olmoqchisiz.
-              </p>
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-                <button className="btn btn-secondary" onClick={() => setIsModalOpen(false)} style={{ flex: 1 }}>Bekor qilish</button>
-                <button className="btn btn-primary" onClick={handleStarsPay} style={{ flex: 1 }}>Telegramga o'tish</button>
-              </div>
-            </div>
-          )}
-        </Modal>
       </div>
     </div>
   );

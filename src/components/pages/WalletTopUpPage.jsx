@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
-import { config } from '../config/config.js'; // Config import qilingan
+import { config } from '../config/config.js'; // Config import
 import { useLanguage } from '../context/useLanguage.js';
 import useAuth from '../hooks/useAuth.js';
 import Sidebar from '../common/Sidebar.jsx';
@@ -16,6 +16,7 @@ export default function WalletTopUpPage() {
   const [selectedMethod, setSelectedMethod] = useState(null);
   const [rate, setRate] = useState(12500);
   const [amount, setAmount] = useState('');
+  const [copied, setCopied] = useState(false);
   
   // Stars
   const [starsRates, setStarsRates] = useState([]);
@@ -25,6 +26,10 @@ export default function WalletTopUpPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Konsolga chiqarib tekshiramiz (F12 -> Console)
+    console.log("Config'dan olingan karta raqami:", config.payment?.cardNumber);
+    console.log("Config'dan olingan karta egasi:", config.payment?.cardHolder);
+
     fetch(config.payment.exchangeApiUrl)
       .then(res => res.json())
       .then(data => { if (data?.conversion_rates?.UZS) setRate(data.conversion_rates.UZS); })
@@ -41,6 +46,18 @@ export default function WalletTopUpPage() {
       .then(data => setStarsRates(data.rates || []))
       .catch(() => {});
   }, []);
+
+  const copyCardNumber = () => {
+    const cardNum = (config.payment?.cardNumber || '').replace(/\s/g, '');
+    if (!cardNum) {
+      info("Karta raqami topilmadi!");
+      return;
+    }
+    navigator.clipboard.writeText(cardNum);
+    setCopied(true);
+    info("Karta raqami nusxalandi!");
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleStarsPay = () => {
     if (!selectedMethod || selectedMethod.id !== 'stars') return;
@@ -191,17 +208,20 @@ export default function WalletTopUpPage() {
 
             {selectedMethod.id === 'card' && (
               <div>
-                {/* KARTA MA'LUMOTLARI CONFIGDAN OLINDI */}
+                {/* KARTA RAQAMI CONFIGDAN OLINADI */}
                 <div style={{ background: 'var(--color-bg-alt)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontSize: '0.8rem', color: '#b9a6a2' }}>Karta raqami:</div>
                     <div style={{ fontSize: '1.2rem', fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: '1px' }}>
-                      {config.payment.cardNumber}
+                      {config.payment.cardNumber || "Karta raqami sozlanmagan"}
                     </div>
                     <div style={{ fontSize: '0.8rem', color: '#b9a6a2' }}>
-                      {config.payment.cardHolder}
+                      {config.payment.cardHolder || "Egasi ko'rsatilmagan"}
                     </div>
                   </div>
+                  <button className="btn btn-secondary btn-sm" onClick={copyCardNumber}>
+                    <i className={`fa-solid ${copied ? 'fa-check' : 'fa-copy'}`}></i>
+                  </button>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Miqdor (UZS)</label>

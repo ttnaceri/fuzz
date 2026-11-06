@@ -250,6 +250,11 @@ function DesktopQr({ onApproved, disabled }) {
       setState('ready');
     } catch (err) {
       setQr(null);
+      // 404 — backendda QR hali yo'q (deploy qilinmagan), 503 — sozlanmagan. Qayta urinishdan foyda yo'q.
+      if (err?.status === 404 || err?.status === 503) {
+        setState('unavailable');
+        return;
+      }
       setErrorMsg(err.message || 'QR kod yaratilmadi');
       setState('error');
     }
@@ -318,7 +323,10 @@ function DesktopQr({ onApproved, disabled }) {
         {showOverlay && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.5rem', textAlign: 'center', color: '#241411', fontSize: '0.8rem' }}>
             {state === 'loading' && <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '1.5rem' }} />}
-            {state !== 'loading' && (
+            {state === 'unavailable' && (
+              <span>QR sign-in is temporarily unavailable. Please use your username and password.</span>
+            )}
+            {state !== 'loading' && state !== 'unavailable' && (
               <>
                 <span>
                   {state === 'expired' && 'QR code expired'}

@@ -5,19 +5,33 @@ import { useCart } from '../context/useCart.js';
 import { useLanguage } from '../context/useLanguage.js';
 import Navigation from './Navigation.jsx';
 import SearchBar from './SearchBar.jsx';
+import useToast from '../hooks/useToast.js';
 
 export default function Header() {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const { count } = useCart();
   const { lang, setLang, t } = useLanguage();
   const navigate = useNavigate();
+  const { info } = useToast();
   
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 1024);
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+
+    // PWA o'rnatish oynasini ushlab qolish
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, []);
 
   const handleLogout = () => {
@@ -25,11 +39,20 @@ export default function Header() {
     navigate('/login');
   };
 
-  // Fuzz App yuklab olish tugmasi uchun funksiya
-  const handleDownloadApp = () => {
-    // Hozircha o'rnatish oynasini chiqarish yoki yuklash sahifasiga o'tish
-    // Kelajakda bu yerga .exe, .dmg yoki PWA o'rnatish logikasi ulanadi
-    navigate('/download'); 
+  // PWA O'rnatish funksiyasi
+  const handleInstallApp = async () => {
+    if (deferredPrompt) {
+      // Brauzer o'rnatishni qo'llab-quvvatlaydi
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        info("Fuzz App muvaffaqiyatli o'rnatildi!");
+      }
+      setDeferredPrompt(null);
+    } else {
+      // Brauzer qo'llab-quvvatlamasa yoki allaqachon o'rnatilgan bo'lsa
+      info("Fuzz App'ni o'rnatish uchun brauzeringiz menyusidan 'Add to Home Screen' yoki 'Install App' ni tanlang.");
+    }
   };
 
   return (
@@ -48,7 +71,6 @@ export default function Header() {
         
         <div className="header__actions" style={{ marginLeft: '1rem' }}>
           
-          {/* Til o'zgartirish (faqat desktopda) */}
           {!isMobile && (
             <button 
               onClick={() => setLang(lang === 'uz' ? 'ru' : lang === 'ru' ? 'en' : 'uz')} 
@@ -59,10 +81,10 @@ export default function Header() {
             </button>
           )}
 
-          {/* DOWNLOAD FUZZ TUGMASI (faqat desktop va netbuklar uchun) */}
+          {/* DOWNLOAD FUZZ (PWA INSTALL) TUGMASI */}
           {!isMobile && (
             <button 
-              onClick={handleDownloadApp} 
+              onClick={handleInstallApp} 
               className="btn btn-secondary btn-sm" 
               style={{ 
                 borderColor: '#8a1200', 
@@ -78,13 +100,11 @@ export default function Header() {
             </button>
           )}
 
-          {/* Savat */}
           <Link to="/cart" className="header__icon-btn">
             <i className="fa-solid fa-cart-shopping" />
             {count > 0 && <span className="header__badge">{count}</span>}
           </Link>
           
-          {/* Profil / Login */}
           {isAuthenticated ? (
             <>
               <Link to={isAdmin ? "/admin" : "/account"} className="btn btn-ghost btn-sm">

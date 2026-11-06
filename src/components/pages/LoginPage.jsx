@@ -1,10 +1,10 @@
-import { useState, useEffect, Component } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect, useRef, Component } from 'react';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import useToast from '../hooks/useToast.js';
 import useAuth from '../hooks/useAuth.js';
 
-// QR kod xato bersa, uni ushlab qolish uchun kichik ErrorBoundary
+// QR kod chizishda xato bo'lsa ushlab qolish uchun
 class QRBoundary extends Component {
   constructor(props) {
     super(props);
@@ -15,17 +15,98 @@ class QRBoundary extends Component {
   }
   render() {
     if (this.state.hasError) {
-      return (
-        <div style={{ padding: '1rem', color: '#ed5555', textAlign: 'center', fontSize: '0.9rem' }}>
-          QR kodni yuklashda xatolik yuz berdi.
-        </div>
-      );
+      return <div style={{ color: '#ed5555', padding: '1rem' }}>QR kodni yuklashda xatolik.</div>;
     }
     return this.props.children;
   }
 }
 
+// ==========================================
+// MOBIL QR SKANER KOMPONENTI
+// ==========================================
+function MobileQRScanner({ onBack }) {
+  const videoRef = useRef(null);
+  const [hasCamera, setHasCamera] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    let stream = null;
+
+    const startCamera = async () => {
+      try {
+        // Orqa kamerani ochishga harakat qilamiz
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' }
+        });
+        
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (err) {
+        console.error("Kamera xatosi:", err);
+        setHasCamera(false);
+        setErrorMsg("Kamerani ochish imkoni bo'lmadi. Ruxsat berilganligini tekshiring.");
+      }
+    };
+
+    startCamera();
+
+    // Komponent yopilganda kamerani o'chirish
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: '400px', margin: '0 auto', padding: '1rem' }}>
+      <h2 style={{ color: '#f5eeee', marginBottom: '1rem' }}>QR Skaner</h2>
+      <p style={{ color: '#b9a6a2', marginBottom: '2rem', textAlign: 'center' }}>Kamerani kompyuteringizdagi QR kodga qarating.</p>
+      
+      <div style={{ 
+        width: '100%', 
+        height: '300px', 
+        border: '2px dashed #8a1200', 
+        borderRadius: '12px', 
+        overflow: 'hidden', 
+        position: 'relative',
+        backgroundColor: '#000',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        {hasCamera ? (
+          <video 
+            ref={videoRef} 
+            autoPlay 
+            playsInline 
+            muted 
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        ) : (
+          <div style={{ color: '#ed5555', textAlign: 'center', padding: '1rem' }}>
+            <i className="fa-solid fa-camera-slash" style={{ fontSize: '3rem', marginBottom: '1rem' }}></i>
+            <p>{errorMsg}</p>
+          </div>
+        )}
+      </div>
+      
+      <button onClick={onBack} style={{ marginTop: '2rem', backgroundColor: 'transparent', color: '#b9a6a2', border: '1px solid #48201a', padding: '0.8rem 1.5rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+        Orqaga qaytish
+      </button>
+    </div>
+  );
+}
+
+
+// ==========================================
+// ASOSIY LOGIN SAHIFASI
+// ==========================================
 export default function LoginPage() {
+  const [searchParams] = useSearchParams();
+  const isMobileScanMode = searchParams.get('mobileScan') === 'true';
+  
   const { success, error: toastError } = useToast();
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -43,7 +124,6 @@ export default function LoginPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // QR token generatsiyasi
   const [qrToken, setQrToken] = useState('fuzz_qr_' + Math.random().toString(36).substring(7));
   useEffect(() => {
     const interval = setInterval(() => {
@@ -65,11 +145,7 @@ export default function LoginPage() {
     try {
       await login(form);
       success('Tizimga muvaffaqiyatli kirdingiz!');
-      
-      // Xato shu yerda edi: redirectTo o'zgaruvchisi o'rniga location.state ishlatiladi
-      const from = location.state?.from || '/account';
-      navigate(from, { replace: true });
-      
+      navigate(location.state?.from || '/account', { replace: true });
     } catch (err) {
       setApiError(err.message || 'Xato yuz berdi');
     } finally {
@@ -90,6 +166,18 @@ export default function LoginPage() {
     footer: { backgroundColor: '#19100e', padding: '1.2rem 2rem', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #48201a', fontSize: '0.85rem', color: '#b9a6a2' }
   };
 
+  // Agar mobil QR skaner rejimi bo'lsa, faqat kamerani ko'rsatamiz
+  if (isMobileScanMode && isMobile) {
+    return (
+      <div style={styles.wrapper}>
+        <div style={styles.box}>
+           <MobileQRScanner onBack={() => navigate('/login')} />
+        </div>
+      </div>
+    );
+  }
+
+  // Standart Login sahifasi
   return (
     <div style={styles.wrapper}>
       <div style={styles.box}>

@@ -44,6 +44,8 @@ import WalletRefundPage from './pages/WalletRefundPage.jsx';
 
 // --- AUTH PAGES ---
 import LoginPage from './pages/LoginPage.jsx';
+import QrScanPage from './pages/QrScanPage.jsx';
+import QrAuthPage from './pages/QrAuthPage.jsx';
 import RegisterTelegramPage from './pages/RegisterTelegramPage.jsx';
 import RegisterFormPage from './pages/RegisterFormPage.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
@@ -145,6 +147,8 @@ export const router = createBrowserRouter([
       { path: 'settings', element: <ProtectedRoute><SettingsPage /></ProtectedRoute> },
       { path: 'security', element: <ProtectedRoute><SecurityPage /></ProtectedRoute> },
       
+      { path: 'qr-scan', element: <ProtectedRoute><QrScanPage /></ProtectedRoute> },
+      { path: 'qr-auth', element: <ProtectedRoute><QrAuthPage /></ProtectedRoute> },
       { path: 'wallet/history', element: <ProtectedRoute><WalletHistoryPage /></ProtectedRoute> },
       { path: 'wallet/topup', element: <ProtectedRoute><WalletTopUpPage /></ProtectedRoute> },
       { path: 'wallet/refund', element: <ProtectedRoute><WalletRefundPage /></ProtectedRoute> },

@@ -13,7 +13,7 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
 
   // 2. Agar foydalanuvchi tizimga kirmagan bo'lsa, Login sahifasiga yo'naltirish
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+    return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }
 
   // 3. Agar sahifa faqat adminlar uchun bo'lsa va foydalanuvchi admin bo'lmasa

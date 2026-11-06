@@ -4,7 +4,7 @@ import useToast from '../hooks/useToast.js';
 import { api } from '../services/api.js';
 
 export default function ResetPasswordPage() {
-  const [form, setForm] = useState({ username: '', email: '', passwordEnd: '' });
+  const [form, setForm] = useState({ username: '', email: '' });
   const [loading, setLoading] = useState(false);
   const { success, error: toastError } = useToast();
   const navigate = useNavigate();
@@ -38,11 +38,8 @@ export default function ResetPasswordPage() {
           <div style={{ marginBottom: '1rem' }}>
             <input type="text" placeholder="Username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', boxSizing: 'border-box' }} />
           </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <input type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', boxSizing: 'border-box' }} />
-          </div>
           <div style={{ marginBottom: '1.5rem' }}>
-            <input type="text" placeholder="Parolning oxirgi 2 belgisi (ixtiyoriy)" value={form.passwordEnd} onChange={(e) => setForm({ ...form, passwordEnd: e.target.value })} maxLength="2" style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', boxSizing: 'border-box' }} />
+            <input type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px', boxSizing: 'border-box' }} />
           </div>
           <button type="submit" disabled={loading} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#8a1200', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
             {loading ? 'Yuborilmoqda...' : 'Kodni Yuborish'}

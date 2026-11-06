@@ -17,9 +17,10 @@
 		}
 	],
 	
-	// Telegram Bot uchun maxfiy o'zgaruvchilar
+	// Ochiq sozlamalar. Maxfiy qiymatlar bu yerda EMAS — ular `wrangler secret put` orqali:
+	//   BOT_TOKEN, JWT_SECRET, TELEGRAM_WEBHOOK_SECRET
+	// Lokal ishlash uchun: .dev.vars fayli (gitignore'da)
 	"vars": {
-		"BOT_TOKEN": "8899661133:AAEZdm2KsSYQUpUdw3aDgp85mXdGeHzYGQ4",
 		"ADMIN_IDS": "6465879965"
 	}
 }

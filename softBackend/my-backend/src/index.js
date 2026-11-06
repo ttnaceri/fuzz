@@ -2,15 +2,39 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import userApp from './userIndex.js';
 import adminApp from './adminIndex.js';
+import qrApp, { ensureQrTable } from './qrAuth.js';
+import { createToken } from './utils/jwt.js';
+import { hashPassword, verifyPassword, randomPasswordHash } from './utils/password.js';
+import { getAuthUser, requireAuth, requireAdmin } from './middleware/auth.js';
 
 const app = new Hono();
 
 app.use('*', cors({
   origin: ['https://fuzz-tau.vercel.app', 'http://localhost:5173', 'http://localhost:3000'],
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 }));
+
+// ==========================================
+// RUXSATLAR (barcha admin va xizmat endpointlari)
+// ==========================================
+app.use('/fuzz/api/admin/*', requireAdmin);
+app.use('/fuzz/api/telegram/*', requireAdmin);
+app.use('/fuzz/api/upload', requireAuth);
+
+// init-db: admin bo'lmagan yangi bazada birinchi marta ochiq, keyin faqat admin
+app.use('/fuzz/api/init-db', async (c, next) => {
+  let hasAdmin = false;
+  try {
+    hasAdmin = !!(await c.env.DB.prepare("SELECT id FROM users WHERE role IN ('admin','super_admin') LIMIT 1").first());
+  } catch { /* users jadvali hali yo'q */ }
+  if (hasAdmin) return requireAdmin(c, next);
+  await next();
+});
+
+const MIN_PASSWORD = 6;
+const publicUser = (u) => ({ id: u.id, username: u.username, role: u.role, balance: round2(u.balance || 0) });
 
 const BANNED_WORDS = ['fuck', 'xxx', 'porn', 'sex', 'shit', 'bitch'];
 const isNameValid = (name) => {
@@ -232,6 +256,8 @@ app.get('/fuzz/api/init-db', async (c) => {
       );
     `).run();
 
+    await ensureQrTable(c.env.DB);
+
     return c.json({ message: "Barcha jadvallar yaratildi!" });
   } catch (err) {
     return c.json({ error: "Xato: " + err.message }, 500);
@@ -277,16 +303,40 @@ app.get('/fuzz/api/images/:id', async (c) => {
 app.post('/fuzz/api/auth/login', async (c) => {
   try {
     const { username, password } = await c.req.json();
-    let user = await c.env.DB.prepare('SELECT * FROM users WHERE username = ?').bind(username).first();
+    if (!username || !password) return c.json({ error: 'Parol yoki username xato!' }, 401);
+    const user = await c.env.DB.prepare('SELECT * FROM users WHERE username = ?').bind(username).first();
 
-    if (!user && username === 'admin' && password === '55668576he') {
-        const id = crypto.randomUUID();
-        await c.env.DB.prepare('INSERT INTO users (id, username, email, password, role) VALUES (?, ?, ?, ?, ?)').bind(id, username, 'admin@fuzz.store', password, 'admin').run();
-        user = { id, username, role: 'admin', balance: 0 };
+    const { ok, needsRehash } = user ? await verifyPassword(password, user.password) : { ok: false };
+    if (!user || !ok) return c.json({ error: 'Parol yoki username xato!' }, 401);
+    if (user.role === 'banned') return c.json({ error: 'Akkaunt bloklangan' }, 403);
+
+    // Eski ochiq parolni hash'ga o'tkazish
+    if (needsRehash) {
+      await c.env.DB.prepare('UPDATE users SET password = ? WHERE id = ?').bind(await hashPassword(password), user.id).run();
     }
 
-    if (!user || user.password !== password) return c.json({ error: 'Parol yoki username xato!' }, 401);
-    return c.json({ user: { id: user.id, username: user.username, role: user.role, balance: round2(user.balance || 0) } });
+    const token = await createToken({ sub: user.id }, c.env);
+    return c.json({ token, user: publicUser(user) });
+  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
+});
+
+app.get('/fuzz/api/auth/me', requireAuth, async (c) => {
+  const user = await getAuthUser(c);
+  return c.json({ user: publicUser(user) });
+});
+
+app.post('/fuzz/api/auth/logout', (c) => c.json({ ok: true }));
+
+app.post('/fuzz/api/auth/change-password', requireAuth, async (c) => {
+  try {
+    const me = await getAuthUser(c);
+    const { oldPassword, newPassword } = await c.req.json();
+    if (!newPassword || newPassword.length < MIN_PASSWORD) return c.json({ error: `Parol kamida ${MIN_PASSWORD} belgi bo'lishi kerak` }, 400);
+    const row = await c.env.DB.prepare('SELECT password FROM users WHERE id = ?').bind(me.id).first();
+    const { ok } = await verifyPassword(oldPassword || '', row?.password);
+    if (!ok) return c.json({ error: 'Eski parol xato' }, 400);
+    await c.env.DB.prepare('UPDATE users SET password = ? WHERE id = ?').bind(await hashPassword(newPassword), me.id).run();
+    return c.json({ message: 'Parol yangilandi!' });
   } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
@@ -294,15 +344,17 @@ app.post('/fuzz/api/auth/register', async (c) => {
   try {
     const { username, email, password, telegramId } = await c.req.json();
     if (!username || !password || !email) return c.json({ error: 'Barcha maydonlarni to\'ldiring!' }, 400);
+    if (password.length < MIN_PASSWORD) return c.json({ error: `Parol kamida ${MIN_PASSWORD} belgi bo'lishi kerak` }, 400);
 
     const existing = await c.env.DB.prepare('SELECT * FROM users WHERE username = ? OR email = ?').bind(username, email).first();
     if (existing) return c.json({ error: 'Bu username yoki email band!' }, 409);
 
     const id = crypto.randomUUID();
     await c.env.DB.prepare('INSERT INTO users (id, username, email, password, role, telegram_id) VALUES (?, ?, ?, ?, ?, ?)')
-      .bind(id, username, email, password, 'user', telegramId || null).run();
+      .bind(id, username, email, await hashPassword(password), 'user', telegramId || null).run();
 
-    return c.json({ user: { id, username, role: 'user', balance: 0 } }, 201);
+    const token = await createToken({ sub: id }, c.env);
+    return c.json({ token, user: { id, username, role: 'user', balance: 0 } }, 201);
   } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
@@ -317,21 +369,52 @@ app.post('/fuzz/api/auth/check-telegram', async (c) => {
 });
 
 // Reset Password
+const RESET_TTL_MS = 10 * 60 * 1000;
+const RESET_MAX_ATTEMPTS = 5;
+
+async function ensureResetAttempts(db) {
+  try { await db.prepare('ALTER TABLE reset_codes ADD COLUMN attempts INTEGER DEFAULT 0').run(); } catch { /* ustun allaqachon bor */ }
+}
+
+function randomCode() {
+  const n = crypto.getRandomValues(new Uint32Array(1))[0] % 1000000;
+  return n.toString().padStart(6, '0');
+}
+
+// Kodni tekshiradi: noto'g'ri urinishlar soni cheklangan, muddati o'tgan kod qabul qilinmaydi
+async function checkResetCode(db, username, code) {
+  await ensureResetAttempts(db);
+  const record = await db.prepare('SELECT * FROM reset_codes WHERE username = ? ORDER BY expires_at DESC LIMIT 1').bind(username || '').first();
+  if (!record || new Date(record.expires_at) < new Date()) return { ok: false, error: 'Kod muddati o\'tgan. Yangi kod so\'rang.' };
+  if ((record.attempts || 0) >= RESET_MAX_ATTEMPTS) return { ok: false, error: 'Urinishlar soni tugadi. Yangi kod so\'rang.' };
+  if (String(code || '') !== record.code) {
+    await db.prepare('UPDATE reset_codes SET attempts = COALESCE(attempts, 0) + 1 WHERE id = ?').bind(record.id).run();
+    return { ok: false, error: 'Kod xato!' };
+  }
+  return { ok: true, record };
+}
+
 app.post('/fuzz/api/auth/reset-request', async (c) => {
   try {
-    const { username, email, passwordEnd } = await c.req.json();
-    const user = await c.env.DB.prepare('SELECT * FROM users WHERE username = ? AND email = ?').bind(username, email).first();
+    const { username, email } = await c.req.json();
+    const user = await c.env.DB.prepare('SELECT * FROM users WHERE username = ? AND email = ?').bind(username || '', email || '').first();
     if (!user) return c.json({ error: 'Bunday foydalanuvchi topilmadi!' }, 404);
-    if (passwordEnd && user.password.slice(-2) !== passwordEnd) return c.json({ error: 'Parolning oxirgi 2 belgisi xato!' }, 400);
+    if (!user.telegram_id) return c.json({ error: 'Bu akkauntga Telegram ulanmagan — kodni yuborib bo\'lmaydi.' }, 400);
 
-    const code = Math.floor(10000 + Math.random() * 90000).toString();
-    const id = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-    await c.env.DB.prepare('INSERT INTO reset_codes (id, username, code, expires_at) VALUES (?, ?, ?, ?)').bind(id, username, code, expiresAt).run();
+    await ensureResetAttempts(c.env.DB);
+    // Spamdan himoya: 60 soniyada bir martadan ko'p emas
+    const last = await c.env.DB.prepare('SELECT expires_at FROM reset_codes WHERE username = ? ORDER BY expires_at DESC LIMIT 1').bind(username).first();
+    if (last && new Date(last.expires_at).getTime() - RESET_TTL_MS > Date.now() - 60 * 1000) {
+      return c.json({ error: 'Kod yaqinda yuborildi. 1 daqiqadan keyin qayta urinib ko\'ring.' }, 429);
+    }
 
-    const BOT_TOKEN = c.env.BOT_TOKEN;
-    if (BOT_TOKEN && user.telegram_id) {
-      await sendTelegramMessage(BOT_TOKEN, user.telegram_id, `Fuzz parolni tiklash kodi: ${code}\n\nKod 10 daqiqa amal qiladi.`);
+    const code = randomCode();
+    const expiresAt = new Date(Date.now() + RESET_TTL_MS).toISOString();
+    await c.env.DB.prepare('DELETE FROM reset_codes WHERE username = ?').bind(username).run();
+    await c.env.DB.prepare('INSERT INTO reset_codes (id, username, code, expires_at, attempts) VALUES (?, ?, ?, ?, 0)').bind(crypto.randomUUID(), username, code, expiresAt).run();
+
+    if (c.env.BOT_TOKEN) {
+      await sendTelegramMessage(c.env.BOT_TOKEN, user.telegram_id, `Fuzz parolni tiklash kodi: ${code}\n\nKod 10 daqiqa amal qiladi.`);
     }
     return c.json({ message: 'Kod yuborildi!' });
   } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
@@ -340,9 +423,8 @@ app.post('/fuzz/api/auth/reset-request', async (c) => {
 app.post('/fuzz/api/auth/reset-verify', async (c) => {
   try {
     const { username, code } = await c.req.json();
-    const record = await c.env.DB.prepare('SELECT * FROM reset_codes WHERE username = ? AND code = ? ORDER BY expires_at DESC LIMIT 1').bind(username, code).first();
-    if (!record) return c.json({ error: 'Kod xato!' }, 400);
-    if (new Date(record.expires_at) < new Date()) return c.json({ error: 'Kod muddati o\'tgan!' }, 400);
+    const res = await checkResetCode(c.env.DB, username, code);
+    if (!res.ok) return c.json({ error: res.error }, 400);
     return c.json({ message: 'Kod tasdiqlandi!' });
   } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
@@ -350,9 +432,10 @@ app.post('/fuzz/api/auth/reset-verify', async (c) => {
 app.post('/fuzz/api/auth/reset-password', async (c) => {
   try {
     const { username, code, newPassword } = await c.req.json();
-    const record = await c.env.DB.prepare('SELECT * FROM reset_codes WHERE username = ? AND code = ?').bind(username, code).first();
-    if (!record) return c.json({ error: 'Ruxsatsiz so\'rov!' }, 403);
-    await c.env.DB.prepare('UPDATE users SET password = ? WHERE username = ?').bind(newPassword, username).run();
+    if (!newPassword || newPassword.length < MIN_PASSWORD) return c.json({ error: `Parol kamida ${MIN_PASSWORD} belgi bo'lishi kerak` }, 400);
+    const res = await checkResetCode(c.env.DB, username, code);
+    if (!res.ok) return c.json({ error: res.error }, 403);
+    await c.env.DB.prepare('UPDATE users SET password = ? WHERE username = ?').bind(await hashPassword(newPassword), username).run();
     await c.env.DB.prepare('DELETE FROM reset_codes WHERE username = ?').bind(username).run();
     return c.json({ message: 'Parol yangilandi!' });
   } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
@@ -419,7 +502,7 @@ app.post('/fuzz/api/admin/console', async (c) => {
       const newBalance = parseFloat(parts[2]) || 0;
       if (!newName || !isNameValid(newName)) return c.json({ error: 'Nom noto\'g\'ri!' }, 400);
       const id = crypto.randomUUID();
-      await c.env.DB.prepare('INSERT INTO users (id, username, email, password, role, balance) VALUES (?, ?, ?, ?, ?, ?)').bind(id, newName, `${newName}@temp.com`, '123456', 'user', newBalance).run();
+      await c.env.DB.prepare('INSERT INTO users (id, username, email, password, role, balance) VALUES (?, ?, ?, ?, ?, ?)').bind(id, newName, `${newName}@temp.com`, await randomPasswordHash(), 'user', newBalance).run();
       response = `${newName} yaratildi.`;
     } else if (action === 'newupd') {
       const username = parts[1];
@@ -465,31 +548,62 @@ app.get('/fuzz/api/bundles/:id', async (c) => {
   }
 });
 
-app.get('/fuzz/api/bundles/:id/games', async (c) => {
-  try {
-    const games = await c.env.DB.prepare(`
-      SELECT g.* FROM games g
-      JOIN bundle_games bg ON g.id = bg.game_id
-      WHERE bg.bundle_id = ?
-    `).bind(c.req.param('id')).all();
-    return c.json({ games: games.results || [] });
-  } catch (err) {
-    return c.json({ games: [] });
-  }
-});
+// /fuzz/api/bundles/:id/games — userIndex.js da (game_url'siz)
 
 // ==========================================
 // TELEGRAM WEBHOOK (To'liq qayta yozildi)
 // ==========================================
 app.post('/fuzz/telegram/webhook', async (c) => {
   try {
+    // Faqat Telegram'dan kelgan so'rovlar: setWebhook'da berilgan secret_token tekshiriladi
+    const expectedSecret = c.env.TELEGRAM_WEBHOOK_SECRET;
+    if (!expectedSecret || c.req.header('X-Telegram-Bot-Api-Secret-Token') !== expectedSecret) {
+      return c.json({ ok: false }, 401);
+    }
+
     const update = await c.req.json();
-    console.log("Telegram update:", JSON.stringify(update).slice(0, 500));
 
     const BOT_TOKEN = c.env.BOT_TOKEN;
     if (!BOT_TOKEN) {
       console.error("BOT_TOKEN topilmadi!");
       return c.json({ ok: false, error: 'Bot token yo\'q' }, 500);
+    }
+
+    // ==========================================
+    // 0. SUCCESSFUL PAYMENT (Stars to'lovi yakunlanganda)
+    //    Bu blok "message" blokidan OLDIN turishi shart — aks holda unga hech qachon yetib kelinmaydi.
+    // ==========================================
+    if (update.message?.successful_payment) {
+      const payment = update.message.successful_payment;
+      const chatId = update.message.chat.id;
+      const parts = String(payment.invoice_payload || '').split('|');
+
+      if (payment.currency === 'XTR' && parts.length === 3 && parts[0] === 'stars_pay') {
+        const amountUsd = parseFloat(parts[2]);
+        const user = await c.env.DB.prepare('SELECT * FROM users WHERE telegram_id = ?').bind(chatId.toString()).first();
+        const chargeId = payment.telegram_payment_charge_id || crypto.randomUUID();
+
+        // Bir to'lovni ikki marta hisoblamaslik (Telegram qayta yuborishi mumkin)
+        try { await c.env.DB.prepare('ALTER TABLE payments ADD COLUMN charge_id TEXT').run(); } catch { /* bor */ }
+        const dup = await c.env.DB.prepare('SELECT id FROM payments WHERE charge_id = ?').bind(chargeId).first();
+
+        if (user && !dup && amountUsd > 0) {
+          await c.env.DB.batch([
+            c.env.DB.prepare('UPDATE users SET balance = ROUND(COALESCE(balance, 0) + ?, 2) WHERE id = ?').bind(amountUsd, user.id),
+            c.env.DB.prepare('INSERT INTO payments (id, user_id, amount_usd, stars_paid, charge_id) VALUES (?, ?, ?, ?, ?)')
+              .bind(crypto.randomUUID(), user.id, amountUsd, payment.total_amount, chargeId),
+          ]);
+          const fresh = await c.env.DB.prepare('SELECT balance FROM users WHERE id = ?').bind(user.id).first();
+          await sendTelegramMessage(
+            BOT_TOKEN,
+            chatId,
+            `✅ To'lov muvaffaqiyatli!\n\nBalansingiz +$${amountUsd} ga to'ldirildi.\nJoriy balans: $${round2(fresh?.balance || 0)}`
+          );
+        } else if (!user) {
+          console.error("Successful payment: foydalanuvchi topilmadi, chatId =", chatId);
+        }
+      }
+      return c.json({ ok: true });
     }
 
     // ==========================================
@@ -510,11 +624,14 @@ app.post('/fuzz/telegram/webhook', async (c) => {
 
         // Agar pay_ bilan boshlansa -> Stars invoice
         if (startParam && startParam.startsWith('pay_')) {
-          const parts = startParam.split('_');
-          const amountUsd = parseFloat(parts[1]);
-          const starsAmount = parseInt(parts[2]);
+          // Narxni foydalanuvchi emas, admin belgilagan stars_rates jadvali belgilaydi
+          const amountUsd = parseFloat(startParam.split('_')[1]);
+          const rate = isNaN(amountUsd) ? null : await c.env.DB.prepare(
+            'SELECT stars_amount FROM stars_rates WHERE amount_usd = ? ORDER BY created_at DESC LIMIT 1'
+          ).bind(amountUsd).first();
+          const starsAmount = rate ? parseInt(rate.stars_amount, 10) : NaN;
 
-          if (isNaN(amountUsd) || isNaN(starsAmount)) {
+          if (isNaN(amountUsd) || isNaN(starsAmount) || starsAmount <= 0) {
             await sendTelegramMessage(BOT_TOKEN, chatId, "❌ Noto'g'ri to'lov parametri.");
             return c.json({ ok: true });
           }
@@ -540,7 +657,7 @@ app.post('/fuzz/telegram/webhook', async (c) => {
         if (!existing) {
           const id = crypto.randomUUID();
           await c.env.DB.prepare('INSERT INTO users (id, username, email, password, role, telegram_id) VALUES (?, ?, ?, ?, ?, ?)')
-            .bind(id, tgUsername || firstName, `${chatId}@tg.temp`, '123456', 'user', chatId.toString()).run();
+            .bind(id, tgUsername || firstName, `${chatId}@tg.temp`, await randomPasswordHash(), 'user', chatId.toString()).run();
         }
 
         // Til tanlash tugmalarini yuborish
@@ -667,41 +784,6 @@ app.post('/fuzz/telegram/webhook', async (c) => {
       return c.json({ ok: true });
     }
 
-    // ==========================================
-    // 4. SUCCESSFUL PAYMENT (Stars to'lovi yakunlanganda)
-    // ==========================================
-    if (update.message && update.message.successful_payment) {
-      const payment = update.message.successful_payment;
-      const chatId = update.message.chat.id;
-      const payload = payment.invoice_payload;
-
-      const parts = payload.split('|');
-      if (parts.length === 3) {
-        const amountUsd = parseFloat(parts[2]);
-        const user = await c.env.DB.prepare('SELECT * FROM users WHERE telegram_id = ?').bind(chatId.toString()).first();
-
-        if (user) {
-          const currentBalance = Number(user.balance) || 0;
-          const newBalance = round2(currentBalance + amountUsd);
-
-          await c.env.DB.prepare('UPDATE users SET balance = ? WHERE telegram_id = ?')
-            .bind(newBalance, chatId.toString()).run();
-
-          await c.env.DB.prepare('INSERT INTO payments (id, user_id, amount_usd, stars_paid) VALUES (?, ?, ?, ?)')
-            .bind(crypto.randomUUID(), user.id, amountUsd, payment.total_amount).run();
-
-          await sendTelegramMessage(
-            BOT_TOKEN,
-            chatId,
-            `✅ To'lov muvaffaqiyatli!\n\nBalansingiz +$${amountUsd} ga to'ldirildi.\nJoriy balans: $${newBalance}`
-          );
-        } else {
-          console.error("Successful payment: foydalanuvchi topilmadi, chatId =", chatId);
-        }
-      }
-      return c.json({ ok: true });
-    }
-
     return c.json({ ok: true });
   } catch (err) {
     console.error("Webhook xatosi:", err);
@@ -719,7 +801,13 @@ app.post('/fuzz/api/telegram/set-webhook', async (c) => {
     if (!BOT_TOKEN) return c.json({ error: 'BOT_TOKEN yo\'q' }, 500);
 
     const webhookUrl = 'https://my-backend.updbackend.workers.dev/fuzz/telegram/webhook';
-    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${encodeURIComponent(webhookUrl)}`);
+    const secret = c.env.TELEGRAM_WEBHOOK_SECRET;
+    if (!secret) return c.json({ error: "TELEGRAM_WEBHOOK_SECRET yo'q: npx wrangler secret put TELEGRAM_WEBHOOK_SECRET" }, 500);
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: webhookUrl, secret_token: secret }),
+    });
     const data = await res.json();
     return c.json(data);
   } catch (err) {
@@ -740,6 +828,7 @@ app.post('/fuzz/api/telegram/delete-webhook', async (c) => {
 });
 
 // Barcha user va admin API'larni ulash
+app.route('/fuzz/api', qrApp);
 app.route('/fuzz/api', userApp);
 app.route('/fuzz/api', adminApp);
 

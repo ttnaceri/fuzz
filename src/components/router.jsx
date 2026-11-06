@@ -44,6 +44,7 @@ import WalletRefundPage from './pages/WalletRefundPage.jsx';
 
 // --- AUTH PAGES ---
 import LoginPage from './pages/LoginPage.jsx';
+import QrScannerPage from './pages/QrScannerPage.jsx';
 import QrScanPage from './pages/QrScanPage.jsx';
 import QrAuthPage from './pages/QrAuthPage.jsx';
 import RegisterTelegramPage from './pages/RegisterTelegramPage.jsx';
@@ -112,6 +113,7 @@ export const router = createBrowserRouter([
     element: <AuthLayout />,
     children: [
       { path: '/login', element: <LoginPage /> },
+      { path: '/qr-scanner', element: <QrScannerPage /> },
       { path: '/register', element: <RegisterTelegramPage /> },
       { path: '/register/form', element: <RegisterFormPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },

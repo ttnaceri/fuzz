@@ -61,7 +61,7 @@ export default function BottomNav() {
 
         {/* Markaziy QR Skaner tugmasi */}
         <div className="bottom-nav__center">
-          <button onClick={() => navigate('/login?mobileScan=true')} className="bottom-nav__qr-btn" aria-label="QR Login">
+          <button onClick={() => navigate('/qr-scan')} className="bottom-nav__qr-btn" aria-label="QR Login">
             <i className="fa-solid fa-qrcode"></i>
           </button>
         </div>

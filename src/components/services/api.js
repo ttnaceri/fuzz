@@ -1,4 +1,5 @@
 import { config } from '../config/config.js';
+import { storage } from '../utils/storage.js';
 
 export class ApiError extends Error {
   constructor(message, { status = 0, code = 'API_ERROR', details = null } = {}) {
@@ -43,6 +44,8 @@ async function request(method, path, { params, body, headers = {} } = {}) {
   const timeout = setTimeout(() => controller.abort(), config.requestTimeout || 15000);
 
   const finalHeaders = { 'Accept': 'application/json', ...headers };
+  const authToken = storage.getAuth()?.token;
+  if (authToken && !finalHeaders.Authorization) finalHeaders.Authorization = `Bearer ${authToken}`;
   let finalBody;
   
   if (body !== undefined) {

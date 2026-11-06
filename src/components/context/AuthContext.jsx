@@ -27,18 +27,31 @@ export function AuthProvider({ children }) {
       const cached = storage.getAuth();
       if (!cached?.user?.id) return null;
 
-      const res = await api.get('/api/admin/users');
-      const currentUser = (res.users || []).find(u => u.id === cached.user.id);
+      // Tokensiz (eski) sessiya — qayta kirish kerak
+      if (!cached.token) {
+        setUser(null);
+        storage.clearAuth();
+        return null;
+      }
+
+      const res = await api.get('/api/auth/me');
+      const currentUser = res?.user;
 
       if (currentUser) {
         const normalized = normalizeUser(currentUser);
         setUser(normalized);
-        storage.setAuth({ user: normalized });
+        storage.setAuth({ ...storage.getAuth(), user: normalized });
         return normalized;
       }
       return null;
     } catch (e) {
-      console.warn("Balansni yangilashda xato:", e);
+      // Token eskirgan / akkaunt bloklangan — sessiyani tozalaymiz
+      if (e?.status === 401) {
+        setUser(null);
+        storage.clearAuth();
+      } else {
+        console.warn("Balansni yangilashda xato:", e);
+      }
       return null;
     }
   }, []);
@@ -75,7 +88,16 @@ export function AuthProvider({ children }) {
     if (!res || !res.user) throw new Error(res?.error || "Xatolik");
     const normalized = normalizeUser(res.user);
     setUser(normalized);
-    storage.setAuth({ user: normalized });
+    storage.setAuth({ user: normalized, token: res.token || null });
+    setTimeout(() => refreshUser(), 100);
+    return normalized;
+  }, [refreshUser]);
+
+  // QR orqali kirish: backend tasdiqlangan sessiya uchun user + token qaytaradi
+  const loginWithSession = useCallback((rawUser, token) => {
+    const normalized = normalizeUser(rawUser);
+    setUser(normalized);
+    storage.setAuth({ user: normalized, token: token || null });
     setTimeout(() => refreshUser(), 100);
     return normalized;
   }, [refreshUser]);
@@ -90,13 +112,14 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       isAuthenticated: !!user,
-      isAdmin: !!user && (user.role === 'admin'),
+      isAdmin: !!user && (user.role === 'admin' || user.role === 'super_admin'),
       loading,
       login,
+      loginWithSession,
       logout,
       refreshUser,
     }),
-    [user, loading, login, logout, refreshUser]
+    [user, loading, login, loginWithSession, logout, refreshUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import useToast from '../hooks/useToast.js';
 import useAuth from '../hooks/useAuth.js';
+import { authService } from '../services/authService.js';
 
 export default function LoginPage() {
   const { success, error: toastError } = useToast();
-  const { login } = useAuth();
+  const { login, loginWithSession, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -24,16 +25,11 @@ export default function LoginPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // QR token faqat bir marta yaratiladi, 30 soniyada yangilanadi
-  const [qrToken, setQrToken] = useState('fuzz_qr_' + Math.random().toString(36).substring(7));
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setQrToken('fuzz_qr_' + Math.random().toString(36).substring(7));
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  // Telefon/planshet (sensorli ekran) — QR ko'rsatish o'rniga skanerni taklif qilamiz
+  const isTouchDevice = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
 
-  const qrUrl = `https://fuzz-tau.vercel.app/qr-auth?token=${qrToken}`;
+  const redirectTo = location.state?.from || '/account';
+  const cameFromQr = redirectTo.startsWith('/qr-');
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -46,7 +42,7 @@ export default function LoginPage() {
     try {
       await login(form);
       success('Tizimga muvaffaqiyatli kirdingiz!');
-      navigate(location.state?.from || '/account', { replace: true });
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       setApiError(err.message || 'Xato yuz berdi');
     } finally {
@@ -157,6 +153,11 @@ export default function LoginPage() {
           <div style={styles.formSide}>
             <h3 style={styles.title}>SIGN IN WITH ACCOUNT NAME</h3>
             
+            {cameFromQr && !apiError && (
+              <div style={{ ...styles.errorBox, color: '#b9a6a2', borderColor: '#48201a', backgroundColor: '#19100e' }}>
+                Sign in on this phone to scan or confirm a QR code.
+              </div>
+            )}
             {apiError && <div style={styles.errorBox}>{apiError}</div>}
             
             <form onSubmit={handleLogin}>
@@ -195,12 +196,22 @@ export default function LoginPage() {
           {/* O'ng tomon: QR Kod */}
           <div style={styles.qrSide}>
             <h3 style={styles.title}>OR SIGN IN WITH QR</h3>
-            <div style={{ backgroundColor: '#fff', padding: '1rem', borderRadius: '8px', margin: '1rem 0' }}>
-              <QRCodeSVG value={qrUrl} size={150} />
-            </div>
-            <p style={{ fontSize: '0.8rem', color: '#b9a6a2', textAlign: 'center' }}>
-              Use the <strong>Fuzz Mobile App</strong> to sign in
-            </p>
+            {isTouchDevice ? (
+              <p style={{ fontSize: '0.85rem', color: '#b9a6a2', textAlign: 'center', margin: 0 }}>
+                {cameFromQr
+                  ? 'Sign in on this phone first — then you will be taken back to confirm the QR sign-in on your computer.'
+                  : 'Want to sign in on a computer without typing a password? Sign in here, then tap the QR button in the bottom menu and scan the code on your computer.'}
+              </p>
+            ) : (
+              <DesktopQr
+                disabled={isAuthenticated}
+                onApproved={(user, token) => {
+                  loginWithSession(user, token);
+                  success('Tizimga muvaffaqiyatli kirdingiz!');
+                  navigate(redirectTo, { replace: true });
+                }}
+              />
+            )}
           </div>
 
         </div>
@@ -214,5 +225,117 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+const MAX_AUTO_REFRESH = 5;
+const POLL_MS = 2000;
+
+// Desktop: backendda QR sessiya yaratadi, holatini so'raydi va eskirsa yangilaydi
+function DesktopQr({ onApproved, disabled }) {
+  const [qr, setQr] = useState(null); // { token, expiresAt }
+  const [state, setState] = useState('loading'); // loading | ready | expired | rejected | error
+  const [errorMsg, setErrorMsg] = useState('');
+  const autoRefreshes = useRef(0);
+  const onApprovedRef = useRef(onApproved);
+  onApprovedRef.current = onApproved;
+
+  const createSession = useCallback(async () => {
+    setState('loading');
+    setErrorMsg('');
+    try {
+      const res = await authService.qrCreate();
+      if (!res?.token) throw new Error('QR kod yaratilmadi');
+      setQr({ token: res.token, expiresAt: res.expiresAt });
+      setState('ready');
+    } catch (err) {
+      setQr(null);
+      setErrorMsg(err.message || 'QR kod yaratilmadi');
+      setState('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!disabled) createSession();
+  }, [createSession, disabled]);
+
+  // Holatni so'rash: setTimeout zanjiri — so'rovlar ustma-ust tushmaydi
+  useEffect(() => {
+    if (state !== 'ready' || !qr) return;
+    let cancelled = false;
+    let timer;
+
+    const poll = async () => {
+      if (cancelled) return;
+      if (Date.now() >= qr.expiresAt) {
+        setState('expired');
+        return;
+      }
+      try {
+        const res = await authService.qrStatus(qr.token);
+        if (cancelled) return;
+        if (res?.status === 'approved' && res.user) {
+          onApprovedRef.current(res.user, res.token);
+          return;
+        }
+        if (res?.status === 'expired') { setState('expired'); return; }
+        if (res?.status === 'rejected') { setState('rejected'); return; }
+      } catch {
+        // Tarmoq xatosi — keyingi urinishda davom etamiz
+      }
+      if (!cancelled) timer = setTimeout(poll, POLL_MS);
+    };
+
+    timer = setTimeout(poll, POLL_MS);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [state, qr]);
+
+  // Eskirganda avtomatik yangilash (faqat sahifa ko'rinib turganda va cheklangan marta)
+  useEffect(() => {
+    if (state !== 'expired') return;
+    if (document.visibilityState === 'visible' && autoRefreshes.current < MAX_AUTO_REFRESH) {
+      autoRefreshes.current += 1;
+      createSession();
+    }
+  }, [state, createSession]);
+
+  const manualRefresh = () => {
+    autoRefreshes.current = 0;
+    createSession();
+  };
+
+  if (disabled) {
+    return <p style={{ fontSize: '0.85rem', color: '#b9a6a2', textAlign: 'center' }}>You are already signed in.</p>;
+  }
+
+  const qrUrl = qr ? `${window.location.origin}/qr-auth?token=${qr.token}` : '';
+  const showOverlay = state !== 'ready';
+
+  return (
+    <>
+      <div style={{ position: 'relative', backgroundColor: '#fff', padding: '1rem', borderRadius: '8px', margin: '1rem 0', width: 150, height: 150, boxSizing: 'content-box' }}>
+        {qr && <QRCodeSVG value={qrUrl} size={150} style={{ opacity: showOverlay ? 0.1 : 1 }} />}
+        {showOverlay && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.5rem', textAlign: 'center', color: '#241411', fontSize: '0.8rem' }}>
+            {state === 'loading' && <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '1.5rem' }} />}
+            {state !== 'loading' && (
+              <>
+                <span>
+                  {state === 'expired' && 'QR code expired'}
+                  {state === 'rejected' && 'Sign-in was declined on the phone'}
+                  {state === 'error' && (errorMsg || 'Could not load QR code')}
+                </span>
+                <button type="button" onClick={manualRefresh} style={{ padding: '0.4rem 0.8rem', border: 'none', borderRadius: 4, background: '#8a1200', color: '#fff', cursor: 'pointer', fontWeight: 600 }}>
+                  Refresh
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+      <p style={{ fontSize: '0.8rem', color: '#b9a6a2', textAlign: 'center' }}>
+        Open Fuzz on your phone, tap the <i className="fa-solid fa-qrcode" /> button and scan this code — or just scan it with your phone camera.
+      </p>
+    </>
   );
 }

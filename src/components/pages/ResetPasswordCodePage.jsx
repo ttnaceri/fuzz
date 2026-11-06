@@ -30,7 +30,7 @@ export default function ResetPasswordCodePage() {
       <div style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', width: '100%', maxWidth: '400px', border: '1px solid #48201a' }}>
         <h2 style={{ color: '#f5eeee', textAlign: 'center', marginBottom: '1rem' }}>Tasdiqlash Kodi</h2>
         <p style={{ color: '#b9a6a2', fontSize: '0.9rem', marginBottom: '1.5rem', textAlign: 'center' }}>
-          Telegramingizga yuborilgan 5 xonali kodni kiriting.
+          Telegramingizga yuborilgan 6 xonali kodni kiriting.
         </p>
         
         <form onSubmit={handleSubmit}>

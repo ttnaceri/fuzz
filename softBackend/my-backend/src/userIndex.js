@@ -1,6 +1,17 @@
 import { Hono } from 'hono';
+import { getAuthUser, requireAuth, requireSelfOrAdmin, isAdminRole } from './middleware/auth.js';
 
 const userApp = new Hono();
+
+// Shaxsiy ma'lumotlar — faqat egasi yoki admin
+userApp.use('/users/:userId/*', requireSelfOrAdmin('userId'));
+userApp.use('/store/*', requireAuth);
+userApp.use('/wishlist', requireAuth);
+userApp.use('/wishlist/*', requireAuth);
+userApp.use('/games/track-time', requireAuth);
+
+// O'yin havolasi (game_url) ochiq ro'yxatlarda ko'rsatilmaydi — faqat /games/:id/play orqali
+const stripUrl = ({ game_url, ...rest }) => rest;
 
 // User Library
 userApp.get('/users/:userId/library', async (c) => {
@@ -10,7 +21,7 @@ userApp.get('/users/:userId/library', async (c) => {
       JOIN user_library ul ON g.id = ul.game_id
       WHERE ul.user_id = ?
     `).bind(c.req.param('userId')).all();
-    return c.json({ games: library.results || [] });
+    return c.json({ games: (library.results || []).map(stripUrl) });
   } catch (err) { return c.json({ games: [] }); }
 });
 
@@ -27,10 +38,10 @@ userApp.get('/users/:userId/owns/:gameId', async (c) => {
 // ==========================================
 // YANGI: FAQAT USERNAME'NI YANGILASH
 // ==========================================
-userApp.put('/users/:id/username', async (c) => {
+userApp.put('/users/:userId/username', async (c) => {
   try {
     const { username } = await c.req.json();
-    const userId = c.req.param('id');
+    const userId = c.req.param('userId');
 
     if (!username || username.trim().length < 3) {
       return c.json({ error: 'Username kamida 3 belgidan iborat bo\'lishi kerak!' }, 400);
@@ -54,22 +65,29 @@ userApp.put('/users/:id/username', async (c) => {
   }
 });
 
-// Buy Game
+// Buy Game — sotib oluvchi har doim tokendagi foydalanuvchi (body'dagi userId e'tiborga olinmaydi)
 userApp.post('/store/buy', async (c) => {
   try {
-    const { userId, gameId } = await c.req.json();
-    if (!userId || !gameId) return c.json({ error: 'Ma\'lumot yetarli emas' }, 400);
-    const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first();
+    const me = await getAuthUser(c);
+    const { gameId } = await c.req.json();
+    if (!gameId) return c.json({ error: 'Ma\'lumot yetarli emas' }, 400);
     const game = await c.env.DB.prepare('SELECT * FROM games WHERE id = ?').bind(gameId).first();
-    if (!user || !game) return c.json({ error: 'Ma\'lumot topilmadi' }, 404);
-    const owned = await c.env.DB.prepare('SELECT * FROM user_library WHERE user_id = ? AND game_id = ?').bind(userId, gameId).first();
+    if (!game) return c.json({ error: 'Ma\'lumot topilmadi' }, 404);
+    const owned = await c.env.DB.prepare('SELECT * FROM user_library WHERE user_id = ? AND game_id = ?').bind(me.id, gameId).first();
     if (owned) return c.json({ error: 'Sotib olingan!' }, 400);
-    let finalPrice = game.price;
-    if (game.discount > 0) finalPrice = game.price - (game.price * (game.discount / 100));
-    if (user.balance < finalPrice) return c.json({ error: 'Balans yetarli emas!' }, 400);
-    await c.env.DB.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').bind(finalPrice, userId).run();
-    await c.env.DB.prepare('INSERT INTO user_library (id, user_id, game_id) VALUES (?, ?, ?)').bind(crypto.randomUUID(), userId, gameId).run();
-    return c.json({ message: 'Sotib olindi!', newBalance: user.balance - finalPrice });
+
+    let finalPrice = Number(game.price) || 0;
+    if (game.discount > 0) finalPrice = finalPrice - (finalPrice * (game.discount / 100));
+    finalPrice = Math.max(0, Math.round(finalPrice * 100) / 100);
+
+    // Atomik: balans yetarli bo'lsagina ayiriladi (parallel so'rovlar bilan manfiyga tushmaydi)
+    const res = await c.env.DB.prepare('UPDATE users SET balance = ROUND(balance - ?, 2) WHERE id = ? AND balance >= ?')
+      .bind(finalPrice, me.id, finalPrice).run();
+    if (!res.meta?.changes) return c.json({ error: 'Balans yetarli emas!' }, 400);
+
+    await c.env.DB.prepare('INSERT INTO user_library (id, user_id, game_id) VALUES (?, ?, ?)').bind(crypto.randomUUID(), me.id, gameId).run();
+    const fresh = await c.env.DB.prepare('SELECT balance FROM users WHERE id = ?').bind(me.id).first();
+    return c.json({ message: 'Sotib olindi!', newBalance: fresh?.balance ?? 0 });
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
@@ -83,14 +101,15 @@ userApp.get('/users/:userId/wishlist', async (c) => {
       JOIN user_wishlist uw ON g.id = uw.game_id
       WHERE uw.user_id = ?
     `).bind(c.req.param('userId')).all();
-    return c.json({ games: wishlist.results || [] });
+    return c.json({ games: (wishlist.results || []).map(stripUrl) });
   } catch (err) { return c.json({ games: [] }); }
 });
 
 userApp.post('/wishlist', async (c) => {
   try {
-    const { userId, gameId } = await c.req.json();
-    if (!userId || !gameId) return c.json({ error: 'Ma\'lumot yetarli emas' }, 400);
+    const userId = (await getAuthUser(c)).id;
+    const { gameId } = await c.req.json();
+    if (!gameId) return c.json({ error: 'Ma\'lumot yetarli emas' }, 400);
 
     const existing = await c.env.DB.prepare('SELECT * FROM user_wishlist WHERE user_id = ? AND game_id = ?').bind(userId, gameId).first();
     if (existing) return c.json({ error: 'Allaqachon wishlistda!' }, 400);
@@ -104,25 +123,37 @@ userApp.post('/wishlist', async (c) => {
 
 userApp.delete('/wishlist/:userId/:gameId', async (c) => {
   try {
+    const me = await getAuthUser(c);
+    if (me.id !== c.req.param('userId') && !isAdminRole(me.role)) return c.json({ error: 'Ruxsat yo\'q' }, 403);
     await c.env.DB.prepare('DELETE FROM user_wishlist WHERE user_id = ? AND game_id = ?')
       .bind(c.req.param('userId'), c.req.param('gameId')).run();
     return c.json({ success: true });
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
-// Play Game
-userApp.get('/games/:id/play', async (c) => {
+// Play Game — faqat sotib olgan (yoki bepul o'yin / admin)
+userApp.get('/games/:id/play', requireAuth, async (c) => {
   try {
-    const game = await c.env.DB.prepare('SELECT game_url FROM games WHERE id = ?').bind(c.req.param('id')).first();
-    return game ? c.json({ game_url: game.game_url }) : c.json({ error: 'O\'yin topilmadi' }, 404);
+    const me = await getAuthUser(c);
+    const game = await c.env.DB.prepare('SELECT game_url, price, discount FROM games WHERE id = ?').bind(c.req.param('id')).first();
+    if (!game) return c.json({ error: 'O\'yin topilmadi' }, 404);
+    const isFree = !(Number(game.price) > 0) || Number(game.discount) >= 100;
+    if (!isFree && !isAdminRole(me.role)) {
+      const owned = await c.env.DB.prepare('SELECT id FROM user_library WHERE user_id = ? AND game_id = ?').bind(me.id, c.req.param('id')).first();
+      if (!owned) return c.json({ error: 'Bu o\'yinni avval sotib oling' }, 403);
+    }
+    return c.json({ game_url: game.game_url });
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
 // Track Time
 userApp.post('/games/track-time', async (c) => {
   try {
-    const { userId, gameId, seconds } = await c.req.json();
-    if (!userId || !gameId || !seconds) return c.json({ error: 'Ma\'lumot yetarli emas' }, 400);
+    const userId = (await getAuthUser(c)).id;
+    const body = await c.req.json();
+    const gameId = body.gameId;
+    const seconds = Math.floor(Number(body.seconds));
+    if (!gameId || !(seconds > 0) || seconds > 6 * 3600) return c.json({ error: 'Ma\'lumot yetarli emas' }, 400);
     const existing = await c.env.DB.prepare('SELECT * FROM game_stats WHERE user_id = ? AND game_id = ?').bind(userId, gameId).first();
     if (existing) {
       await c.env.DB.prepare('UPDATE game_stats SET total_seconds = total_seconds + ?, last_played = CURRENT_TIMESTAMP WHERE id = ?').bind(seconds, existing.id).run();
@@ -141,7 +172,7 @@ userApp.get('/games', async (c) => {
     let params = [];
     if (companyId) { query += ' AND company_id = ?'; params.push(companyId); }
     const games = await c.env.DB.prepare(query).bind(...params).all();
-    return c.json({ games: games.results || [] });
+    return c.json({ games: (games.results || []).map(stripUrl) });
   } catch (err) { return c.json({ games: [] }); }
 });
 
@@ -149,7 +180,7 @@ userApp.get('/games/:id', async (c) => {
   try {
     const game = await c.env.DB.prepare('SELECT * FROM games WHERE id = ?').bind(c.req.param('id')).first();
     if (!game) return c.json({ error: 'O\'yin topilmadi' }, 404);
-    return c.json({ game });
+    return c.json({ game: stripUrl(game) });
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
@@ -178,7 +209,7 @@ userApp.get('/bundles/:id/games', async (c) => {
       JOIN bundle_games bg ON g.id = bg.game_id
       WHERE bg.bundle_id = ?
     `).bind(c.req.param('id')).all();
-    return c.json({ games: games.results || [] });
+    return c.json({ games: (games.results || []).map(stripUrl) });
   } catch (err) { return c.json({ games: [] }); }
 });
 

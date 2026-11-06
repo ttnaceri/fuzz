@@ -35,7 +35,8 @@ import SupportPage from './pages/SupportPage.jsx';
 import AboutPage from './pages/AboutPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
-import BundleDetailsPage from './pages/BundleDetailsPage.jsx'; // YANGI IMPORT
+import BundleDetailsPage from './pages/BundleDetailsPage.jsx';
+import SetupPage from './pages/SetupPage.jsx';
 
 // --- WALLET PAGES ---
 import WalletHistoryPage from './pages/WalletHistoryPage.jsx';
@@ -131,7 +132,7 @@ export const router = createBrowserRouter([
       { path: 'top-sellers', element: <TopSellersPage /> },
       { path: 'search', element: <SearchPage /> },
       { path: 'game/:id', element: <GameDetailsPage /> },
-      { path: 'bundle/:id', element: <BundleDetailsPage /> }, // YANGI ROUTE
+      { path: 'bundle/:id', element: <BundleDetailsPage /> },
       { path: 'companies', element: <CompaniesPage /> },
       { path: 'company/:id', element: <CompanyDetailsPage /> },
       
@@ -145,6 +146,9 @@ export const router = createBrowserRouter([
       { path: 'settings', element: <ProtectedRoute><SettingsPage /></ProtectedRoute> },
       { path: 'security', element: <ProtectedRoute><SecurityPage /></ProtectedRoute> },
       
+      // --- SETUP PAGE (YANGI) ---
+      { path: 'setup', element: <ProtectedRoute><SetupPage /></ProtectedRoute> },
+
       { path: 'wallet/history', element: <ProtectedRoute><WalletHistoryPage /></ProtectedRoute> },
       { path: 'wallet/topup', element: <ProtectedRoute><WalletTopUpPage /></ProtectedRoute> },
       { path: 'wallet/refund', element: <ProtectedRoute><WalletRefundPage /></ProtectedRoute> },

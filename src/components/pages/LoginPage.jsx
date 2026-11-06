@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, Component } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
+import { Html5Qrcode } from 'html5-qrcode';
 import useToast from '../hooks/useToast.js';
 import useAuth from '../hooks/useAuth.js';
 
@@ -22,42 +23,55 @@ class QRBoundary extends Component {
 }
 
 // ==========================================
-// MOBIL QR SKANER KOMPONENTI
+// MOBIL QR SKANER KOMPONENTI (YANGILANGAN)
 // ==========================================
-function MobileQRScanner({ onBack }) {
-  const videoRef = useRef(null);
-  const [hasCamera, setHasCamera] = useState(true);
+function MobileQRScanner({ onBack, onScanSuccess }) {
+  const scannerRef = useRef(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isScanning, setIsScanning] = useState(false);
 
   useEffect(() => {
-    let stream = null;
+    // 1. Html5Qrcode instansiyasini yaratish
+    const html5QrCode = new Html5Qrcode("qr-reader");
+    scannerRef.current = html5QrCode;
 
-    const startCamera = async () => {
+    // 2. Skanerni ishga tushirish
+    const startScanner = async () => {
       try {
-        // Orqa kamerani ochishga harakat qilamiz
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' }
-        });
-        
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
+        setIsScanning(true);
+        await html5QrCode.start(
+          { facingMode: "environment" }, // Orqa kamera
+          {
+            fps: 10, // Sekundiga 10 marta rasm tekshiriladi
+            qrbox: { width: 250, height: 250 } // QR kod ramkasi o'lchami
+          },
+          (decodedText) => {
+            // QR kod muvaffaqiyatli o'qilganda
+            html5QrCode.stop().then(() => {
+              setIsScanning(false);
+              onScanSuccess(decodedText); // Natijani ota-onaga yuborish
+            }).catch(err => console.error("To'xtatishda xato:", err));
+          },
+          (errorMessage) => {
+            // Har bir kadrda QR topilmasa xato beradi, buni e'tiborsiz qoldiramiz
+          }
+        );
       } catch (err) {
-        console.error("Kamera xatosi:", err);
-        setHasCamera(false);
+        console.error("Skanerni ishga tushirishda xato:", err);
         setErrorMsg("Kamerani ochish imkoni bo'lmadi. Ruxsat berilganligini tekshiring.");
+        setIsScanning(false);
       }
     };
 
-    startCamera();
+    startScanner();
 
-    // Komponent yopilganda kamerani o'chirish
+    // Komponent yopilganda kamerani to'xtatish
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      if (scannerRef.current && scannerRef.current.isScanning) {
+        scannerRef.current.stop().catch(err => console.error("Tozalashda xato:", err));
       }
     };
-  }, []);
+  }, [onScanSuccess]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: '400px', margin: '0 auto', padding: '1rem' }}>
@@ -66,26 +80,20 @@ function MobileQRScanner({ onBack }) {
       
       <div style={{ 
         width: '100%', 
-        height: '300px', 
-        border: '2px dashed #8a1200', 
         borderRadius: '12px', 
         overflow: 'hidden', 
         position: 'relative',
         backgroundColor: '#000',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        minHeight: '300px'
       }}>
-        {hasCamera ? (
-          <video 
-            ref={videoRef} 
-            autoPlay 
-            playsInline 
-            muted 
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        ) : (
-          <div style={{ color: '#ed5555', textAlign: 'center', padding: '1rem' }}>
+        {/* html5-qrcode kutubxonasi videoni shu id ichiga joylashtiradi */}
+        <div id="qr-reader" style={{ width: '100%' }}></div>
+
+        {errorMsg && (
+          <div style={{ color: '#ed5555', textAlign: 'center', padding: '1rem', position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#100b0a' }}>
             <i className="fa-solid fa-camera-slash" style={{ fontSize: '3rem', marginBottom: '1rem' }}></i>
             <p>{errorMsg}</p>
           </div>
@@ -107,7 +115,7 @@ export default function LoginPage() {
   const [searchParams] = useSearchParams();
   const isMobileScanMode = searchParams.get('mobileScan') === 'true';
   
-  const { success, error: toastError } = useToast();
+  const { success, error: toastError, info } = useToast();
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -153,6 +161,22 @@ export default function LoginPage() {
     }
   };
 
+  // QR kod skanerlanganda ishga tushadigan funksiya
+  const handleScanSuccess = (decodedText) => {
+    console.log("Skanerlangan QR Kod:", decodedText);
+    info(`QR Kod o'qildi: ${decodedText}`);
+    
+    // Bu yerda backendga so'rov yuborib, tokenni tasdiqlash logikasi bo'ladi
+    // Masalan:
+    // api.post('/api/auth/qr-login', { token: decodedText })
+    //   .then(...)
+    
+    // Hozircha orqaga qaytaramiz
+    setTimeout(() => {
+      navigate('/login');
+    }, 2000);
+  };
+
   const styles = {
     wrapper: { minHeight: 'calc(100vh - 64px)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#100b0a', padding: '2rem 1rem' },
     box: { backgroundColor: '#241411', border: '1px solid #48201a', borderRadius: '8px', width: '100%', maxWidth: '800px', boxShadow: '0 10px 40px rgba(0,0,0,0.8)' },
@@ -171,7 +195,10 @@ export default function LoginPage() {
     return (
       <div style={styles.wrapper}>
         <div style={styles.box}>
-           <MobileQRScanner onBack={() => navigate('/login')} />
+           <MobileQRScanner 
+              onBack={() => navigate('/login')} 
+              onScanSuccess={handleScanSuccess} 
+           />
         </div>
       </div>
     );

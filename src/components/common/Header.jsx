@@ -6,15 +6,17 @@ import { useLanguage } from '../context/useLanguage.js';
 import Navigation from './Navigation.jsx';
 import SearchBar from './SearchBar.jsx';
 import useToast from '../hooks/useToast.js';
+import { fileSystemService } from '../services/fileSystemService.js';
 
 export default function Header() {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const { count } = useCart();
   const { lang, setLang, t } = useLanguage();
   const navigate = useNavigate();
-  const { info } = useToast();
+  const { info, success, error: toastError } = useToast();
   
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
+  const [hasFolder, setHasFolder] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 1024);
@@ -22,21 +24,45 @@ export default function Header() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Papka tanlanganligini tekshirish
+  useEffect(() => {
+    if (!isAuthenticated) { setHasFolder(false); return; }
+    fileSystemService.getSavedDirectory()
+      .then(handle => setHasFolder(!!handle))
+      .catch(() => setHasFolder(false));
+  }, [isAuthenticated]);
+
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const handleDownloadSetup = () => {
-    // Fuzz Setup dasturini yuklash
-    // Fayl public/FuzzSetup.exe da bo'lishi kerak
-    const link = document.createElement('a');
-    link.href = '/FuzzSetup.exe'; 
-    link.download = 'FuzzSetup.exe';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    info("Fuzz Setup yuklab olinmoqda...");
+  // Fuzz uchun papka tanlash
+  const handleInstallFuzz = async () => {
+    if (!isAuthenticated) {
+      info("Iltimos, avval tizimga kiring.");
+      navigate('/login');
+      return;
+    }
+
+    // Brauzer qo'llab-quvvatlashini tekshirish
+    if (!window.showDirectoryPicker) {
+      toastError("Brauzeringiz papka tanlashni qo'llab-quvvatlamaydi. Iltimos, Chrome, Edge yoki Opera brauzeridan foydalaning.");
+      return;
+    }
+
+    try {
+      await fileSystemService.selectDirectory();
+      setHasFolder(true);
+      success("✅ Fuzz papkasi muvaffaqiyatli tanlandi! Endi o'yinlarni o'rnatishingiz mumkin.");
+      navigate('/library');
+    } catch (err) {
+      if (err.message.includes('bekor qilindi')) {
+        info("Papka tanlash bekor qilindi.");
+      } else {
+        toastError("Xato: " + err.message);
+      }
+    }
   };
 
   return (
@@ -55,25 +81,25 @@ export default function Header() {
         
         <div className="header__actions" style={{ marginLeft: '1rem' }}>
           
-          {/* Download Setup Tugmasi (faqat desktop uchun) */}
-          {!isMobile && (
+          {/* Install Fuzz tugmasi - faqat desktop uchun, faqat papka tanlanmagan bo'lsa */}
+          {!isMobile && isAuthenticated && !hasFolder && (
             <button 
-              onClick={handleDownloadSetup} 
+              onClick={handleInstallFuzz} 
               className="btn btn-primary btn-sm" 
               style={{ marginRight: '0.5rem', whiteSpace: 'nowrap' }}
-              title="Download Fuzz for Windows"
+              title="Fuzz uchun papka tanlash"
             >
-              <i className="fa-solid fa-download" /> Download
+              <i className="fa-solid fa-download" /> Install Fuzz
             </button>
           )}
 
           {!isMobile && (
             <button 
-              onClick={() => setLang(lang === 'uz' ? 'ru' : lang === 'ru' ? 'en' : 'uz')} 
+              onClick={() => setLang(lang === 'UZ' ? 'RU' : lang === 'RU' ? 'EN' : 'UZ')} 
               className="btn btn-ghost btn-sm" 
               style={{ fontWeight: 'bold' }}
             >
-              {lang.toUpperCase()}
+              {lang}
             </button>
           )}
 

@@ -14,7 +14,6 @@ export default function Header() {
   const navigate = useNavigate();
   const { info } = useToast();
   
-  // 1024px ga o'zgartirildi
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
 
   useEffect(() => {
@@ -26,6 +25,18 @@ export default function Header() {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleDownloadSetup = () => {
+    // Fuzz Setup dasturini yuklash
+    // Fayl public/FuzzSetup.exe da bo'lishi kerak
+    const link = document.createElement('a');
+    link.href = '/FuzzSetup.exe'; 
+    link.download = 'FuzzSetup.exe';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    info("Fuzz Setup yuklab olinmoqda...");
   };
 
   return (
@@ -43,6 +54,19 @@ export default function Header() {
         {!isMobile && <SearchBar />}
         
         <div className="header__actions" style={{ marginLeft: '1rem' }}>
+          
+          {/* Download Setup Tugmasi (faqat desktop uchun) */}
+          {!isMobile && (
+            <button 
+              onClick={handleDownloadSetup} 
+              className="btn btn-primary btn-sm" 
+              style={{ marginRight: '0.5rem', whiteSpace: 'nowrap' }}
+              title="Download Fuzz for Windows"
+            >
+              <i className="fa-solid fa-download" /> Download
+            </button>
+          )}
+
           {!isMobile && (
             <button 
               onClick={() => setLang(lang === 'uz' ? 'ru' : lang === 'ru' ? 'en' : 'uz')} 

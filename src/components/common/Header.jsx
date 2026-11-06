@@ -37,7 +37,7 @@ export default function Header() {
     navigate('/login');
   };
 
-  // Fuzz uchun papka tanlash
+  // Fuzz uchun papka tanlash (Fayl yuklanmaydi, faqat brauzer API si)
   const handleInstallFuzz = async () => {
     if (!isAuthenticated) {
       info("Iltimos, avval tizimga kiring.");
@@ -52,9 +52,10 @@ export default function Header() {
     }
 
     try {
+      // Bu funksiya ichida brauzerning maxsus oynasi ochiladi
       await fileSystemService.selectDirectory();
       setHasFolder(true);
-      success("✅ Fuzz papkasi muvaffaqiyatli tanlandi! Endi o'yinlarni o'rnatishingiz mumkin.");
+      success("✅ Fuzz papkasi tanlandi! Endi o'yinlarni o'rnatishingiz mumkin.");
       navigate('/library');
     } catch (err) {
       if (err.message.includes('bekor qilindi')) {
@@ -89,17 +90,17 @@ export default function Header() {
               style={{ marginRight: '0.5rem', whiteSpace: 'nowrap' }}
               title="Fuzz uchun papka tanlash"
             >
-              <i className="fa-solid fa-download" /> Install Fuzz
+              <i className="fa-solid fa-folder-plus" /> Install Fuzz
             </button>
           )}
 
           {!isMobile && (
             <button 
-              onClick={() => setLang(lang === 'UZ' ? 'RU' : lang === 'RU' ? 'EN' : 'UZ')} 
+              onClick={() => setLang(lang === 'uz' ? 'ru' : lang === 'ru' ? 'en' : 'uz')} 
               className="btn btn-ghost btn-sm" 
               style={{ fontWeight: 'bold' }}
             >
-              {lang}
+              {lang.toUpperCase()}
             </button>
           )}
 

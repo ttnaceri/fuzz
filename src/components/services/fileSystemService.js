@@ -58,10 +58,12 @@ export const fileSystemService = {
         throw new Error("Papkaga yozish ruxsati berilmadi.");
       }
       await saveDirectoryHandle(handle);
+      
       // Fuzz uchun kerakli papkalarni yaratish
       await handle.getDirectoryHandle('games', { create: true });
       await handle.getDirectoryHandle('data', { create: true });
       await handle.getDirectoryHandle('logs', { create: true });
+      
       return handle;
     } catch (err) {
       if (err.name === 'AbortError') {
@@ -103,29 +105,6 @@ export const fileSystemService = {
       const fileHandle = await gameDir.getFileHandle(fileName);
       const file = await fileHandle.getFile();
       return await file.text();
-    } catch {
-      return null;
-    }
-  },
-
-  async saveAppData(key, data) {
-    const handle = await this.getSavedDirectory();
-    if (!handle) throw new Error("Fuzz papkasi topilmadi.");
-    const dataDir = await handle.getDirectoryHandle('data', { create: true });
-    const fileHandle = await dataDir.getFileHandle(`${key}.json`, { create: true });
-    const writable = await fileHandle.createWritable();
-    await writable.write(JSON.stringify(data));
-    await writable.close();
-  },
-
-  async readAppData(key) {
-    const handle = await this.getSavedDirectory();
-    if (!handle) throw new Error("Fuzz papkasi topilmadi.");
-    try {
-      const dataDir = await handle.getDirectoryHandle('data');
-      const fileHandle = await dataDir.getFileHandle(`${key}.json`);
-      const file = await fileHandle.getFile();
-      return JSON.parse(await file.text());
     } catch {
       return null;
     }

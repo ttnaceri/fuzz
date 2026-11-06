@@ -1,8 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Component } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import useToast from '../hooks/useToast.js';
 import useAuth from '../hooks/useAuth.js';
+
+// QR kod xato bersa, uni ushlab qolish uchun kichik ErrorBoundary
+class QRBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '1rem', color: '#ed5555', textAlign: 'center', fontSize: '0.9rem' }}>
+          QR kodni yuklashda xatolik yuz berdi.
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function LoginPage() {
   const { success, error: toastError } = useToast();
@@ -13,8 +34,6 @@ export default function LoginPage() {
   const [form, setForm] = useState({ username: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
-
-  // Netbuk va mobil farqini aniqlash (1024px chegarasi)
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
 
   useEffect(() => {
@@ -24,7 +43,7 @@ export default function LoginPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // QR token faqat bir marta yaratiladi, 30 soniyada yangilanadi
+  // QR token generatsiyasi (30 soniyada yangilanadi)
   const [qrToken, setQrToken] = useState('fuzz_qr_' + Math.random().toString(36).substring(7));
   useEffect(() => {
     const interval = setInterval(() => {
@@ -54,98 +73,18 @@ export default function LoginPage() {
     }
   };
 
+  // Stillar
   const styles = {
-    wrapper: { 
-      minHeight: 'calc(100vh - 64px)', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      backgroundColor: '#100b0a', 
-      padding: '2rem 1rem' 
-    },
-    box: { 
-      backgroundColor: '#241411', 
-      border: '1px solid #48201a', 
-      borderRadius: '8px', 
-      width: '100%', 
-      maxWidth: '750px', 
-      boxShadow: '0 10px 40px rgba(0,0,0,0.8)',
-      display: 'flex',
-      flexDirection: 'column'
-    },
-    body: { 
-      display: 'flex', 
-      flexDirection: isMobile ? 'column' : 'row', // Mobil/netbuk uchun ustun
-      padding: '2rem', 
-      gap: '2rem' 
-    },
-    formSide: { 
-      flex: '1 1 300px', 
-      display: 'flex', 
-      flexDirection: 'column' 
-    },
-    qrSide: { 
-      flex: '0 1 250px', 
-      borderLeft: isMobile ? 'none' : '1px solid #48201a', 
-      borderTop: isMobile ? '1px solid #48201a' : 'none',
-      paddingLeft: isMobile ? '0' : '2rem', 
-      paddingTop: isMobile ? '2rem' : '0',
-      display: 'flex', 
-      flexDirection: 'column', 
-      alignItems: 'center', 
-      justifyContent: 'center' 
-    },
-    title: { 
-      color: '#8a1200', 
-      fontSize: '0.85rem', 
-      textTransform: 'uppercase', 
-      letterSpacing: '1px', 
-      marginBottom: '1.5rem', 
-      fontWeight: '700' 
-    },
-    input: { 
-      width: '100%', 
-      padding: '0.8rem 1rem', 
-      backgroundColor: '#100b0a', 
-      border: '1px solid #48201a', 
-      borderRadius: '4px', 
-      color: '#f5eeee', 
-      outline: 'none', 
-      fontSize: '1rem', 
-      boxSizing: 'border-box' 
-    },
-    errorBox: { 
-      backgroundColor: 'rgba(237, 85, 85, 0.1)', 
-      border: '1px solid #ed5555', 
-      padding: '0.8rem', 
-      borderRadius: '4px', 
-      color: '#ed5555', 
-      marginBottom: '1rem', 
-      fontSize: '0.85rem',
-      wordBreak: 'break-word'
-    },
-    btnPrimary: { 
-      width: '100%', 
-      padding: '0.8rem', 
-      color: '#fff', 
-      border: 'none', 
-      borderRadius: '4px', 
-      fontWeight: '600', 
-      fontSize: '1rem', 
-      cursor: 'pointer', 
-      background: 'linear-gradient(90deg, #8a1200 0%, #3d0500 100%)' 
-    },
-    footer: { 
-      backgroundColor: '#19100e', 
-      padding: '1.2rem 2rem', 
-      display: 'flex', 
-      justifyContent: 'space-between', 
-      borderTop: '1px solid #48201a', 
-      fontSize: '0.85rem', 
-      color: '#b9a6a2',
-      flexWrap: 'wrap',
-      gap: '0.5rem'
-    }
+    wrapper: { minHeight: 'calc(100vh - 64px)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#100b0a', padding: '2rem 1rem' },
+    box: { backgroundColor: '#241411', border: '1px solid #48201a', borderRadius: '8px', width: '100%', maxWidth: '800px', boxShadow: '0 10px 40px rgba(0,0,0,0.8)' },
+    body: { display: 'flex', flexDirection: isMobile ? 'column' : 'row', padding: '2rem', gap: '2rem' },
+    formSide: { flex: '1 1 300px', display: 'flex', flexDirection: 'column' },
+    qrSide: { flex: '0 1 280px', borderLeft: isMobile ? 'none' : '1px solid #48201a', borderTop: isMobile ? '1px solid #48201a' : 'none', paddingLeft: isMobile ? '0' : '2rem', paddingTop: isMobile ? '2rem' : '0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
+    title: { color: '#8a1200', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '1.5rem', fontWeight: '700' },
+    input: { width: '100%', padding: '0.8rem 1rem', backgroundColor: '#100b0a', border: '1px solid #48201a', borderRadius: '4px', color: '#f5eeee', outline: 'none', fontSize: '1rem', boxSizing: 'border-box' },
+    errorBox: { backgroundColor: 'rgba(237, 85, 85, 0.1)', border: '1px solid #ed5555', padding: '0.8rem', borderRadius: '4px', color: '#ed5555', marginBottom: '1rem', fontSize: '0.85rem' },
+    btnPrimary: { width: '100%', padding: '0.8rem', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: '600', fontSize: '1rem', cursor: 'pointer', background: 'linear-gradient(90deg, #8a1200 0%, #3d0500 100%)' },
+    footer: { backgroundColor: '#19100e', padding: '1.2rem 2rem', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #48201a', fontSize: '0.85rem', color: '#b9a6a2' }
   };
 
   return (
@@ -156,27 +95,14 @@ export default function LoginPage() {
           {/* Chap tomon: Forma */}
           <div style={styles.formSide}>
             <h3 style={styles.title}>SIGN IN WITH ACCOUNT NAME</h3>
-            
             {apiError && <div style={styles.errorBox}>{apiError}</div>}
             
             <form onSubmit={handleLogin}>
               <div style={{ marginBottom: '1.2rem' }}>
-                <input 
-                  type="text" 
-                  style={styles.input} 
-                  placeholder="Account Name (Username)" 
-                  value={form.username} 
-                  onChange={(e) => setForm({ ...form, username: e.target.value })} 
-                />
+                <input type="text" style={styles.input} placeholder="Account Name (Username)" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
               </div>
               <div style={{ marginBottom: '1.2rem' }}>
-                <input 
-                  type="password" 
-                  style={styles.input} 
-                  placeholder="Password" 
-                  value={form.password} 
-                  onChange={(e) => setForm({ ...form, password: e.target.value })} 
-                />
+                <input type="password" style={styles.input} placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', color: '#b9a6a2', fontSize: '0.85rem' }}>
                 <input type="checkbox" id="remember" style={{ accentColor: '#8a1200' }} />
@@ -195,11 +121,16 @@ export default function LoginPage() {
           {/* O'ng tomon: QR Kod */}
           <div style={styles.qrSide}>
             <h3 style={styles.title}>OR SIGN IN WITH QR</h3>
-            <div style={{ backgroundColor: '#fff', padding: '1rem', borderRadius: '8px', margin: '1rem 0' }}>
-              <QRCodeSVG value={qrUrl} size={150} />
-            </div>
-            <p style={{ fontSize: '0.8rem', color: '#b9a6a2', textAlign: 'center' }}>
-              Use the <strong>Fuzz Mobile App</strong> to sign in
+            
+            {/* QR kodni xatolardan himoyalash */}
+            <QRBoundary>
+              <div style={{ backgroundColor: '#fff', padding: '1rem', borderRadius: '8px', margin: '1rem 0' }}>
+                <QRCodeSVG value={qrUrl} size={150} />
+              </div>
+            </QRBoundary>
+
+            <p style={{ fontSize: '0.8rem', color: '#b9a6a2', textAlign: 'center', lineHeight: 1.4 }}>
+              Open <strong>Fuzz</strong> on your phone, tap the QR button and scan this code — or just scan it with your phone camera.
             </p>
           </div>
 
@@ -208,9 +139,7 @@ export default function LoginPage() {
         {/* Pastki qism */}
         <div style={styles.footer}>
           <span>Don't have an account?</span>
-          <Link to="/register" style={{ color: '#8a1200', fontWeight: '600', textDecoration: 'underline' }}>
-            Create a Free Account
-          </Link>
+          <Link to="/register" style={{ color: '#8a1200', fontWeight: '600', textDecoration: 'underline' }}>Create a Free Account</Link>
         </div>
       </div>
     </div>

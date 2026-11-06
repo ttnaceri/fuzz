@@ -16,18 +16,34 @@ export default function Header() {
   
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [isAppInstalled, setIsAppInstalled] = useState(false);
+  
+  // Faqat brauzerda ekanligini aniqlash (PWA yoki Telegram ichida emas)
+  const [isBrowser, setIsBrowser] = useState(true);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 1024);
     window.addEventListener('resize', handleResize);
 
-    // 1. App ichida (PWA yoki Telegram WebApp) ekanligini aniqlash
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    const isTelegram = typeof window !== 'undefined' && window.Telegram?.WebApp?.initData;
-    setIsAppInstalled(isStandalone || isTelegram);
+    // 1. Ilova rejimida ekanligini tekshirish (PWA yoki Telegram)
+    const checkIfApp = () => {
+      // Standalone PWA
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      // iOS Safari
+      const isIOSStandalone = window.navigator.standalone === true;
+      // Telegram WebApp
+      const isTelegram = typeof window !== 'undefined' && window.Telegram?.WebApp?.initData;
+      
+      // Agar shulardan biri bo'lsa, demak bu ilova, brauzer emas
+      if (isStandalone || isIOSStandalone || isTelegram) {
+        setIsBrowser(false);
+      } else {
+        setIsBrowser(true);
+      }
+    };
+    
+    checkIfApp();
 
-    // 2. PWA o'rnatish oynasini ushlab qolish (faqat brauzerda ishlaydi)
+    // PWA o'rnatish oynasini ushlash
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -45,17 +61,14 @@ export default function Header() {
     navigate('/login');
   };
 
-  // Download Fuzz (PWA) tugmasi funksiyasi
   const handleDownloadApp = async () => {
     if (deferredPrompt) {
-      // Brauzer o'rnatish oynasini qo'llab-quvvatlaydi
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
         setDeferredPrompt(null);
       }
     } else {
-      // Agar brauzer avtomatik oynani ko'rsatmasa (Safari, Firefox va h.k.)
       info("Ilovani o'rnatish uchun brauzer menyusidan 'Add to Home Screen' (Bosh ekranga qo'shish) ni tanlang.");
     }
   };
@@ -76,7 +89,6 @@ export default function Header() {
         
         <div className="header__actions" style={{ marginLeft: '1rem' }}>
           
-          {/* Til o'zgartirish */}
           {!isMobile && (
             <button 
               onClick={() => setLang(lang === 'uz' ? 'ru' : lang === 'ru' ? 'en' : 'uz')} 
@@ -87,8 +99,8 @@ export default function Header() {
             </button>
           )}
 
-          {/* DOWNLOAD FUZZ TUGMASI (faqat brauzerda va desktopda ko'rinadi) */}
-          {!isMobile && !isAppInstalled && (
+          {/* DOWNLOAD FUZZ: faqat brauzerda va mobil bo'lmaganda ko'rinadi */}
+          {!isMobile && isBrowser && (
             <button 
               onClick={handleDownloadApp} 
               className="btn btn-secondary btn-sm" 
@@ -106,13 +118,11 @@ export default function Header() {
             </button>
           )}
 
-          {/* Savat */}
           <Link to="/cart" className="header__icon-btn">
             <i className="fa-solid fa-cart-shopping" />
             {count > 0 && <span className="header__badge">{count}</span>}
           </Link>
           
-          {/* Profil / Login */}
           {isAuthenticated ? (
             <>
               <Link to={isAdmin ? "/admin" : "/account"} className="btn btn-ghost btn-sm">

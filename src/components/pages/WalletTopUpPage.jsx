@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
-import { config } from '../config/config.js';
+import { config } from '../config/config.js'; // Config import qilingan
 import { useLanguage } from '../context/useLanguage.js';
 import useAuth from '../hooks/useAuth.js';
 import Sidebar from '../common/Sidebar.jsx';
@@ -17,6 +17,7 @@ export default function WalletTopUpPage() {
   const [rate, setRate] = useState(12500);
   const [amount, setAmount] = useState('');
   
+  // Stars
   const [starsRates, setStarsRates] = useState([]);
   const [usdAmount, setUsdAmount] = useState('');
   const [starsAmount, setStarsAmount] = useState('');
@@ -41,35 +42,6 @@ export default function WalletTopUpPage() {
       .catch(() => {});
   }, []);
 
-  // Karta orqali to'lovda dollar ekvivalentini hisoblash
-  const cleanAmount = amount.replace(/\s/g, '');
-  const amountInUsd = cleanAmount && rate > 0 ? (Number(cleanAmount) / rate).toFixed(2) : '0.00';
-
-  // Stars inputlari o'rtasidagi bog'liqlik
-  const handleUsdChange = (val) => {
-    setUsdAmount(val);
-    if (selectedMethod && val) {
-      const starRate = starsRates.find(r => r.amount_usd.toString() === val.toString());
-      if (starRate) {
-        setStarsAmount(starRate.stars_amount.toString());
-      } else {
-        // Agar kursda bo'lmasa, 1$ = 10 Stars qoidasi
-        setStarsAmount((parseFloat(val) * 10).toString());
-      }
-    } else {
-      setStarsAmount('');
-    }
-  };
-
-  const handleStarsChange = (val) => {
-    setStarsAmount(val);
-    if (selectedMethod && val) {
-      setUsdAmount((parseInt(val) / 10).toFixed(2));
-    } else {
-      setUsdAmount('');
-    }
-  };
-
   const handleStarsPay = () => {
     if (!selectedMethod || selectedMethod.id !== 'stars') return;
     if (!usdAmount || !starsAmount || !user) return;
@@ -80,8 +52,8 @@ export default function WalletTopUpPage() {
   };
 
   const handleCardPay = async () => {
-    const clean = amount.replace(/\s/g, '');
-    if (!clean || Number(clean) <= 0) {
+    const cleanAmount = amount.replace(/\s/g, '');
+    if (!cleanAmount || Number(cleanAmount) <= 0) {
       info("Iltimos, to'g'ri miqdor kiriting.");
       return;
     }
@@ -89,7 +61,7 @@ export default function WalletTopUpPage() {
     try {
       await api.post('/api/payment-request', {
         userId: user.id,
-        amount_uzs: Number(clean)
+        amount_uzs: Number(cleanAmount)
       });
       success("So'rov yuborildi! Admin 15 daqiqa ichida tasdiqlaydi.");
       setAmount('');
@@ -176,6 +148,9 @@ export default function WalletTopUpPage() {
                 <img src={selectedMethod.logo_url} alt={selectedMethod.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} onError={(e) => e.currentTarget.style.display = 'none'} />
               </div>
               <h3 style={{ color: '#f5eeee', margin: 0 }}>{selectedMethod.name}</h3>
+              {selectedMethod.discount > 0 && (
+                <span style={{ backgroundColor: '#f0b44d', color: '#000', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>-{selectedMethod.discount}% chegirma</span>
+              )}
             </div>
 
             {selectedMethod.id === 'stars' && (
@@ -200,24 +175,12 @@ export default function WalletTopUpPage() {
                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                   <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                     <label className="form-label">Fuzz Balans ($)</label>
-                    <input 
-                      type="number" 
-                      className="form-input" 
-                      value={usdAmount} 
-                      onChange={(e) => handleUsdChange(e.target.value)} 
-                      placeholder="1.00" 
-                    />
+                    <input type="number" className="form-input" value={usdAmount} onChange={(e) => setUsdAmount(e.target.value)} placeholder="1.00" />
                   </div>
                   <div style={{ flex: 1, textAlign: 'center', paddingTop: '1.8rem' }}><i className="fa-solid fa-arrow-right"></i></div>
                   <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                     <label className="form-label">Telegram Stars</label>
-                    <input 
-                      type="number" 
-                      className="form-input" 
-                      value={starsAmount} 
-                      onChange={(e) => handleStarsChange(e.target.value)} 
-                      placeholder="10" 
-                    />
+                    <input type="number" className="form-input" value={starsAmount} onChange={(e) => setStarsAmount(e.target.value)} placeholder="10" />
                   </div>
                 </div>
                 <button className="btn btn-primary" onClick={() => setIsModalOpen(true)} style={{ width: '100%' }}>
@@ -228,11 +191,16 @@ export default function WalletTopUpPage() {
 
             {selectedMethod.id === 'card' && (
               <div>
+                {/* KARTA MA'LUMOTLARI CONFIGDAN OLINDI */}
                 <div style={{ background: 'var(--color-bg-alt)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontSize: '0.8rem', color: '#b9a6a2' }}>Karta raqami:</div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: '1px' }}>{config.payment.cardNumber}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#b9a6a2' }}>{config.payment.cardHolder}</div>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: '1px' }}>
+                      {config.payment.cardNumber}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#b9a6a2' }}>
+                      {config.payment.cardHolder}
+                    </div>
                   </div>
                 </div>
                 <div className="form-group">
@@ -244,10 +212,9 @@ export default function WalletTopUpPage() {
                     onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' '))} 
                     placeholder="50 000" 
                   />
-                  {/* DOLLAR EKVIVALENTI */}
-                  <small style={{ color: '#43b581', display: 'block', marginTop: '0.3rem' }}>
-                    ≈ ${amountInUsd}
-                  </small>
+                  <div style={{ fontSize: '0.8rem', color: '#43b581', marginTop: '0.5rem' }}>
+                    ~ ${amount ? (Number(amount.replace(/\s/g, '')) / rate).toFixed(2) : '0.00'}
+                  </div>
                 </div>
                 <button className="btn btn-primary" onClick={handleCardPay} style={{ width: '100%' }}>
                   So'rov yuborish

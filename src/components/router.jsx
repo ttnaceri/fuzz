@@ -4,7 +4,7 @@ import AdminLayout from './layouts/AdminLayout.jsx';
 import AuthLayout from './layouts/AuthLayout.jsx';
 import ProtectedRoute from './common/ProtectedRoute.jsx';
 
-// --- PUBLIC & USER PAGES ---
+// --- PUBLIC PAGES ---
 import HomePage from './pages/HomePage.jsx';
 import StorePage from './pages/StorePage.jsx';
 import CategoriesPage from './pages/CategoriesPage.jsx';

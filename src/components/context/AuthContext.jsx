@@ -27,13 +27,8 @@ export function AuthProvider({ children }) {
       const cached = storage.getAuth();
       if (!cached?.user?.id) return null;
 
-      // Tokensiz (eski) sessiya — qayta kirish kerak
-      if (!cached.token) {
-        setUser(null);
-        storage.clearAuth();
-        return null;
-      }
-
+      // Tokensiz sessiyani shu yerda o'chirmaymiz: yangi backend unga 401 qaytaradi (pastda tozalanadi),
+      // eski backendda esa /auth/me yo'q (404) — u holda sessiya saqlanib qoladi.
       const res = await api.get('/api/auth/me');
       const currentUser = res?.user;
 

@@ -18,26 +18,78 @@ export default function WalletTopUpPage() {
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Stars uchun
+  const [starsRates, setStarsRates] = useState([]);
+  const [starsUsd, setStarsUsd] = useState('1');
+  const [starsAmount, setStarsAmount] = useState(10);
+
   useEffect(() => {
-    // Valyuta kursi — backend orqali (API kalit faqat serverda saqlanadi)
     api.get('/api/rates/usd')
       .then(data => {
         if (data?.usd_uzs && Number(data.usd_uzs) > 0) {
           setRate(Number(data.usd_uzs));
         }
       })
-      .catch(() => { /* fallback 12500 saqlanadi */ });
+      .catch(() => {});
 
-    // To'lov usullarini yuklash
     api.get('/api/payment-methods')
       .then(data => {
         setPaymentMethods(data.methods || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
+
+    api.get('/api/stars-rates')
+      .then(data => setStarsRates(data.rates || []))
+      .catch(() => {});
   }, []);
 
-  // Karta raqamini nusxalash
+  // Fuzz $ ↔ Telegram Stars (bog'langan)
+  const handleUsdChange = (v) => {
+    const clean = v.replace(/[^\d.]/g, '').replace(/^(\d*\.\d*)\..*/, '$1');
+    setStarsUsd(clean);
+    const usd = parseFloat(clean);
+    if (!isNaN(usd) && usd > 0) {
+      // stars_rates dan eng yaqin narxni topish
+      const exact = starsRates.find(r => Number(r.amount_usd) === usd);
+      if (exact) {
+        setStarsAmount(Number(exact.stars_amount));
+      } else {
+        // default 1 usd = 10 stars
+        setStarsAmount(Math.max(1, Math.round(usd * 10)));
+      }
+    } else {
+      setStarsAmount(0);
+    }
+  };
+
+  const handleStarsChange = (v) => {
+    const clean = v.replace(/\D/g, '');
+    const stars = parseInt(clean, 10) || 0;
+    setStarsAmount(stars);
+    if (stars >= 1) {
+      // stars_rates dan eng yaqin paketni topish
+      const exact = starsRates.find(r => Number(r.stars_amount) === stars);
+      if (exact) {
+        setStarsUsd(String(exact.amount_usd));
+      } else {
+        // default 10 stars = 1 usd
+        setStarsUsd((stars / 10).toFixed(2).replace(/\.00$/, ''));
+      }
+    } else {
+      setStarsUsd('');
+    }
+  };
+
+  const handleStarsPay = () => {
+    const usd = parseFloat(starsUsd);
+    if (!usd || usd <= 0) { info('Miqdor kiriting'); return; }
+    if (!starsAmount || starsAmount < 1) { info('Kamida 1 Star'); return; }
+    const url = `https://t.me/FuzzAppBot?start=pay_${usd}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+    success("Telegram'da to'lovni yakunlang. To'lov tasdiqlangach balans to'ladi.");
+  };
+
   const copyCardNumber = () => {
     const cleanNumber = config.payment.cardNumber.replace(/\s/g, '');
     navigator.clipboard.writeText(cleanNumber);
@@ -123,7 +175,7 @@ export default function WalletTopUpPage() {
           </div>
         ) : (
           <div style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', border: '1px solid #48201a', maxWidth: '600px', margin: '0 auto' }}>
-            <button onClick={() => setSelectedMethod(null)} style={{ background: 'none', border: 'none', color: '#b9a6a2', cursor: 'pointer', marginBottom: '1rem', padding: 0 }}>
+            <button onClick={() => { setSelectedMethod(null); setStarsUsd('1'); setStarsAmount(10); }} style={{ background: 'none', border: 'none', color: '#b9a6a2', cursor: 'pointer', marginBottom: '1rem', padding: 0 }}>
               <i className="fa-solid fa-arrow-left"></i> Orqaga
             </button>
 
@@ -134,6 +186,71 @@ export default function WalletTopUpPage() {
               <h3 style={{ color: '#f5eeee', margin: 0 }}>{selectedMethod.name}</h3>
             </div>
 
+            {/* ========== TELEGRAM STARS ========== */}
+            {selectedMethod.id === 'stars' && (
+              <div>
+                <p style={{ color: '#b9a6a2', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                  Balansni Telegram Stars orqali to'ldiring. To'lov botda amalga oshiriladi.
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Fuzz $</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={starsUsd}
+                      onChange={(e) => handleUsdChange(e.target.value)}
+                      placeholder="1.00"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Telegram Stars</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={starsAmount}
+                      onChange={(e) => handleStarsChange(e.target.value)}
+                      placeholder="10"
+                    />
+                  </div>
+                </div>
+
+                {starsRates.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
+                    {starsRates.map(r => (
+                      <button
+                        key={`${r.amount_usd}-${r.stars_amount}`}
+                        type="button"
+                        onClick={() => { setStarsUsd(String(r.amount_usd)); setStarsAmount(Number(r.stars_amount)); }}
+                        style={{
+                          background: Number(starsUsd) === Number(r.amount_usd) ? '#8a1200' : '#100b0a',
+                          border: '1px solid #48201a',
+                          color: '#f5eeee',
+                          padding: '0.4rem 0.8rem',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '0.8rem',
+                        }}
+                      >
+                        ${r.amount_usd} = {r.stars_amount} ⭐
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ fontSize: '0.8rem', color: '#6b524e', marginBottom: '1rem' }}>
+                  * 1 Fuzz $ = 10 Telegram Stars (admin o'zgartirishi mumkin)
+                </div>
+
+                <button className="btn btn-primary" onClick={handleStarsPay} style={{ width: '100%' }}>
+                  <i className="fa-brands fa-telegram" style={{ marginRight: '0.5rem' }}></i>
+                  Telegram'da to'lash
+                </button>
+              </div>
+            )}
+
+            {/* ========== KARTA ========== */}
             {selectedMethod.id === 'card' && (
               <div>
                 <div style={{ background: 'var(--color-bg-alt)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -146,7 +263,6 @@ export default function WalletTopUpPage() {
                       {config.payment.cardHolder}
                     </div>
                   </div>
-
                   <button
                     onClick={copyCardNumber}
                     style={{ background: '#100b0a', border: '1px solid #48201a', color: copied ? '#43b581' : '#b9a6a2', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer', transition: '0.2s' }}

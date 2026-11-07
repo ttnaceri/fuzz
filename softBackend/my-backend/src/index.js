@@ -576,7 +576,7 @@ app.post('/fuzz/telegram/webhook', async (c) => {
           await sendTelegramMessage(
             BOT_TOKEN, chatId,
             "Tasdiqlash uchun quyidagi tugmani bosing:",
-            { inline_keyboard: [[{ text: "✅ Tasdiqlash", web_app: { url: webAppUrl } }]] }
+            { inline_keyboard: [[{ text: "✅ Tasdiqlash", url: webAppUrl }]] }
           );
           return c.json({ ok: true });
         }

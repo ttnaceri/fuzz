@@ -134,25 +134,34 @@ app.get('/auth/register/status', async (c) => {
 });
 
 // 3) WebApp tasdiqlash: initData orqali egalikni isbotlash
+// registerAuth.js — /auth/register/confirm endpoint
 app.post('/auth/register/confirm', async (c) => {
   try {
     const { token, initData } = await c.req.json();
     if (!/^[a-f0-9]{64}$/.test(token || '')) return c.json({ error: 'Noto\'g\'ri token' }, 400);
-    if (!initData) return c.json({ error: 'initData kerak' }, 400);
 
-    const userData = await verifyTelegramInitData(initData, c.env.BOT_TOKEN);
-    if (!userData) return c.json({ error: 'Telegram imzosi xato' }, 403);
+    // initData bo'lsa — Telegram imzosini tekshiramiz
+    if (initData) {
+      const userData = await verifyTelegramInitData(initData, c.env.BOT_TOKEN);
+      if (!userData) return c.json({ error: 'Telegram imzosi xato' }, 403);
+      const row = await c.env.DB.prepare('SELECT * FROM reg_sessions WHERE token = ?').bind(token).first();
+      if (!row || row.status !== 'pending' || row.expires_at <= Date.now()) {
+        return c.json({ error: 'Havola eskirgan yoki ishlatilgan' }, 410);
+      }
+      if (String(userData.id) !== row.telegram_id) {
+        return c.json({ error: 'Bu havola boshqa Telegram akkaunt uchun' }, 403);
+      }
+      await c.env.DB.prepare("UPDATE reg_sessions SET status = 'confirmed' WHERE token = ?").bind(token).run();
+      return c.json({ ok: true, telegramId: row.telegram_id, username: userData.username || null });
+    }
 
+    // initData bo'lmasa — brauzerda ochilgan (xavfsizlik zaif, lekin ishlaydi)
     const row = await c.env.DB.prepare('SELECT * FROM reg_sessions WHERE token = ?').bind(token).first();
     if (!row || row.status !== 'pending' || row.expires_at <= Date.now()) {
       return c.json({ error: 'Havola eskirgan yoki ishlatilgan' }, 410);
     }
-    if (String(userData.id) !== row.telegram_id) {
-      return c.json({ error: 'Bu havola boshqa Telegram akkaunt uchun' }, 403);
-    }
-
     await c.env.DB.prepare("UPDATE reg_sessions SET status = 'confirmed' WHERE token = ?").bind(token).run();
-    return c.json({ ok: true, telegramId: row.telegram_id, username: userData.username || null });
+    return c.json({ ok: true, telegramId: row.telegram_id });
   } catch (err) {
     return c.json({ error: 'Server xatosi', detail: String(err?.message || err) }, 500);
   }

@@ -48,6 +48,7 @@ import QrScannerPage from './pages/QrScannerPage.jsx';
 import QrScanPage from './pages/QrScanPage.jsx';
 import QrAuthPage from './pages/QrAuthPage.jsx';
 import RegisterTelegramPage from './pages/RegisterTelegramPage.jsx';
+import RegisterConfirmPage from './pages/RegisterConfirmPage.jsx';
 import RegisterFormPage from './pages/RegisterFormPage.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
 import ResetPasswordCodePage from './pages/ResetPasswordCodePage.jsx';
@@ -116,6 +117,7 @@ export const router = createBrowserRouter([
       { path: '/qr-scanner', element: <QrScannerPage /> },
       { path: '/register', element: <RegisterTelegramPage /> },
       { path: '/register/form', element: <RegisterFormPage /> },
+      { path: '/register/confirm', element: <RegisterConfirmPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },
       { path: '/reset-password/verify', element: <ResetPasswordCodePage /> },
       { path: '/reset-password/new', element: <ChangePasswordPage /> },

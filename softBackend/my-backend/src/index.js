@@ -3,6 +3,8 @@ import { cors } from 'hono/cors';
 import userApp from './userIndex.js';
 import adminApp from './adminIndex.js';
 import qrApp, { ensureQrTable } from './qrAuth.js';
+import registerAuth, { ensureRegisterTable } from './registerAuth.js';
+import resetAuth, { ensureResetTable } from './resetAuth.js';
 import { createToken } from './utils/jwt.js';
 import { hashPassword, verifyPassword, randomPasswordHash } from './utils/password.js';
 import { getAuthUser, requireAuth, requireAdmin } from './middleware/auth.js';
@@ -42,7 +44,6 @@ const isNameValid = (name) => {
   return !BANNED_WORDS.some(word => name.toLowerCase().includes(word));
 };
 
-// Float xatolarini oldini olish uchun yaxlitlash
 const round2 = (num) => Math.round(Number(num) * 100) / 100;
 
 // ==========================================
@@ -85,12 +86,9 @@ app.get('/fuzz/api/health', (c) => c.json({ status: 'ok', time: new Date().toISO
 
 // ==========================================
 // USD/UZS KURSI (ExchangeRate API — kalit faqat serverda)
-// Frontend config.js da exchangeApiUrl OLIB TASHLANDI.
-// Kalit faqat EXCHANGE_RATE_API_KEY secret'ida (Cloudflare Workers).
-// 1 soat cache — kvotani tejash uchun.
 // ==========================================
 let __rateCache = { value: null, fetchedAt: 0 };
-const RATE_CACHE_TTL_MS = 60 * 60 * 1000; // 1 soat
+const RATE_CACHE_TTL_MS = 60 * 60 * 1000;
 
 app.get('/fuzz/api/rates/usd', async (c) => {
   try {
@@ -98,23 +96,19 @@ app.get('/fuzz/api/rates/usd', async (c) => {
     if (__rateCache.value !== null && (now - __rateCache.fetchedAt) < RATE_CACHE_TTL_MS) {
       return c.json({ usd_uzs: __rateCache.value, cached: true });
     }
-
     const apiKey = c.env.EXCHANGE_RATE_API_KEY;
     if (!apiKey) {
       return c.json({ error: "EXCHANGE_RATE_API_KEY sozlanmagan (npx wrangler secret put EXCHANGE_RATE_API_KEY)" }, 500);
     }
-
     const res = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`);
     if (!res.ok) {
       return c.json({ error: `Exchange API xato: ${res.status}` }, 502);
     }
     const data = await res.json();
     const uzs = data?.conversion_rates?.UZS;
-
     if (!uzs || typeof uzs !== 'number') {
       return c.json({ error: 'Kurs olinmadi' }, 502);
     }
-
     __rateCache = { value: uzs, fetchedAt: now };
     return c.json({ usd_uzs: uzs, cached: false });
   } catch (err) {
@@ -122,11 +116,8 @@ app.get('/fuzz/api/rates/usd', async (c) => {
   }
 });
 
-
 // ==========================================
 // PUBLIC STARS RATES (frontend uchun)
-// stars_rates jadvalidan paketlarni qaytaradi
-// Admin /admin/stars-rate orqali o'zgartiradi
 // ==========================================
 app.get('/fuzz/api/stars-rates', async (c) => {
   try {
@@ -139,12 +130,11 @@ app.get('/fuzz/api/stars-rates', async (c) => {
   }
 });
 
-// Telegram webhook holatini tekshirish (debug uchun)
+// Telegram webhook holatini tekshirish
 app.get('/fuzz/api/telegram/status', async (c) => {
   try {
     const BOT_TOKEN = c.env.BOT_TOKEN;
     if (!BOT_TOKEN) return c.json({ error: 'BOT_TOKEN yo\'q' });
-
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getWebhookInfo`);
     const data = await res.json();
     return c.json(data);
@@ -313,6 +303,8 @@ app.get('/fuzz/api/init-db', async (c) => {
     `).run();
 
     await ensureQrTable(c.env.DB);
+    await ensureRegisterTable(c.env.DB);
+    await ensureResetTable(c.env.DB);
 
     return c.json({ message: "Barcha jadvallar yaratildi!" });
   } catch (err) {
@@ -366,7 +358,6 @@ app.post('/fuzz/api/auth/login', async (c) => {
     if (!user || !ok) return c.json({ error: 'Parol yoki username xato!' }, 401);
     if (user.role === 'banned') return c.json({ error: 'Akkaunt bloklangan' }, 403);
 
-    // Eski ochiq parolni hash'ga o'tkazish
     if (needsRehash) {
       await c.env.DB.prepare('UPDATE users SET password = ? WHERE id = ?').bind(await hashPassword(password), user.id).run();
     }
@@ -392,107 +383,6 @@ app.post('/fuzz/api/auth/change-password', requireAuth, async (c) => {
     const { ok } = await verifyPassword(oldPassword || '', row?.password);
     if (!ok) return c.json({ error: 'Eski parol xato' }, 400);
     await c.env.DB.prepare('UPDATE users SET password = ? WHERE id = ?').bind(await hashPassword(newPassword), me.id).run();
-    return c.json({ message: 'Parol yangilandi!' });
-  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
-});
-
-app.post('/fuzz/api/auth/register', async (c) => {
-  try {
-    const { username, email, password, telegramId } = await c.req.json();
-    if (!username || !password || !email) return c.json({ error: 'Barcha maydonlarni to\'ldiring!' }, 400);
-    if (password.length < MIN_PASSWORD) return c.json({ error: `Parol kamida ${MIN_PASSWORD} belgi bo'lishi kerak` }, 400);
-
-    const existing = await c.env.DB.prepare('SELECT * FROM users WHERE username = ? OR email = ?').bind(username, email).first();
-    if (existing) return c.json({ error: 'Bu username yoki email band!' }, 409);
-
-    const id = crypto.randomUUID();
-    await c.env.DB.prepare('INSERT INTO users (id, username, email, password, role, telegram_id) VALUES (?, ?, ?, ?, ?, ?)')
-      .bind(id, username, email, await hashPassword(password), 'user', telegramId || null).run();
-
-    const token = await createToken({ sub: id }, c.env);
-    return c.json({ token, user: { id, username, role: 'user', balance: 0 } }, 201);
-  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
-});
-
-app.post('/fuzz/api/auth/check-telegram', async (c) => {
-  try {
-    const { telegramId } = await c.req.json();
-    if (!telegramId) return c.json({ error: 'Telegram ID kiritilmadi' }, 400);
-    const user = await c.env.DB.prepare('SELECT * FROM users WHERE telegram_id = ?').bind(telegramId).first();
-    if (!user) return c.json({ error: 'Bu Telegram ID bilan ro\'yxatdan o\'tilmagan. Iltimos, avval botga /start bosing.' }, 404);
-    return c.json({ message: 'Telegram ID tasdiqlandi!' });
-  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
-});
-
-// Reset Password
-const RESET_TTL_MS = 10 * 60 * 1000;
-const RESET_MAX_ATTEMPTS = 5;
-
-async function ensureResetAttempts(db) {
-  try { await db.prepare('ALTER TABLE reset_codes ADD COLUMN attempts INTEGER DEFAULT 0').run(); } catch { /* ustun allaqachon bor */ }
-}
-
-function randomCode() {
-  const n = crypto.getRandomValues(new Uint32Array(1))[0] % 1000000;
-  return n.toString().padStart(6, '0');
-}
-
-// Kodni tekshiradi: noto'g'ri urinishlar soni cheklangan, muddati o'tgan kod qabul qilinmaydi
-async function checkResetCode(db, username, code) {
-  await ensureResetAttempts(db);
-  const record = await db.prepare('SELECT * FROM reset_codes WHERE username = ? ORDER BY expires_at DESC LIMIT 1').bind(username || '').first();
-  if (!record || new Date(record.expires_at) < new Date()) return { ok: false, error: 'Kod muddati o\'tgan. Yangi kod so\'rang.' };
-  if ((record.attempts || 0) >= RESET_MAX_ATTEMPTS) return { ok: false, error: 'Urinishlar soni tugadi. Yangi kod so\'rang.' };
-  if (String(code || '') !== record.code) {
-    await db.prepare('UPDATE reset_codes SET attempts = COALESCE(attempts, 0) + 1 WHERE id = ?').bind(record.id).run();
-    return { ok: false, error: 'Kod xato!' };
-  }
-  return { ok: true, record };
-}
-
-app.post('/fuzz/api/auth/reset-request', async (c) => {
-  try {
-    const { username, email } = await c.req.json();
-    const user = await c.env.DB.prepare('SELECT * FROM users WHERE username = ? AND email = ?').bind(username || '', email || '').first();
-    if (!user) return c.json({ error: 'Bunday foydalanuvchi topilmadi!' }, 404);
-    if (!user.telegram_id) return c.json({ error: 'Bu akkauntga Telegram ulanmagan — kodni yuborib bo\'lmaydi.' }, 400);
-
-    await ensureResetAttempts(c.env.DB);
-    // Spamdan himoya: 60 soniyada bir martadan ko'p emas
-    const last = await c.env.DB.prepare('SELECT expires_at FROM reset_codes WHERE username = ? ORDER BY expires_at DESC LIMIT 1').bind(username).first();
-    if (last && new Date(last.expires_at).getTime() - RESET_TTL_MS > Date.now() - 60 * 1000) {
-      return c.json({ error: 'Kod yaqinda yuborildi. 1 daqiqadan keyin qayta urinib ko\'ring.' }, 429);
-    }
-
-    const code = randomCode();
-    const expiresAt = new Date(Date.now() + RESET_TTL_MS).toISOString();
-    await c.env.DB.prepare('DELETE FROM reset_codes WHERE username = ?').bind(username).run();
-    await c.env.DB.prepare('INSERT INTO reset_codes (id, username, code, expires_at, attempts) VALUES (?, ?, ?, ?, 0)').bind(crypto.randomUUID(), username, code, expiresAt).run();
-
-    if (c.env.BOT_TOKEN) {
-      await sendTelegramMessage(c.env.BOT_TOKEN, user.telegram_id, `Fuzz parolni tiklash kodi: ${code}\n\nKod 10 daqiqa amal qiladi.`);
-    }
-    return c.json({ message: 'Kod yuborildi!' });
-  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
-});
-
-app.post('/fuzz/api/auth/reset-verify', async (c) => {
-  try {
-    const { username, code } = await c.req.json();
-    const res = await checkResetCode(c.env.DB, username, code);
-    if (!res.ok) return c.json({ error: res.error }, 400);
-    return c.json({ message: 'Kod tasdiqlandi!' });
-  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
-});
-
-app.post('/fuzz/api/auth/reset-password', async (c) => {
-  try {
-    const { username, code, newPassword } = await c.req.json();
-    if (!newPassword || newPassword.length < MIN_PASSWORD) return c.json({ error: `Parol kamida ${MIN_PASSWORD} belgi bo'lishi kerak` }, 400);
-    const res = await checkResetCode(c.env.DB, username, code);
-    if (!res.ok) return c.json({ error: res.error }, 403);
-    await c.env.DB.prepare('UPDATE users SET password = ? WHERE username = ?').bind(await hashPassword(newPassword), username).run();
-    await c.env.DB.prepare('DELETE FROM reset_codes WHERE username = ?').bind(username).run();
     return c.json({ message: 'Parol yangilandi!' });
   } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
@@ -605,11 +495,10 @@ app.get('/fuzz/api/bundles/:id', async (c) => {
 });
 
 // ==========================================
-// TELEGRAM WEBHOOK (To'liq qayta yozildi)
+// TELEGRAM WEBHOOK
 // ==========================================
 app.post('/fuzz/telegram/webhook', async (c) => {
   try {
-    // Faqat Telegram'dan kelgan so'rovlar: setWebhook'da berilgan secret_token tekshiriladi
     const expectedSecret = c.env.TELEGRAM_WEBHOOK_SECRET;
     if (!expectedSecret || c.req.header('X-Telegram-Bot-Api-Secret-Token') !== expectedSecret) {
       return c.json({ ok: false }, 401);
@@ -624,8 +513,7 @@ app.post('/fuzz/telegram/webhook', async (c) => {
     }
 
     // ==========================================
-    // 0. SUCCESSFUL PAYMENT (Stars to'lovi yakunlanganda)
-    //    Bu blok "message" blokidan OLDIN turishi shart — aks holda unga hech qachon yetib kelinmaydi.
+    // 0. SUCCESSFUL PAYMENT
     // ==========================================
     if (update.message?.successful_payment) {
       const payment = update.message.successful_payment;
@@ -637,7 +525,6 @@ app.post('/fuzz/telegram/webhook', async (c) => {
         const user = await c.env.DB.prepare('SELECT * FROM users WHERE telegram_id = ?').bind(chatId.toString()).first();
         const chargeId = payment.telegram_payment_charge_id || crypto.randomUUID();
 
-        // Bir to'lovni ikki marta hisoblamaslik (Telegram qayta yuborishi mumkin)
         try { await c.env.DB.prepare('ALTER TABLE payments ADD COLUMN charge_id TEXT').run(); } catch { /* bor */ }
         const dup = await c.env.DB.prepare('SELECT id FROM payments WHERE charge_id = ?').bind(chargeId).first();
 
@@ -676,9 +563,35 @@ app.post('/fuzz/telegram/webhook', async (c) => {
         const textParts = text.split(' ');
         const startParam = textParts.length > 1 ? textParts[1] : null;
 
+        // ============ YANGI: /start reg_<token> — Telegram WebApp tasdiqlash ============
+        if (startParam && startParam.startsWith('reg_')) {
+          const token = startParam.slice(4);
+          if (!/^[a-f0-9]{64}$/.test(token)) {
+            await sendTelegramMessage(BOT_TOKEN, chatId, "❌ Noto'g'ri registratsiya havolasi");
+            return c.json({ ok: true });
+          }
+          const sess = await c.env.DB.prepare(
+            "SELECT * FROM reg_sessions WHERE token = ? AND status = 'pending' AND expires_at > ?"
+          ).bind(token, Date.now()).first();
+          if (!sess) {
+            await sendTelegramMessage(BOT_TOKEN, chatId, "❌ Havola eskirgan yoki ishlatilgan. Saytda qaytadan boshlang.");
+            return c.json({ ok: true });
+          }
+          if (sess.telegram_id !== chatId.toString()) {
+            await sendTelegramMessage(BOT_TOKEN, chatId, "❌ Bu havola boshqa Telegram akkaunt uchun");
+            return c.json({ ok: true });
+          }
+          const webAppUrl = `https://fuzz-tau.vercel.app/register/confirm?token=${token}`;
+          await sendTelegramMessage(
+            BOT_TOKEN, chatId,
+            "Tasdiqlash uchun quyidagi tugmani bosing:",
+            { inline_keyboard: [[{ text: "✅ Tasdiqlash", web_app: { url: webAppUrl } }]] }
+          );
+          return c.json({ ok: true });
+        }
+
         // Agar pay_ bilan boshlansa -> Stars invoice
         if (startParam && startParam.startsWith('pay_')) {
-          // Narxni foydalanuvchi emas, admin belgilagan stars_rates jadvali belgilaydi
           const amountUsd = parseFloat(startParam.split('_')[1]);
           const rate = isNaN(amountUsd) ? null : await c.env.DB.prepare(
             'SELECT stars_amount FROM stars_rates WHERE amount_usd = ? ORDER BY created_at DESC LIMIT 1'
@@ -706,7 +619,7 @@ app.post('/fuzz/telegram/webhook', async (c) => {
           return c.json({ ok: true });
         }
 
-        // Oddiy /start - foydalanuvchini bazaga qo'shish (agar yo'q bo'lsa)
+        // Oddiy /start
         const existing = await c.env.DB.prepare('SELECT * FROM users WHERE telegram_id = ?').bind(chatId.toString()).first();
         if (!existing) {
           const id = crypto.randomUUID();
@@ -714,7 +627,6 @@ app.post('/fuzz/telegram/webhook', async (c) => {
             .bind(id, tgUsername || firstName, `${chatId}@tg.temp`, await randomPasswordHash(), 'user', chatId.toString()).run();
         }
 
-        // Til tanlash tugmalarini yuborish
         await sendTelegramMessage(
           BOT_TOKEN,
           chatId,
@@ -741,7 +653,6 @@ app.post('/fuzz/telegram/webhook', async (c) => {
           console.error("Support message saqlashda xato:", e);
         }
 
-        // Adminlarga bildirishnoma yuborish
         try {
           const ADMIN_IDS = c.env.ADMIN_IDS ? c.env.ADMIN_IDS.split(',').map(s => s.trim()) : [];
           for (const adminId of ADMIN_IDS) {
@@ -755,7 +666,6 @@ app.post('/fuzz/telegram/webhook', async (c) => {
           console.error("Adminga bildirishnoma yuborishda xato:", e);
         }
 
-        // Foydalanuvchiga tasdiq
         await sendTelegramMessage(
           BOT_TOKEN,
           chatId,
@@ -768,14 +678,13 @@ app.post('/fuzz/telegram/webhook', async (c) => {
     }
 
     // ==========================================
-    // 2. CALLBACK QUERY (tugma bosilganda)
+    // 2. CALLBACK QUERY
     // ==========================================
     if (update.callback_query) {
       const callbackQuery = update.callback_query;
       const chatId = callbackQuery.message.chat.id;
       const data = callbackQuery.data;
 
-      // Til tanlash
       if (data.startsWith('lang_')) {
         const lang = data.split('_')[1];
         const firstName = callbackQuery.from.first_name || 'User';
@@ -784,7 +693,6 @@ app.post('/fuzz/telegram/webhook', async (c) => {
         await c.env.DB.prepare('UPDATE users SET language = ? WHERE telegram_id = ?')
           .bind(lang, chatId.toString()).run();
 
-        // Callback'ni tasdiqlash
         await answerCallbackQuery(BOT_TOKEN, callbackQuery.id);
 
         let welcomeMessage = '';
@@ -814,13 +722,12 @@ app.post('/fuzz/telegram/webhook', async (c) => {
         return c.json({ ok: true });
       }
 
-      // Boshqa callback'lar uchun
       await answerCallbackQuery(BOT_TOKEN, callbackQuery.id);
       return c.json({ ok: true });
     }
 
     // ==========================================
-    // 3. PRE-CHECKOUT QUERY (Stars to'lovdan oldin)
+    // 3. PRE-CHECKOUT QUERY
     // ==========================================
     if (update.pre_checkout_query) {
       try {
@@ -841,13 +748,12 @@ app.post('/fuzz/telegram/webhook', async (c) => {
     return c.json({ ok: true });
   } catch (err) {
     console.error("Webhook xatosi:", err);
-    // Telegram qayta yubormasligi uchun har doim 200 qaytaramiz
     return c.json({ ok: true });
   }
 });
 
 // ==========================================
-// TELEGRAM WEBHOOK'NI SOZLASH (Admin uchun)
+// TELEGRAM WEBHOOK'NI SOZLASH
 // ==========================================
 app.post('/fuzz/api/telegram/set-webhook', async (c) => {
   try {
@@ -881,9 +787,13 @@ app.post('/fuzz/api/telegram/delete-webhook', async (c) => {
   }
 });
 
-// Barcha user va admin API'larni ulash
+// ==========================================
+// ROUTE MOUNTING
+// ==========================================
 app.route('/fuzz/api', qrApp);
 app.route('/fuzz/api', userApp);
 app.route('/fuzz/api', adminApp);
+app.route('/fuzz/api', registerAuth);
+app.route('/fuzz/api', resetAuth);
 
 export default app;

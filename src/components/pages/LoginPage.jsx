@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import useToast from '../hooks/useToast.js';
 import useAuth from '../hooks/useAuth.js';
 import { api } from '../services/api.js';
-import { config } from '../../config/config.js';
+import { config } from '../config/config.js';
 
 class QRBoundary extends Component {
   constructor(props) {
@@ -22,7 +22,6 @@ class QRBoundary extends Component {
   }
 }
 
-// Dinamik origin — local dev / production / preview uchun to'g'ri ishlaydi
 const getQrOrigin = () => {
   if (typeof window === 'undefined') return 'https://fuzz-tau.vercel.app';
   return window.location.origin;

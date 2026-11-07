@@ -16,7 +16,7 @@ export default function Header() {
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [isApp, setIsApp] = useState(false); // <-- endi isApp (browser emas)
+  const [isApp, setIsApp] = useState(true); // Default: App deb hisoblaymiz (xavfsizroq)
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 1024);
@@ -24,25 +24,27 @@ export default function Header() {
 
     // ============ ILOVA (APP) ANIQLASH ============
     const checkIfApp = () => {
-      // 1. PWA standalone
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-      // 2. iOS Safari
-      const isIOSStandalone = window.navigator.standalone === true;
-      // 3. Telegram WebApp — initData yoki platform orqali
-      const tg = window.Telegram?.WebApp;
-      const isTelegram = Boolean(tg?.initData) || (tg?.platform && tg.platform !== 'unknown');
-      // 4. Fuzz'ning o'z PWA konteksti (agar kelajakda qo'shilsa)
-      // const isFuzzApp = ...;
+      // 1. Telegram WebApp (eng ishonchli usul - obyektning o'zi borligi)
+      const tg = typeof window !== 'undefined' ? window.Telegram?.WebApp : null;
+      const isTelegram = !!tg;
 
-      return isStandalone || isIOSStandalone || isTelegram;
+      // 2. PWA standalone
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      
+      // 3. iOS Safari standalone
+      const isIOSStandalone = window.navigator.standalone === true;
+
+      // Agar shulardan biri bo'lsa - bu App
+      return isTelegram || isStandalone || isIOSStandalone;
     };
 
-    // Bir necha marta tekshirish — Telegram WebApp kech yuklanishi mumkin
+    // Bir necha marta tekshirish (Telegram kech yuklanishi mumkin)
+    // 0ms, 300ms, 1000ms da tekshiramiz
     setIsApp(checkIfApp());
-    const t1 = setTimeout(() => setIsApp(checkIfApp()), 200);
-    const t2 = setTimeout(() => setIsApp(checkIfApp()), 800);
+    const t1 = setTimeout(() => setIsApp(checkIfApp()), 300);
+    const t2 = setTimeout(() => setIsApp(checkIfApp()), 1000);
 
-    // PWA o'rnatish prompt
+    // PWA o'rnatish prompt (faqat brauzerda ishlaydi)
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -100,7 +102,7 @@ export default function Header() {
             </button>
           )}
 
-          {/* DOWNLOAD FUZZ: FAQAT BRAUZERDA va desktopda */}
+          {/* DOWNLOAD FUZZ: faqat oddiy brauzerda ko'rinadi */}
           {!isMobile && !isApp && (
             <button
               onClick={handleDownloadApp}

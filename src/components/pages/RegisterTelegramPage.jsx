@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import useToast from '../hooks/useToast.js';
 import { api } from '../services/api.js';
@@ -35,7 +35,7 @@ export default function RegisterTelegramPage() {
 
   // ============ 2-QADAM: 2 xonali kod ============
   const handleVerifyCode = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setErrorMsg('');
     if (code.length !== 2) return toastError('2 xonali kodni kiriting');
     setLoading(true);
@@ -54,6 +54,14 @@ export default function RegisterTelegramPage() {
       setLoading(false);
     }
   };
+
+  // Avto-tasdiqlash effekti (kod 2 xonali bo'lganda)
+  useEffect(() => {
+    if (step === 2 && code.length === 2 && !loading) {
+      handleVerifyCode();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, step]);
 
   // ============ 3-QADAM: Forma ============
   const handleComplete = async (e) => {
@@ -89,7 +97,6 @@ export default function RegisterTelegramPage() {
     <div style={{ minHeight: 'calc(100vh - 64px)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#100b0a', padding: '2rem 1rem' }}>
       <div style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', width: '100%', maxWidth: '420px', border: '1px solid #48201a' }}>
 
-        {/* Qadam ko'rsatkichi */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
           {[1, 2, 3].map((s) => (
             <div key={s} style={{
@@ -122,13 +129,12 @@ export default function RegisterTelegramPage() {
           </div>
         )}
 
-        {/* ============ 1-QADAM ============ */}
         {step === 1 && (
           <form onSubmit={handleSendCode}>
             <div style={{ marginBottom: '1rem' }}>
               <input
                 type="text"
-                placeholder="Telegram ID (masalan: 5801429782)"
+                placeholder="Telegram ID raqamingiz"
                 value={telegramId}
                 onChange={(e) => setTelegramId(e.target.value.replace(/\D/g, '').slice(0, 15))}
                 style={{ ...inputStyle, textAlign: 'center', letterSpacing: '3px' }}
@@ -140,7 +146,6 @@ export default function RegisterTelegramPage() {
           </form>
         )}
 
-        {/* ============ 2-QADAM ============ */}
         {step === 2 && (
           <form onSubmit={handleVerifyCode}>
             <div style={{ marginBottom: '1rem' }}>
@@ -151,12 +156,13 @@ export default function RegisterTelegramPage() {
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 2))}
                 style={{ ...inputStyle, textAlign: 'center', fontSize: '2rem', letterSpacing: '1rem' }}
                 maxLength={2}
+                autoFocus
               />
             </div>
             <p style={{ color: '#6b524e', fontSize: '0.75rem', textAlign: 'center', marginBottom: '0.8rem' }}>
-              2 marta xato = 1 soat blok
+              Kod kiritilishi bilan avtomatik tasdiqlanadi
             </p>
-            <button type="submit" disabled={loading} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#8a1200', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+            <button type="submit" disabled={loading || code.length !== 2} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#8a1200', color: '#fff', border: 'none', borderRadius: '4px', cursor: (loading || code.length !== 2) ? 'not-allowed' : 'pointer', fontWeight: 'bold', opacity: (loading || code.length !== 2) ? 0.6 : 1 }}>
               {loading ? 'Tekshirilmoqda...' : 'Tasdiqlash'}
             </button>
             <button type="button" onClick={() => { setStep(1); setCode(''); setErrorMsg(''); }} style={{ width: '100%', marginTop: '0.5rem', padding: '0.6rem', backgroundColor: 'transparent', color: '#b9a6a2', border: '1px solid #48201a', borderRadius: '4px', cursor: 'pointer' }}>
@@ -165,7 +171,6 @@ export default function RegisterTelegramPage() {
           </form>
         )}
 
-        {/* ============ 3-QADAM ============ */}
         {step === 3 && (
           <form onSubmit={handleComplete}>
             {[

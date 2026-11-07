@@ -13,37 +13,36 @@ export default function Header() {
   const { lang, setLang, t } = useLanguage();
   const { info } = useToast();
   const navigate = useNavigate();
-  
+
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  
-  // Faqat brauzerda ekanligini aniqlash (PWA yoki Telegram ichida emas)
-  const [isBrowser, setIsBrowser] = useState(true);
+  const [isApp, setIsApp] = useState(false); // <-- endi isApp (browser emas)
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 1024);
     window.addEventListener('resize', handleResize);
 
-    // 1. Ilova rejimida ekanligini tekshirish (PWA yoki Telegram)
+    // ============ ILOVA (APP) ANIQLASH ============
     const checkIfApp = () => {
-      // Standalone PWA
+      // 1. PWA standalone
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-      // iOS Safari
+      // 2. iOS Safari
       const isIOSStandalone = window.navigator.standalone === true;
-      // Telegram WebApp
-      const isTelegram = typeof window !== 'undefined' && window.Telegram?.WebApp?.initData;
-      
-      // Agar shulardan biri bo'lsa, demak bu ilova, brauzer emas
-      if (isStandalone || isIOSStandalone || isTelegram) {
-        setIsBrowser(false);
-      } else {
-        setIsBrowser(true);
-      }
-    };
-    
-    checkIfApp();
+      // 3. Telegram WebApp — initData yoki platform orqali
+      const tg = window.Telegram?.WebApp;
+      const isTelegram = Boolean(tg?.initData) || (tg?.platform && tg.platform !== 'unknown');
+      // 4. Fuzz'ning o'z PWA konteksti (agar kelajakda qo'shilsa)
+      // const isFuzzApp = ...;
 
-    // PWA o'rnatish oynasini ushlash
+      return isStandalone || isIOSStandalone || isTelegram;
+    };
+
+    // Bir necha marta tekshirish — Telegram WebApp kech yuklanishi mumkin
+    setIsApp(checkIfApp());
+    const t1 = setTimeout(() => setIsApp(checkIfApp()), 200);
+    const t2 = setTimeout(() => setIsApp(checkIfApp()), 800);
+
+    // PWA o'rnatish prompt
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -51,6 +50,8 @@ export default function Header() {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
@@ -69,7 +70,7 @@ export default function Header() {
         setDeferredPrompt(null);
       }
     } else {
-      info("Ilovani o'rnatish uchun brauzer menyusidan 'Add to Home Screen' (Bosh ekranga qo'shish) ni tanlang.");
+      info("Ilovani o'rnatish uchun brauzer menyusidan 'Add to Home Screen' ni tanlang.");
     }
   };
 
@@ -82,30 +83,30 @@ export default function Header() {
         </Link>
 
         {!isMobile && <Navigation />}
-        
+
         <div style={{ flex: 1 }}></div>
 
         {!isMobile && <SearchBar />}
-        
+
         <div className="header__actions" style={{ marginLeft: '1rem' }}>
-          
+
           {!isMobile && (
-            <button 
-              onClick={() => setLang(lang === 'uz' ? 'ru' : lang === 'ru' ? 'en' : 'uz')} 
-              className="btn btn-ghost btn-sm" 
+            <button
+              onClick={() => setLang(lang === 'uz' ? 'ru' : lang === 'ru' ? 'en' : 'uz')}
+              className="btn btn-ghost btn-sm"
               style={{ fontWeight: 'bold' }}
             >
               {lang.toUpperCase()}
             </button>
           )}
 
-          {/* DOWNLOAD FUZZ: faqat brauzerda va mobil bo'lmaganda ko'rinadi */}
-          {!isMobile && isBrowser && (
-            <button 
-              onClick={handleDownloadApp} 
-              className="btn btn-secondary btn-sm" 
-              style={{ 
-                borderColor: '#8a1200', 
+          {/* DOWNLOAD FUZZ: FAQAT BRAUZERDA va desktopda */}
+          {!isMobile && !isApp && (
+            <button
+              onClick={handleDownloadApp}
+              className="btn btn-secondary btn-sm"
+              style={{
+                borderColor: '#8a1200',
                 color: '#f5eeee',
                 display: 'flex',
                 alignItems: 'center',
@@ -122,11 +123,11 @@ export default function Header() {
             <i className="fa-solid fa-cart-shopping" />
             {count > 0 && <span className="header__badge">{count}</span>}
           </Link>
-          
+
           {isAuthenticated ? (
             <>
               <Link to={isAdmin ? "/admin" : "/account"} className="btn btn-ghost btn-sm">
-                <i className={isAdmin ? "fa-solid fa-shield" : "fa-solid fa-user"} /> 
+                <i className={isAdmin ? "fa-solid fa-shield" : "fa-solid fa-user"} />
                 <span className="d-none d-md-inline">{isAdmin ? 'Admin' : (user?.username || 'Account')}</span>
               </Link>
               <button className="btn btn-ghost btn-sm" onClick={handleLogout}>

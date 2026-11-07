@@ -85,7 +85,7 @@ async function answerCallbackQuery(botToken, callbackQueryId, text = null) {
 app.get('/fuzz/api/health', (c) => c.json({ status: 'ok', time: new Date().toISOString() }));
 
 // ==========================================
-// USD/UZS KURSI (ExchangeRate API — kalit faqat serverda)
+// USD/UZS KURSI
 // ==========================================
 let __rateCache = { value: null, fetchedAt: 0 };
 const RATE_CACHE_TTL_MS = 60 * 60 * 1000;
@@ -98,7 +98,7 @@ app.get('/fuzz/api/rates/usd', async (c) => {
     }
     const apiKey = c.env.EXCHANGE_RATE_API_KEY;
     if (!apiKey) {
-      return c.json({ error: "EXCHANGE_RATE_API_KEY sozlanmagan (npx wrangler secret put EXCHANGE_RATE_API_KEY)" }, 500);
+      return c.json({ error: "EXCHANGE_RATE_API_KEY sozlanmagan" }, 500);
     }
     const res = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`);
     if (!res.ok) {
@@ -117,7 +117,7 @@ app.get('/fuzz/api/rates/usd', async (c) => {
 });
 
 // ==========================================
-// PUBLIC STARS RATES (frontend uchun)
+// PUBLIC STARS RATES
 // ==========================================
 app.get('/fuzz/api/stars-rates', async (c) => {
   try {
@@ -144,7 +144,7 @@ app.get('/fuzz/api/telegram/status', async (c) => {
 });
 
 // ==========================================
-// DB INIT (Barcha jadvallar)
+// DB INIT
 // ==========================================
 app.get('/fuzz/api/init-db', async (c) => {
   try {
@@ -313,7 +313,7 @@ app.get('/fuzz/api/init-db', async (c) => {
 });
 
 // ==========================================
-// RASM YUKLASH VA KO'RSATISH
+// RASM YUKLASH
 // ==========================================
 app.post('/fuzz/api/upload', async (c) => {
   try {
@@ -505,16 +505,13 @@ app.post('/fuzz/telegram/webhook', async (c) => {
     }
 
     const update = await c.req.json();
-
     const BOT_TOKEN = c.env.BOT_TOKEN;
     if (!BOT_TOKEN) {
       console.error("BOT_TOKEN topilmadi!");
       return c.json({ ok: false, error: 'Bot token yo\'q' }, 500);
     }
 
-    // ==========================================
     // 0. SUCCESSFUL PAYMENT
-    // ==========================================
     if (update.message?.successful_payment) {
       const payment = update.message.successful_payment;
       const chatId = update.message.chat.id;
@@ -536,20 +533,15 @@ app.post('/fuzz/telegram/webhook', async (c) => {
           ]);
           const fresh = await c.env.DB.prepare('SELECT balance FROM users WHERE id = ?').bind(user.id).first();
           await sendTelegramMessage(
-            BOT_TOKEN,
-            chatId,
+            BOT_TOKEN, chatId,
             `✅ To'lov muvaffaqiyatli!\n\nBalansingiz +$${amountUsd} ga to'ldirildi.\nJoriy balans: $${round2(fresh?.balance || 0)}`
           );
-        } else if (!user) {
-          console.error("Successful payment: foydalanuvchi topilmadi, chatId =", chatId);
         }
       }
       return c.json({ ok: true });
     }
 
-    // ==========================================
-    // 1. XABARLAR (message)
-    // ==========================================
+    // 1. XABARLAR
     if (update.message) {
       const chatId = update.message.chat.id;
       const text = update.message.text || '';
@@ -558,12 +550,11 @@ app.post('/fuzz/telegram/webhook', async (c) => {
       const lastName = from.last_name || '';
       const tgUsername = from.username || '';
 
-      // --- /start buyrug'i ---
       if (text.startsWith('/start')) {
         const textParts = text.split(' ');
         const startParam = textParts.length > 1 ? textParts[1] : null;
 
-        // ============ YANGI: /start reg_<token> — Telegram WebApp tasdiqlash ============
+        // reg_<token>
         if (startParam && startParam.startsWith('reg_')) {
           const token = startParam.slice(4);
           if (!/^[a-f0-9]{64}$/.test(token)) {
@@ -582,16 +573,15 @@ app.post('/fuzz/telegram/webhook', async (c) => {
             return c.json({ ok: true });
           }
           const webAppUrl = `https://fuzz-tau.vercel.app/register/confirm?token=${token}`;
-            await sendTelegramMessage(
+          await sendTelegramMessage(
             BOT_TOKEN, chatId,
             "Tasdiqlash uchun quyidagi tugmani bosing:",
-            { inline_keyboard: [[{ text: "✅ Tasdiqlash", web_app: { url: webAppUrl } }]] } // <--- TO'G'RI: web_app
+            { inline_keyboard: [[{ text: "✅ Tasdiqlash", web_app: { url: webAppUrl } }]] }
           );
-
           return c.json({ ok: true });
         }
 
-        // Agar pay_ bilan boshlansa -> Stars invoice
+        // pay_
         if (startParam && startParam.startsWith('pay_')) {
           const amountUsd = parseFloat(startParam.split('_')[1]);
           const rate = isNaN(amountUsd) ? null : await c.env.DB.prepare(
@@ -629,58 +619,44 @@ app.post('/fuzz/telegram/webhook', async (c) => {
         }
 
         await sendTelegramMessage(
-          BOT_TOKEN,
-          chatId,
+          BOT_TOKEN, chatId,
           "Iltimos, tilingizni tanlang:\nPlease choose your language:\nПожалуйста, выберите ваш язык:",
           {
-            inline_keyboard: [
-              [
-                { text: "🇺🇿 Uzb", callback_data: "lang_uz" },
-                { text: "🇬🇧 Eng", callback_data: "lang_en" },
-                { text: "🇷🇺 Rus", callback_data: "lang_ru" }
-              ]
-            ]
+            inline_keyboard: [[
+              { text: "🇺🇿 Uzb", callback_data: "lang_uz" },
+              { text: "🇬🇧 Eng", callback_data: "lang_en" },
+              { text: "🇷🇺 Rus", callback_data: "lang_ru" }
+            ]]
           }
         );
         return c.json({ ok: true });
       }
 
-      // --- Boshqa matnli xabarlar (support) ---
+      // support
       if (text && !text.startsWith('/')) {
         try {
           await c.env.DB.prepare('INSERT INTO support_messages (id, chat_id, username, message) VALUES (?, ?, ?, ?)')
             .bind(crypto.randomUUID(), chatId.toString(), tgUsername || firstName, text).run();
-        } catch (e) {
-          console.error("Support message saqlashda xato:", e);
-        }
+        } catch (e) { console.error("Support message saqlashda xato:", e); }
 
         try {
           const ADMIN_IDS = c.env.ADMIN_IDS ? c.env.ADMIN_IDS.split(',').map(s => s.trim()) : [];
           for (const adminId of ADMIN_IDS) {
             await sendTelegramMessage(
-              BOT_TOKEN,
-              adminId,
+              BOT_TOKEN, adminId,
               `📩 Yangi xabar:\n\nKimdan: ${firstName} ${lastName} (@${tgUsername || 'yo\'q'})\nChat ID: ${chatId}\n\nXabar: ${text}`
             );
           }
-        } catch (e) {
-          console.error("Adminga bildirishnoma yuborishda xato:", e);
-        }
+        } catch (e) { console.error("Adminga bildirishnoma yuborishda xato:", e); }
 
-        await sendTelegramMessage(
-          BOT_TOKEN,
-          chatId,
-          "✅ Xabaringiz qabul qilindi. Admin tez orada javob beradi."
-        );
+        await sendTelegramMessage(BOT_TOKEN, chatId, "✅ Xabaringiz qabul qilindi. Admin tez orada javob beradi.");
         return c.json({ ok: true });
       }
 
       return c.json({ ok: true });
     }
 
-    // ==========================================
     // 2. CALLBACK QUERY
-    // ==========================================
     if (update.callback_query) {
       const callbackQuery = update.callback_query;
       const chatId = callbackQuery.message.chat.id;
@@ -691,33 +667,22 @@ app.post('/fuzz/telegram/webhook', async (c) => {
         const firstName = callbackQuery.from.first_name || 'User';
         const lastName = callbackQuery.from.last_name || '';
 
-        await c.env.DB.prepare('UPDATE users SET language = ? WHERE telegram_id = ?')
-          .bind(lang, chatId.toString()).run();
-
+        await c.env.DB.prepare('UPDATE users SET language = ? WHERE telegram_id = ?').bind(lang, chatId.toString()).run();
         await answerCallbackQuery(BOT_TOKEN, callbackQuery.id);
 
         let welcomeMessage = '';
-        if (lang === 'uz') {
-          welcomeMessage = `Salom, ${firstName} ${lastName}!\n\nFuzz App botiga xush kelibsiz.\nSizning ID: ${chatId}\n\nBizni tanlaganingiz uchun rahmat.`;
-        } else if (lang === 'en') {
-          welcomeMessage = `Hi ${firstName} ${lastName}!\n\nWelcome to Fuzz App bot.\nYour ID: ${chatId}\n\nThank you for choosing us.`;
-        } else if (lang === 'ru') {
-          welcomeMessage = `Привет, ${firstName} ${lastName}!\n\nДобро пожаловать в бот Fuzz App.\nВаш ID: ${chatId}\n\nСпасибо, что выбрали нас.`;
-        }
+        if (lang === 'uz') welcomeMessage = `Salom, ${firstName} ${lastName}!\n\nFuzz App botiga xush kelibsiz.\nSizning ID: ${chatId}\n\nBizni tanlaganingiz uchun rahmat.`;
+        else if (lang === 'en') welcomeMessage = `Hi ${firstName} ${lastName}!\n\nWelcome to Fuzz App bot.\nYour ID: ${chatId}\n\nThank you for choosing us.`;
+        else if (lang === 'ru') welcomeMessage = `Привет, ${firstName} ${lastName}!\n\nДобро пожаловать в бот Fuzz App.\nВаш ID: ${chatId}\n\nСпасибо, что выбрали нас.`;
 
         await sendTelegramMessage(
-          BOT_TOKEN,
-          chatId,
+          BOT_TOKEN, chatId,
           welcomeMessage,
           {
-            inline_keyboard: [
-              [
-                {
-                  text: "🚀 Fuzz App'ni ochish",
-                  web_app: { url: `https://fuzz-tau.vercel.app/register/form?tgId=${chatId}` }
-                }
-              ]
-            ]
+            inline_keyboard: [[{
+              text: "🚀 Fuzz App'ni ochish",
+              web_app: { url: `https://fuzz-tau.vercel.app/register/form?tgId=${chatId}` }
+            }]]
           }
         );
         return c.json({ ok: true });
@@ -727,22 +692,15 @@ app.post('/fuzz/telegram/webhook', async (c) => {
       return c.json({ ok: true });
     }
 
-    // ==========================================
-    // 3. PRE-CHECKOUT QUERY
-    // ==========================================
+    // 3. PRE-CHECKOUT
     if (update.pre_checkout_query) {
       try {
         await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerPreCheckoutQuery`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            pre_checkout_query_id: update.pre_checkout_query.id,
-            ok: true,
-          }),
+          body: JSON.stringify({ pre_checkout_query_id: update.pre_checkout_query.id, ok: true }),
         });
-      } catch (e) {
-        console.error("Pre-checkout xatosi:", e);
-      }
+      } catch (e) { console.error("Pre-checkout xatosi:", e); }
       return c.json({ ok: true });
     }
 
@@ -754,7 +712,7 @@ app.post('/fuzz/telegram/webhook', async (c) => {
 });
 
 // ==========================================
-// TELEGRAM WEBHOOK'NI SOZLASH
+// TELEGRAM WEBHOOK SOZLASH
 // ==========================================
 app.post('/fuzz/api/telegram/set-webhook', async (c) => {
   try {
@@ -763,17 +721,14 @@ app.post('/fuzz/api/telegram/set-webhook', async (c) => {
 
     const webhookUrl = 'https://my-backend.updbackend.workers.dev/fuzz/telegram/webhook';
     const secret = c.env.TELEGRAM_WEBHOOK_SECRET;
-    if (!secret) return c.json({ error: "TELEGRAM_WEBHOOK_SECRET yo'q: npx wrangler secret put TELEGRAM_WEBHOOK_SECRET" }, 500);
+    if (!secret) return c.json({ error: "TELEGRAM_WEBHOOK_SECRET yo'q" }, 500);
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: webhookUrl, secret_token: secret }),
     });
-    const data = await res.json();
-    return c.json(data);
-  } catch (err) {
-    return c.json({ error: err.message }, 500);
-  }
+    return c.json(await res.json());
+  } catch (err) { return c.json({ error: err.message }, 500); }
 });
 
 app.post('/fuzz/api/telegram/delete-webhook', async (c) => {
@@ -781,11 +736,8 @@ app.post('/fuzz/api/telegram/delete-webhook', async (c) => {
     const BOT_TOKEN = c.env.BOT_TOKEN;
     if (!BOT_TOKEN) return c.json({ error: 'BOT_TOKEN yo\'q' }, 500);
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/deleteWebhook`);
-    const data = await res.json();
-    return c.json(data);
-  } catch (err) {
-    return c.json({ error: err.message }, 500);
-  }
+    return c.json(await res.json());
+  } catch (err) { return c.json({ error: err.message }, 500); }
 });
 
 // ==========================================

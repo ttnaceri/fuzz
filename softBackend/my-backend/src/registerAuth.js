@@ -1,78 +1,41 @@
 // softBackend/my-backend/src/registerAuth.js
-// Telegram WebApp initData orqali egalikni isbotlash.
+// Register oqimi: Telegram ID → 2 xonali kod → username/email/parol
+// 2 xato urinish → 1 soat blok
 
 import { Hono } from 'hono';
 import { createToken } from './utils/jwt.js';
 import { hashPassword } from './utils/password.js';
 
 const MIN_PASSWORD = 6;
-const REG_TTL_MS = 10 * 60 * 1000; // 10 daqiqa
-
-function randomToken() {
-  const b = crypto.getRandomValues(new Uint8Array(32));
-  return Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
-}
+const CODE_TTL_MS = 10 * 60 * 1000;      // 10 daqiqa
+const MAX_ATTEMPTS = 2;                  // 2 marta xato
+const BLOCK_DURATION_MS = 60 * 60 * 1000; // 1 soat blok
 
 function randomCode() {
-  const n = crypto.getRandomValues(new Uint32Array(1))[0] % 1000000;
-  return n.toString().padStart(6, '0');
+  // 2 xonali kod: 10..99 (00-09 emas, "nol" bilan boshlanmasin)
+  const n = 10 + (crypto.getRandomValues(new Uint32Array(1))[0] % 90);
+  return n.toString();
 }
 
 export async function ensureRegisterTable(db) {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS reg_sessions (
-      token TEXT PRIMARY KEY,
-      telegram_id TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'pending',
-      user_agent TEXT,
-      created_at INTEGER NOT NULL,
-      expires_at INTEGER NOT NULL
+      telegram_id TEXT PRIMARY KEY,
+      code TEXT NOT NULL,
+      attempts INTEGER DEFAULT 0,
+      blocked_until INTEGER DEFAULT 0,
+      expires_at INTEGER NOT NULL,
+      created_at INTEGER NOT NULL
     );
   `).run();
 }
 
-// Telegram WebApp initData imzosini tekshirish (WebAppData HMAC)
-async function verifyTelegramInitData(initData, botToken) {
-  try {
-    const params = new URLSearchParams(initData);
-    const hash = params.get('hash');
-    if (!hash) return null;
-    params.delete('hash');
-
-    // data-check-string: barcha maydonlar alifbo tartibida, \n bilan
-    const entries = [...params.entries()].sort(([a], [b]) => a.localeCompare(b));
-    const dataCheckString = entries.map(([k, v]) => `${k}=${v}`).join('\n');
-
-    // secret_key = HMAC_SHA256("WebAppData", bot_token)
-    const enc = new TextEncoder();
-    const secretKeyRaw = await crypto.subtle.importKey(
-      'raw', enc.encode('WebAppData'),
-      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-    );
-    const secretKey = await crypto.subtle.sign('HMAC', secretKeyRaw, enc.encode(botToken));
-
-    const dataKey = await crypto.subtle.importKey(
-      'raw', new Uint8Array(secretKey),
-      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-    );
-    const expected = await crypto.subtle.sign('HMAC', dataKey, enc.encode(dataCheckString));
-    const expectedHex = Array.from(new Uint8Array(expected), (b) => b.toString(16).padStart(2, '0')).join('');
-
-    if (expectedHex !== hash) return null;
-    const userJson = params.get('user');
-    if (!userJson) return null;
-    return JSON.parse(userJson);
-  } catch {
-    return null;
-  }
-}
-
-async function sendBotMessage(botToken, chatId, text, replyMarkup = null) {
-  const body = { chat_id: chatId, text };
-  if (replyMarkup) body.reply_markup = replyMarkup;
+async function sendBotMessage(botToken, chatId, text) {
   try {
     const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }),
     });
     return await res.json();
   } catch (e) {
@@ -82,7 +45,7 @@ async function sendBotMessage(botToken, chatId, text, replyMarkup = null) {
 
 const app = new Hono();
 
-// 1) Boshlash: Telegram ID ni qabul qilamiz, botga havola yuboramiz
+// 1) Kod yuborish
 app.post('/auth/register/start', async (c) => {
   try {
     await ensureRegisterTable(c.env.DB);
@@ -90,104 +53,115 @@ app.post('/auth/register/start', async (c) => {
     const tid = String(telegramId || '').trim();
     if (!/^\d{6,15}$/.test(tid)) return c.json({ error: 'Noto\'g\'ri Telegram ID' }, 400);
 
-    // Bu ID band emasligini tekshirish
+    // Bu ID allaqachon users'da bormi?
     const existing = await c.env.DB.prepare('SELECT id FROM users WHERE telegram_id = ?').bind(tid).first();
     if (existing) return c.json({ error: 'Bu Telegram ID allaqachon ro\'yxatdan o\'tgan' }, 409);
 
-    const token = randomToken();
     const now = Date.now();
-    const expiresAt = now + REG_TTL_MS;
-    const ua = (c.req.header('User-Agent') || '').slice(0, 200);
-    await c.env.DB.prepare(
-      'INSERT INTO reg_sessions (token, telegram_id, status, user_agent, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)'
-    ).bind(token, tid, 'pending', ua, now, expiresAt).run();
 
-    // Botga havola yuboramiz
-    const url = `https://t.me/FuzzAppBot?start=reg_${token}`;
+    // Blok holatini tekshirish
+    const prev = await c.env.DB.prepare('SELECT * FROM reg_sessions WHERE telegram_id = ?').bind(tid).first();
+    if (prev && prev.blocked_until > now) {
+      const mins = Math.ceil((prev.blocked_until - now) / 60000);
+      return c.json({ error: `Juda ko'p xato. ${mins} daqiqadan keyin urinib ko'ring.` }, 429);
+    }
+
+    // Yangi kod
+    const code = randomCode();
+    const expiresAt = now + CODE_TTL_MS;
+    await c.env.DB.prepare(`
+      INSERT INTO reg_sessions (telegram_id, code, attempts, blocked_until, expires_at, created_at)
+      VALUES (?, ?, 0, 0, ?, ?)
+      ON CONFLICT(telegram_id) DO UPDATE SET
+        code = excluded.code,
+        attempts = 0,
+        blocked_until = 0,
+        expires_at = excluded.expires_at,
+        created_at = excluded.created_at
+    `).bind(tid, code, expiresAt, now).run();
+
+    // Botga kod yuborish
     const msg = await sendBotMessage(
       c.env.BOT_TOKEN, tid,
-      `Fuzz'da ro'yxatdan o'tish uchun quyidagi tugmani bosing:`,
-      { inline_keyboard: [[{ text: "✅ Tasdiqlash", url }]] }
+      `🔐 *Fuzz ro'yxatdan o'tish kodi:*\n\n\`${code}\`\n\nKod 10 daqiqa amal qiladi.`
     );
     if (!msg.ok) {
-      // Bot xabar yubora olmadi (user botni boshlamagan)
-      return c.json({ error: "Botga xabar yuborib bo'lmadi. Avval @FuzzAppBot ga /start bosing va qayta urinib ko'ring." }, 400);
+      return c.json({ error: "Botga xabar yuborib bo'lmadi. Avval @FuzzAppBot ga /start bosing." }, 400);
     }
 
-    return c.json({ token, expiresAt, ttlMs: REG_TTL_MS });
+    return c.json({ message: 'Kod yuborildi', ttlMs: CODE_TTL_MS });
   } catch (err) {
     return c.json({ error: 'Server xatosi', detail: String(err?.message || err) }, 500);
   }
 });
 
-// 2) Polling: holatni tekshirish
-app.get('/auth/register/status', async (c) => {
+// 2) Kodni tekshirish
+app.post('/auth/register/verify', async (c) => {
   try {
-    const token = c.req.query('token') || '';
-    if (!/^[a-f0-9]{64}$/.test(token)) return c.json({ error: 'Noto\'g\'ri token' }, 400);
-    const row = await c.env.DB.prepare('SELECT status, expires_at FROM reg_sessions WHERE token = ?').bind(token).first();
-    if (!row || row.expires_at <= Date.now()) return c.json({ status: 'expired' });
-    return c.json({ status: row.status });
-  } catch (err) {
-    return c.json({ error: 'Server xatosi' }, 500);
-  }
-});
+    await ensureRegisterTable(c.env.DB);
+    const { telegramId, code } = await c.req.json();
+    const tid = String(telegramId || '').trim();
+    const cleanCode = String(code || '').trim();
 
-// 3) WebApp tasdiqlash: initData orqali egalikni isbotlash
-// registerAuth.js — /auth/register/confirm endpoint
-app.post('/auth/register/confirm', async (c) => {
-  try {
-    const { token, initData } = await c.req.json();
-    if (!/^[a-f0-9]{64}$/.test(token || '')) return c.json({ error: 'Noto\'g\'ri token' }, 400);
+    if (!/^\d{6,15}$/.test(tid)) return c.json({ error: 'Noto\'g\'ri Telegram ID' }, 400);
+    if (!/^\d{2}$/.test(cleanCode)) return c.json({ error: 'Kod 2 xonali bo\'lishi kerak' }, 400);
 
-    // initData bo'lsa — Telegram imzosini tekshiramiz
-    if (initData) {
-      const userData = await verifyTelegramInitData(initData, c.env.BOT_TOKEN);
-      if (!userData) return c.json({ error: 'Telegram imzosi xato' }, 403);
-      const row = await c.env.DB.prepare('SELECT * FROM reg_sessions WHERE token = ?').bind(token).first();
-      if (!row || row.status !== 'pending' || row.expires_at <= Date.now()) {
-        return c.json({ error: 'Havola eskirgan yoki ishlatilgan' }, 410);
-      }
-      if (String(userData.id) !== row.telegram_id) {
-        return c.json({ error: 'Bu havola boshqa Telegram akkaunt uchun' }, 403);
-      }
-      await c.env.DB.prepare("UPDATE reg_sessions SET status = 'confirmed' WHERE token = ?").bind(token).run();
-      return c.json({ ok: true, telegramId: row.telegram_id, username: userData.username || null });
+    const now = Date.now();
+    const row = await c.env.DB.prepare('SELECT * FROM reg_sessions WHERE telegram_id = ?').bind(tid).first();
+    if (!row) return c.json({ error: 'Kod so\'ralmagan. Iltimos, qaytadan boshlang.' }, 400);
+
+    // Blok tekshiruvi
+    if (row.blocked_until > now) {
+      const mins = Math.ceil((row.blocked_until - now) / 60000);
+      return c.json({ error: `Juda ko'p xato. ${mins} daqiqadan keyin urinib ko'ring.` }, 429);
     }
 
-    // initData bo'lmasa — brauzerda ochilgan (xavfsizlik zaif, lekin ishlaydi)
-    const row = await c.env.DB.prepare('SELECT * FROM reg_sessions WHERE token = ?').bind(token).first();
-    if (!row || row.status !== 'pending' || row.expires_at <= Date.now()) {
-      return c.json({ error: 'Havola eskirgan yoki ishlatilgan' }, 410);
+    // Muddati
+    if (row.expires_at < now) return c.json({ error: 'Kod muddati o\'tgan. Yangi kod so\'rang.' }, 400);
+
+    // Kod mos keldimi?
+    if (row.code !== cleanCode) {
+      const newAttempts = (row.attempts || 0) + 1;
+      if (newAttempts >= MAX_ATTEMPTS) {
+        await c.env.DB.prepare('UPDATE reg_sessions SET attempts = ?, blocked_until = ? WHERE telegram_id = ?')
+          .bind(newAttempts, now + BLOCK_DURATION_MS, tid).run();
+        return c.json({ error: 'Kod 2 marta xato kiritildi. 1 soatga bloklandingiz.' }, 429);
+      }
+      await c.env.DB.prepare('UPDATE reg_sessions SET attempts = ? WHERE telegram_id = ?').bind(newAttempts, tid).run();
+      return c.json({ error: `Kod xato. Qolgan urinishlar: ${MAX_ATTEMPTS - newAttempts}` }, 400);
     }
-    await c.env.DB.prepare("UPDATE reg_sessions SET status = 'confirmed' WHERE token = ?").bind(token).run();
-    return c.json({ ok: true, telegramId: row.telegram_id });
+
+    // Kod to'g'ri
+    return c.json({ ok: true, verified: true });
   } catch (err) {
     return c.json({ error: 'Server xatosi', detail: String(err?.message || err) }, 500);
   }
 });
 
-// 4) Yakunlash: username, email, password
+// 3) Yakunlash — username, email, parol
 app.post('/auth/register/complete', async (c) => {
   try {
-    const { token, username, email, password } = await c.req.json();
-    if (!/^[a-f0-9]{64}$/.test(token || '')) return c.json({ error: 'Noto\'g\'ri token' }, 400);
+    const { telegramId, username, email, password } = await c.req.json();
+    const tid = String(telegramId || '').trim();
+
+    if (!/^\d{6,15}$/.test(tid)) return c.json({ error: 'Noto\'g\'ri Telegram ID' }, 400);
     if (!username || !email || !password) return c.json({ error: 'Barcha maydonlar kerak' }, 400);
     if (password.length < MIN_PASSWORD) return c.json({ error: `Parol kamida ${MIN_PASSWORD} belgi` }, 400);
 
-    const row = await c.env.DB.prepare('SELECT * FROM reg_sessions WHERE token = ?').bind(token).first();
-    if (!row || row.status !== 'confirmed' || row.expires_at <= Date.now()) {
-      return c.json({ error: 'Tasdiqlash eskirgan. Qaytadan boshlang.' }, 410);
-    }
+    const now = Date.now();
+    const row = await c.env.DB.prepare('SELECT * FROM reg_sessions WHERE telegram_id = ?').bind(tid).first();
+    if (!row) return c.json({ error: 'Sessiya topilmadi. Qaytadan boshlang.' }, 400);
+    if (row.blocked_until > now) return c.json({ error: 'Bloklangan. Keyinroq urinib ko\'ring.' }, 429);
 
-    const exists = await c.env.DB.prepare('SELECT id FROM users WHERE username = ? OR email = ?').bind(username, email).first();
-    if (exists) return c.json({ error: 'Username yoki email band' }, 409);
+    const exists = await c.env.DB.prepare('SELECT id FROM users WHERE username = ? OR email = ? OR telegram_id = ?')
+      .bind(username, email, tid).first();
+    if (exists) return c.json({ error: 'Username, email yoki Telegram ID band' }, 409);
 
     const id = crypto.randomUUID();
     await c.env.DB.batch([
       c.env.DB.prepare('INSERT INTO users (id, username, email, password, role, telegram_id) VALUES (?, ?, ?, ?, ?, ?)')
-        .bind(id, username, email, await hashPassword(password), 'user', row.telegram_id),
-      c.env.DB.prepare("UPDATE reg_sessions SET status = 'completed' WHERE token = ?").bind(token),
+        .bind(id, username, email, await hashPassword(password), 'user', tid),
+      c.env.DB.prepare('DELETE FROM reg_sessions WHERE telegram_id = ?').bind(tid),
     ]);
 
     const jwt = await createToken({ sub: id }, c.env);

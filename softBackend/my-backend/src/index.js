@@ -554,33 +554,6 @@ app.post('/fuzz/telegram/webhook', async (c) => {
         const textParts = text.split(' ');
         const startParam = textParts.length > 1 ? textParts[1] : null;
 
-        // reg_<token>
-        if (startParam && startParam.startsWith('reg_')) {
-          const token = startParam.slice(4);
-          if (!/^[a-f0-9]{64}$/.test(token)) {
-            await sendTelegramMessage(BOT_TOKEN, chatId, "❌ Noto'g'ri registratsiya havolasi");
-            return c.json({ ok: true });
-          }
-          const sess = await c.env.DB.prepare(
-            "SELECT * FROM reg_sessions WHERE token = ? AND status = 'pending' AND expires_at > ?"
-          ).bind(token, Date.now()).first();
-          if (!sess) {
-            await sendTelegramMessage(BOT_TOKEN, chatId, "❌ Havola eskirgan yoki ishlatilgan. Saytda qaytadan boshlang.");
-            return c.json({ ok: true });
-          }
-          if (sess.telegram_id !== chatId.toString()) {
-            await sendTelegramMessage(BOT_TOKEN, chatId, "❌ Bu havola boshqa Telegram akkaunt uchun");
-            return c.json({ ok: true });
-          }
-          const webAppUrl = `https://fuzz-tau.vercel.app/register/confirm?token=${token}`;
-          await sendTelegramMessage(
-            BOT_TOKEN, chatId,
-            "Tasdiqlash uchun quyidagi tugmani bosing:",
-            { inline_keyboard: [[{ text: "✅ Tasdiqlash", web_app: { url: webAppUrl } }]] }
-          );
-          return c.json({ ok: true });
-        }
-
         // pay_
         if (startParam && startParam.startsWith('pay_')) {
           const amountUsd = parseFloat(startParam.split('_')[1]);

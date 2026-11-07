@@ -399,17 +399,40 @@ app.post('/fuzz/api/admin/console', async (c) => {
     const action = parts[0].toLowerCase();
     let response = '';
 
-    if (action === 'kill') {
+        if (action === 'kill') {
       const target = parts[1];
-      if (target === 'all') {
-        await c.env.DB.prepare('DELETE FROM users WHERE role != "admin"').run();
-        response = "Barcha oddiy foydalanuvchilar o'chirildi.";
+      if (!target) {
+        response = "Xato: foydalanuvchi nomini kiriting.";
+      } else if (target === 'all') {
+        await c.env.DB.batch([
+          c.env.DB.prepare('DELETE FROM user_library WHERE user_id IN (SELECT id FROM users WHERE role != "admin")'),
+          c.env.DB.prepare('DELETE FROM user_wishlist WHERE user_id IN (SELECT id FROM users WHERE role != "admin")'),
+          c.env.DB.prepare('DELETE FROM game_stats WHERE user_id IN (SELECT id FROM users WHERE role != "admin")'),
+          c.env.DB.prepare('DELETE FROM payment_requests WHERE user_id IN (SELECT id FROM users WHERE role != "admin")'),
+          c.env.DB.prepare('DELETE FROM payments WHERE user_id IN (SELECT id FROM users WHERE role != "admin")'),
+          c.env.DB.prepare('DELETE FROM users WHERE role != "admin"'),
+        ]);
+        response = "Barcha oddiy foydalanuvchilar va ularning ma'lumotlari o'chirildi.";
       } else {
         const user = await c.env.DB.prepare('SELECT * FROM users WHERE username = ?').bind(target).first();
         if (user) {
-          await c.env.DB.prepare('DELETE FROM users WHERE username = ?').bind(target).run();
-          response = `Foydalanuvchi ${target} o'chirildi.`;
+          if (user.role === 'admin' || user.role === 'super_admin') {
+            return c.json({ error: 'Adminni o\'chirib bo\'lmaydi!' }, 403);
+          }
+          // Avval unga tegishli barcha ma'lumotlarni o'chiramiz
+          await c.env.DB.batch([
+            c.env.DB.prepare('DELETE FROM user_library WHERE user_id = ?').bind(user.id),
+            c.env.DB.prepare('DELETE FROM user_wishlist WHERE user_id = ?').bind(user.id),
+            c.env.DB.prepare('DELETE FROM game_stats WHERE user_id = ?').bind(user.id),
+            c.env.DB.prepare('DELETE FROM payment_requests WHERE user_id = ?').bind(user.id),
+            c.env.DB.prepare('DELETE FROM payments WHERE user_id = ?').bind(user.id),
+            c.env.DB.prepare('DELETE FROM support_messages WHERE chat_id = ?').bind(user.telegram_id || ''),
+          ]);
+          // Keyin userni o'chiramiz
+          await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(user.id).run();
+          response = `Foydalanuvchi ${target} va unga tegishli barcha ma'lumotlar o'chirildi.`;
         } else {
+          // Agar foydalanuvchi topilmasa, demak o'yin ID si berilgan
           await c.env.DB.prepare('DELETE FROM games WHERE id = ?').bind(target).run();
           response = `O'yin ${target} o'chirildi.`;
         }

@@ -29,6 +29,119 @@ const getQrOrigin = () => {
 
 const POLL_INTERVAL_MS = 2000;
 
+// Steam-uslubidagi "success" overlay uchun CSS keyframes
+const SUCCESS_ANIM_ID = 'fuzz-qr-success-anim';
+if (typeof document !== 'undefined' && !document.getElementById(SUCCESS_ANIM_ID)) {
+  const style = document.createElement('style');
+  style.id = SUCCESS_ANIM_ID;
+  style.textContent = `
+    @keyframes fuzzSpinIn {
+      0%   { transform: rotate(0deg) scale(0.4); opacity: 0; }
+      60%  { transform: rotate(360deg) scale(1.05); opacity: 1; }
+      100% { transform: rotate(360deg) scale(1); opacity: 1; }
+    }
+    @keyframes fuzzCheckDraw {
+      0%   { stroke-dashoffset: 100; }
+      100% { stroke-dashoffset: 0; }
+    }
+    @keyframes fuzzRingPulse {
+      0%   { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.5); }
+      70%  { box-shadow: 0 0 0 24px rgba(76, 175, 80, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+    }
+    @keyframes fuzzFadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    .fuzz-qr-success-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(16, 11, 10, 0.92);
+      border-radius: 8px;
+      animation: fuzzFadeIn 200ms ease-out;
+      z-index: 10;
+    }
+    .fuzz-qr-spinner {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: 4px solid rgba(138, 18, 0, 0.2);
+      border-top-color: #8a1200;
+      animation: fuzzSpinIn 700ms ease-out, spin 900ms linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .fuzz-qr-check-circle {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: #4caf50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fuzzSpinIn 500ms ease-out, fuzzRingPulse 1200ms ease-out;
+    }
+    .fuzz-qr-check-circle svg {
+      width: 40px;
+      height: 40px;
+    }
+    .fuzz-qr-check-circle path {
+      stroke: #fff;
+      stroke-width: 4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+      animation: fuzzCheckDraw 400ms 300ms ease-out forwards;
+    }
+    .fuzz-qr-success-text {
+      margin-top: 1rem;
+      color: #f5eeee;
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .fuzz-qr-success-sub {
+      margin-top: 0.25rem;
+      color: #b9a6a2;
+      font-size: 0.8rem;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// Success overlay komponenti
+function QrSuccessOverlay({ phase, username }) {
+  return (
+    <div className="fuzz-qr-success-overlay">
+      {phase === 'verifying' && (
+        <>
+          <div className="fuzz-qr-spinner" />
+          <div className="fuzz-qr-success-text">Tekshirilmoqda...</div>
+          <div className="fuzz-qr-success-sub">Iltimos kuting</div>
+        </>
+      )}
+      {phase === 'success' && (
+        <>
+          <div className="fuzz-qr-check-circle">
+            <svg viewBox="0 0 40 40">
+              <path d="M10 20 L17 27 L30 14" />
+            </svg>
+          </div>
+          <div className="fuzz-qr-success-text">Tasdiqlandi</div>
+          <div className="fuzz-qr-success-sub">
+            {username ? `${username} sifatida kirilmoqda...` : 'Kirilmoqda...'}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function LoginPage() {
   const { success, error: toastError } = useToast();
   const { login, setSession } = useAuth();
@@ -43,8 +156,11 @@ export default function LoginPage() {
   const [qrToken, setQrToken] = useState('');
   const [qrError, setQrError] = useState('');
   const [qrStatus, setQrStatus] = useState('initializing');
+  const [qrUser, setQrUser] = useState(null);
+  const [successPhase, setSuccessPhase] = useState(null); // null | 'verifying' | 'success'
   const pollRef = useRef(null);
   const isMountedRef = useRef(true);
+  const navigatedRef = useRef(false);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 1024);
@@ -56,6 +172,9 @@ export default function LoginPage() {
   const createQrChallenge = useCallback(async () => {
     setQrStatus('initializing');
     setQrError('');
+    setSuccessPhase(null);
+    setQrUser(null);
+    navigatedRef.current = false;
     try {
       const res = await api.post('/api/auth/qr/create', {});
       if (!isMountedRef.current) return;
@@ -79,11 +198,23 @@ export default function LoginPage() {
       if (!isMountedRef.current) return;
 
       if (res?.status === 'approved' && res?.token && res?.user) {
-        setSession(res.user, res.token);
-        success(`Tizimga kirdingiz: ${res.user.username}`);
         if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-        setQrStatus('approved');
-        navigate(location.state?.from || '/account', { replace: true });
+        setQrUser(res.user);
+        setSuccessPhase('verifying');
+
+        // 1) Verifying (200ms) → 2) Success checkmark (1.5s) → 3) navigate
+        setTimeout(() => {
+          if (!isMountedRef.current) return;
+          setSession(res.user, res.token);
+          setSuccessPhase('success');
+          success(`Tizimga kirdingiz: ${res.user.username}`);
+
+          setTimeout(() => {
+            if (!isMountedRef.current || navigatedRef.current) return;
+            navigatedRef.current = true;
+            navigate(location.state?.from || '/account', { replace: true });
+          }, 1500);
+        }, 200);
         return;
       }
 
@@ -145,6 +276,7 @@ export default function LoginPage() {
   };
 
   const qrUrl = qrToken ? `${getQrOrigin()}${config.qrLogin.path}?token=${qrToken}` : '';
+  const showSuccessOverlay = successPhase !== null;
 
   const styles = {
     wrapper: { minHeight: 'calc(100vh - 64px)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#100b0a', padding: '2rem 1rem' },
@@ -157,7 +289,7 @@ export default function LoginPage() {
     errorBox: { backgroundColor: 'rgba(237, 85, 85, 0.1)', border: '1px solid #ed5555', padding: '0.8rem', borderRadius: '4px', color: '#ed5555', marginBottom: '1rem', fontSize: '0.85rem' },
     btnPrimary: { width: '100%', padding: '0.8rem', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: '600', fontSize: '1rem', cursor: 'pointer', background: 'linear-gradient(90deg, #8a1200 0%, #3d0500 100%)' },
     footer: { backgroundColor: '#19100e', padding: '1.2rem 2rem', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #48201a', fontSize: '0.85rem', color: '#b9a6a2' },
-    qrBox: { backgroundColor: '#fff', padding: '1rem', borderRadius: '8px', margin: '1rem 0', position: 'relative' },
+    qrBox: { backgroundColor: '#fff', padding: '1rem', borderRadius: '8px', margin: '1rem 0', position: 'relative', minHeight: 182, minWidth: 182 },
   };
 
   return (
@@ -195,28 +327,31 @@ export default function LoginPage() {
               <h3 style={styles.title}>OR SIGN IN WITH QR</h3>
               <QRBoundary>
                 <div style={styles.qrBox}>
-                  {qrStatus === 'pending' && qrUrl && (
+                  {qrStatus === 'pending' && qrUrl && !showSuccessOverlay && (
                     <QRCodeSVG value={qrUrl} size={150} />
                   )}
-                  {qrStatus === 'initializing' && (
+                  {qrStatus === 'initializing' && !showSuccessOverlay && (
                     <div style={{ width: 150, height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#241411' }}>
                       <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '2rem' }} />
                     </div>
                   )}
-                  {(qrStatus === 'error' || qrStatus === 'expired') && (
+                  {(qrStatus === 'error' || qrStatus === 'expired') && !showSuccessOverlay && (
                     <div style={{ width: 150, height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8a1200', fontSize: '0.75rem', textAlign: 'center', padding: '0.5rem' }}>
                       {qrStatus === 'expired' ? 'QR kod eskirgan. Yangilanmoqda...' : (qrError || 'QR xatosi')}
                     </div>
+                  )}
+                  {showSuccessOverlay && (
+                    <QrSuccessOverlay phase={successPhase} username={qrUser?.username} />
                   )}
                 </div>
               </QRBoundary>
               <p style={{ fontSize: '0.8rem', color: '#b9a6a2', textAlign: 'center', lineHeight: 1.4 }}>
                 Open <strong>Fuzz</strong> on your phone, tap the QR button and scan this code.
               </p>
-              {qrStatus === 'pending' && (
+              {qrStatus === 'pending' && !showSuccessOverlay && (
                 <p style={{ fontSize: '0.7rem', color: '#6b524e', marginTop: '0.5rem' }}>Kod 2 daqiqa amal qiladi</p>
               )}
-              {qrStatus === 'error' && (
+              {qrStatus === 'error' && !showSuccessOverlay && (
                 <button
                   type="button"
                   onClick={createQrChallenge}

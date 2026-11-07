@@ -11,17 +11,19 @@ export default function QrAuthPage() {
   const navigate = useNavigate();
   const { user, logout, loading } = useAuth();
   const token = params.get('token') || '';
-  const [state, setState] = useState('confirm');
+  const [state, setState] = useState('confirm'); // confirm | sending | approved | rejected | error
   const [errorMsg, setErrorMsg] = useState('');
-  const [debugLog, setDebugLog] = useState('');
+  const [showCheck, setShowCheck] = useState(false);
 
   const hasSessionToken = Boolean(storage.getAuth()?.token);
 
+  // approved bo'lganda: 1.5s spinner → check → 1.2s → main sahifaga
   useEffect(() => {
-    // Mobile debug: JWT bor-yo'qligini ko'rsatish
-    const stored = storage.getAuth();
-    setDebugLog(`Token: ${stored?.token ? stored.token.slice(0, 16) + '...' : 'YO`Q'}`);
-  }, []);
+    if (state !== 'approved') return;
+    const t1 = setTimeout(() => setShowCheck(true), 1200);
+    const t2 = setTimeout(() => navigate('/', { replace: true }), 2600);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [state, navigate]);
 
   const reLogin = async () => {
     await logout();
@@ -32,7 +34,6 @@ export default function QrAuthPage() {
     setState('sending');
     setErrorMsg('');
 
-    // ✅ ANIQ YECHIM: JWT'ni to'g'ridan-to'riq olish
     const stored = storage.getAuth();
     const jwt = stored?.token;
     if (!jwt) {
@@ -78,7 +79,26 @@ export default function QrAuthPage() {
   const btn = { width: '100%', padding: '0.8rem', border: 'none', borderRadius: 4, fontWeight: 600, fontSize: '1rem', cursor: 'pointer', color: '#fff' };
   const primary = { ...btn, background: 'linear-gradient(90deg, #8a1200 0%, #3d0500 100%)' };
   const secondary = { ...btn, background: '#100b0a', border: '1px solid #48201a', color: '#b9a6a2', marginTop: '0.75rem' };
-  const debug = { fontSize: '0.7rem', color: '#6b524e', marginTop: '0.5rem' };
+
+  // CSS animatsiyalar (inline <style>)
+  const animationStyle = `
+    @keyframes fuzz-spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes fuzz-pop-in {
+      0%   { transform: scale(0.3); opacity: 0; }
+      60%  { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes fuzz-ring {
+      0%   { transform: scale(0.8); opacity: 0.8; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
+    @keyframes fuzz-fade-up {
+      0%   { transform: translateY(8px); opacity: 0; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+  `;
 
   if (loading) {
     return (
@@ -110,15 +130,77 @@ export default function QrAuthPage() {
     );
   }
 
+  // ✅ YANGI: approved animatsiyasi
   if (state === 'approved') {
     return (
       <div style={box}>
-        <i className="fa-solid fa-circle-check" style={{ fontSize: '2.5rem', color: '#4caf50' }} />
-        <h3 style={{ margin: '1rem 0 0.5rem' }}>Signed in</h3>
-        <p style={{ color: '#b9a6a2', fontSize: '0.9rem' }}>
-          Your computer is now signed in{user?.username ? ` as ${user.username}` : ''}.
+        <style>{animationStyle}</style>
+
+        <div
+          style={{
+            position: 'relative',
+            width: 120,
+            height: 120,
+            margin: '0 auto 1rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {!showCheck ? (
+            // 1-qadam: aylanuvchi halqa
+            <>
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  border: '4px solid rgba(138, 18, 0, 0.15)',
+                  borderTopColor: '#8a1200',
+                  borderRadius: '50%',
+                  animation: 'fuzz-spin 0.9s linear infinite',
+                }}
+              />
+              <i className="fa-solid fa-shield-halved" style={{ fontSize: '2.2rem', color: '#8a1200' }} />
+            </>
+          ) : (
+            // 2-qadam: checkmark pop-in + ring
+            <>
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  border: '3px solid #4caf50',
+                  borderRadius: '50%',
+                  animation: 'fuzz-ring 1s ease-out forwards',
+                }}
+              />
+              <div
+                style={{
+                  width: 88,
+                  height: 88,
+                  borderRadius: '50%',
+                  background: 'rgba(76, 175, 80, 0.15)',
+                  border: '3px solid #4caf50',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  animation: 'fuzz-pop-in 0.4s ease-out',
+                }}
+              >
+                <i className="fa-solid fa-check" style={{ fontSize: '2.6rem', color: '#4caf50' }} />
+              </div>
+            </>
+          )}
+        </div>
+
+        <h3 style={{ margin: '1rem 0 0.5rem', animation: 'fuzz-fade-up 0.3s ease-out' }}>
+          {showCheck ? 'Tasdiqlandi!' : 'Tasdiqlanmoqda...'}
+        </h3>
+        <p style={{ color: '#b9a6a2', fontSize: '0.9rem', animation: showCheck ? 'fuzz-fade-up 0.3s ease-out' : 'none' }}>
+          {showCheck
+            ? `Kompyuteringiz ${user?.username ? user.username + ' ' : ''}sifatida kirdi.`
+            : 'Kompyuteringiz uchun sessiya yaratilmoqda...'}
         </p>
-        <Link to="/" style={{ ...primary, display: 'block', textDecoration: 'none', marginTop: '1.5rem', boxSizing: 'border-box' }}>Done</Link>
       </div>
     );
   }
@@ -159,8 +241,6 @@ export default function QrAuthPage() {
           No, cancel
         </button>
       </div>
-
-      <p style={debug}>{debugLog}</p>
     </div>
   );
 }

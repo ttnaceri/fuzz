@@ -10,7 +10,7 @@ export default function WalletTopUpPage() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const { info, success } = useToast();
-  
+
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [selectedMethod, setSelectedMethod] = useState(null);
   const [rate, setRate] = useState(12500);
@@ -19,11 +19,14 @@ export default function WalletTopUpPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Valyuta kursini yuklash
-    fetch(config.payment.exchangeApiUrl)
-      .then(res => res.json())
-      .then(data => { if (data?.conversion_rates?.UZS) setRate(data.conversion_rates.UZS); })
-      .catch(() => {});
+    // Valyuta kursi — backend orqali (API kalit faqat serverda saqlanadi)
+    api.get('/api/rates/usd')
+      .then(data => {
+        if (data?.usd_uzs && Number(data.usd_uzs) > 0) {
+          setRate(Number(data.usd_uzs));
+        }
+      })
+      .catch(() => { /* fallback 12500 saqlanadi */ });
 
     // To'lov usullarini yuklash
     api.get('/api/payment-methods')
@@ -36,7 +39,6 @@ export default function WalletTopUpPage() {
 
   // Karta raqamini nusxalash
   const copyCardNumber = () => {
-    // Bo'shliqlarni olib tashlab nusxalaymiz
     const cleanNumber = config.payment.cardNumber.replace(/\s/g, '');
     navigator.clipboard.writeText(cleanNumber);
     setCopied(true);
@@ -52,7 +54,6 @@ export default function WalletTopUpPage() {
     }
 
     try {
-      // Backendga so'rov yuborish
       await api.post('/api/payment-request', {
         userId: user.id,
         amount_uzs: Number(cleanAmount)
@@ -83,14 +84,13 @@ export default function WalletTopUpPage() {
       <div style={{ flex: 1, padding: '1.5rem' }}>
         <h1 className="page-title">{t('wallet.topUp')}</h1>
         <p style={{ color: '#b9a6a2', marginBottom: '1.5rem' }}>{t('wallet.topUpInfo')}</p>
-        
+
         {loading ? (
           <p style={{ color: '#b9a6a2' }}>Yuklanmoqda...</p>
         ) : !selectedMethod ? (
-          /* To'lov usullari ro'yxati */
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
             {paymentMethods.map(m => (
-              <div 
+              <div
                 key={m.id}
                 onClick={() => m.enabled ? setSelectedMethod(m) : null}
                 style={{
@@ -112,22 +112,21 @@ export default function WalletTopUpPage() {
                     {t('wallet.soon')}
                   </div>
                 )}
-                
+
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80px', marginBottom: '1rem' }}>
                   <img src={m.logo_url} alt={m.name} style={{ width: '80px', height: '80px', objectFit: 'contain', borderRadius: '8px' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                 </div>
-                
+
                 <div style={{ color: '#f5eeee', fontWeight: 'bold' }}>{m.name}</div>
               </div>
             ))}
           </div>
         ) : (
-          /* Tanlangan to'lov usuli (Karta) */
           <div style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', border: '1px solid #48201a', maxWidth: '600px', margin: '0 auto' }}>
             <button onClick={() => setSelectedMethod(null)} style={{ background: 'none', border: 'none', color: '#b9a6a2', cursor: 'pointer', marginBottom: '1rem', padding: 0 }}>
               <i className="fa-solid fa-arrow-left"></i> Orqaga
             </button>
-            
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
               <div style={{ width: '60px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <img src={selectedMethod.logo_url} alt={selectedMethod.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} onError={(e) => e.currentTarget.style.display = 'none'} />
@@ -137,7 +136,6 @@ export default function WalletTopUpPage() {
 
             {selectedMethod.id === 'card' && (
               <div>
-                {/* Karta raqami qismi (Configdan olinadi) */}
                 <div style={{ background: 'var(--color-bg-alt)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontSize: '0.8rem', color: '#b9a6a2', marginBottom: '0.2rem' }}>Karta raqami:</div>
@@ -148,9 +146,8 @@ export default function WalletTopUpPage() {
                       {config.payment.cardHolder}
                     </div>
                   </div>
-                  
-                  {/* Nusxalash tugmasi */}
-                  <button 
+
+                  <button
                     onClick={copyCardNumber}
                     style={{ background: '#100b0a', border: '1px solid #48201a', color: copied ? '#43b581' : '#b9a6a2', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer', transition: '0.2s' }}
                     title="Karta raqamini nusxalash"
@@ -161,12 +158,12 @@ export default function WalletTopUpPage() {
 
                 <div className="form-group">
                   <label className="form-label">Miqdor (UZS)</label>
-                  <input 
-                    type="text" 
-                    className="form-input" 
-                    value={amount} 
-                    onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' '))} 
-                    placeholder="50 000" 
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' '))}
+                    placeholder="50 000"
                   />
                   <div style={{ textAlign: 'right', fontSize: '0.8rem', color: '#43b581', marginTop: '0.3rem' }}>
                     ≈ ${(Number(amount.replace(/\s/g, '')) / rate).toFixed(2)}

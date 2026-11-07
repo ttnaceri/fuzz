@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import useToast from '../hooks/useToast.js';
 import useAuth from '../hooks/useAuth.js';
 import { api } from '../services/api.js';
+import { config } from '../../config/config.js';
 
 class QRBoundary extends Component {
   constructor(props) {
@@ -21,7 +22,12 @@ class QRBoundary extends Component {
   }
 }
 
-const QR_ORIGIN = 'https://fuzz-tau.vercel.app';
+// Dinamik origin — local dev / production / preview uchun to'g'ri ishlaydi
+const getQrOrigin = () => {
+  if (typeof window === 'undefined') return 'https://fuzz-tau.vercel.app';
+  return window.location.origin;
+};
+
 const POLL_INTERVAL_MS = 2000;
 
 export default function LoginPage() {
@@ -33,12 +39,11 @@ export default function LoginPage() {
   const [form, setForm] = useState({ username: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth <= 1024);
 
-  // QR holati
   const [qrToken, setQrToken] = useState('');
   const [qrError, setQrError] = useState('');
-  const [qrStatus, setQrStatus] = useState('initializing'); // initializing | pending | approved | expired | error
+  const [qrStatus, setQrStatus] = useState('initializing');
   const pollRef = useRef(null);
   const isMountedRef = useRef(true);
 
@@ -49,12 +54,11 @@ export default function LoginPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Desktop tomonda yangi QR challenge yaratish
   const createQrChallenge = useCallback(async () => {
     setQrStatus('initializing');
     setQrError('');
     try {
-      const res = await api.post('/auth/qr/create', {});
+      const res = await api.post('/api/auth/qr/create', {});
       if (!isMountedRef.current) return;
       if (!res?.token) {
         setQrStatus('error');
@@ -70,14 +74,12 @@ export default function LoginPage() {
     }
   }, []);
 
-  // Status poll
   const pollStatus = useCallback(async (token) => {
     try {
-      const res = await api.get('/auth/qr/status', { params: { token } });
+      const res = await api.get('/api/auth/qr/status', { params: { token } });
       if (!isMountedRef.current) return;
 
       if (res?.status === 'approved' && res?.token && res?.user) {
-        // Desktop login!
         setSession(res.user, res.token);
         success(`Tizimga kirdingiz: ${res.user.username}`);
         if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
@@ -89,32 +91,26 @@ export default function LoginPage() {
       if (res?.status === 'expired' || res?.status === 'consumed') {
         setQrStatus('expired');
         if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-        // Avtomatik yangi QR
         setTimeout(() => { if (isMountedRef.current) createQrChallenge(); }, 1500);
         return;
       }
 
-      // pending — davom etamiz
       setQrStatus('pending');
     } catch (err) {
       if (!isMountedRef.current) return;
-      // 400 (noto'g'ri token) — bu bizning xato, qayta yaratamiz
       if (err?.status === 400) {
         setQrStatus('error');
-        setQrError(err.message || "QR tokenda xato");
+        setQrError(err.message || 'QR tokenda xato');
         return;
       }
-      // Network error — vaqtincha, poll davom etadi
       console.warn('QR poll xatosi (davom etadi):', err?.message);
     }
   }, [setSession, success, navigate, location.state, createQrChallenge]);
 
-  // Mount: QR challenge yaratish va poll boshlash
   useEffect(() => {
     isMountedRef.current = true;
-    if (isMobile) return; // Mobil'da QR paneli ko'rsatilmaydi
+    if (isMobile) return;
     if (!qrToken) { createQrChallenge(); return; }
-    // Poll
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(() => pollStatus(qrToken), POLL_INTERVAL_MS);
     return () => {
@@ -122,7 +118,6 @@ export default function LoginPage() {
     };
   }, [qrToken, isMobile, createQrChallenge, pollStatus]);
 
-  // Cleanup
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
@@ -150,7 +145,7 @@ export default function LoginPage() {
     }
   };
 
-  const qrUrl = qrToken ? `${QR_ORIGIN}/qr-auth?token=${qrToken}` : '';
+  const qrUrl = qrToken ? `${getQrOrigin()}${config.qrLogin.path}?token=${qrToken}` : '';
 
   const styles = {
     wrapper: { minHeight: 'calc(100vh - 64px)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#100b0a', padding: '2rem 1rem' },

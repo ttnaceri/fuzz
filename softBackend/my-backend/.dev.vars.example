@@ -1,0 +1,13 @@
+# ============================================
+# FUZZ BACKEND — LOCAL WRANGLER DEV
+# ============================================
+# ⚠️ Bu fayl faqat `wrangler dev` uchun.
+# Production'da `wrangler secret put <NAME>` ishlatiladi.
+# ============================================
+
+BOT_TOKEN=<Telegram bot token from @BotFather>
+JWT_SECRET=<openssl rand -hex 64>
+TELEGRAM_WEBHOOK_SECRET=<openssl rand -hex 32>
+EXCHANGE_RATE_API_KEY=<from https://app.exchangerate-api.com/>
+
+# ADMIN_IDS wrangler.jsonc -> vars da (maxfiy emas)

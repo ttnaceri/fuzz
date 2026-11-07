@@ -83,12 +83,51 @@ async function answerCallbackQuery(botToken, callbackQueryId, text = null) {
 // ==========================================
 app.get('/fuzz/api/health', (c) => c.json({ status: 'ok', time: new Date().toISOString() }));
 
+// ==========================================
+// USD/UZS KURSI (ExchangeRate API — kalit faqat serverda)
+// Frontend config.js da exchangeApiUrl OLIB TASHLANDI.
+// Kalit faqat EXCHANGE_RATE_API_KEY secret'ida (Cloudflare Workers).
+// 1 soat cache — kvotani tejash uchun.
+// ==========================================
+let __rateCache = { value: null, fetchedAt: 0 };
+const RATE_CACHE_TTL_MS = 60 * 60 * 1000; // 1 soat
+
+app.get('/fuzz/api/rates/usd', async (c) => {
+  try {
+    const now = Date.now();
+    if (__rateCache.value !== null && (now - __rateCache.fetchedAt) < RATE_CACHE_TTL_MS) {
+      return c.json({ usd_uzs: __rateCache.value, cached: true });
+    }
+
+    const apiKey = c.env.EXCHANGE_RATE_API_KEY;
+    if (!apiKey) {
+      return c.json({ error: "EXCHANGE_RATE_API_KEY sozlanmagan (npx wrangler secret put EXCHANGE_RATE_API_KEY)" }, 500);
+    }
+
+    const res = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`);
+    if (!res.ok) {
+      return c.json({ error: `Exchange API xato: ${res.status}` }, 502);
+    }
+    const data = await res.json();
+    const uzs = data?.conversion_rates?.UZS;
+
+    if (!uzs || typeof uzs !== 'number') {
+      return c.json({ error: 'Kurs olinmadi' }, 502);
+    }
+
+    __rateCache = { value: uzs, fetchedAt: now };
+    return c.json({ usd_uzs: uzs, cached: false });
+  } catch (err) {
+    return c.json({ error: 'Server xatosi: ' + err.message }, 500);
+  }
+});
+
 // Telegram webhook holatini tekshirish (debug uchun)
 app.get('/fuzz/api/telegram/status', async (c) => {
   try {
     const BOT_TOKEN = c.env.BOT_TOKEN;
     if (!BOT_TOKEN) return c.json({ error: 'BOT_TOKEN yo\'q' });
-    
+
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getWebhookInfo`);
     const data = await res.json();
     return c.json(data);
@@ -112,7 +151,7 @@ app.get('/fuzz/api/init-db', async (c) => {
 
     await c.env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS companies (
-        id TEXT PRIMARY KEY, name TEXT NOT NULL, logo TEXT, 
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, logo TEXT,
         website TEXT, description TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `).run();
@@ -120,14 +159,14 @@ app.get('/fuzz/api/init-db', async (c) => {
     await c.env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS games (
         id TEXT PRIMARY KEY, title TEXT NOT NULL, price REAL DEFAULT 0, genre TEXT,
-        image TEXT, game_url TEXT, company_id TEXT, available INTEGER DEFAULT 1, 
+        image TEXT, game_url TEXT, company_id TEXT, available INTEGER DEFAULT 1,
         discount INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `).run();
 
     await c.env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS events (
-        id TEXT PRIMARY KEY, title TEXT NOT NULL, image TEXT, link_url TEXT, 
+        id TEXT PRIMARY KEY, title TEXT NOT NULL, image TEXT, link_url TEXT,
         start_date DATETIME, end_date DATETIME, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `).run();
@@ -146,7 +185,7 @@ app.get('/fuzz/api/init-db', async (c) => {
 
     await c.env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS game_stats (
-        id TEXT PRIMARY KEY, user_id TEXT, game_id TEXT, total_seconds INTEGER DEFAULT 0, 
+        id TEXT PRIMARY KEY, user_id TEXT, game_id TEXT, total_seconds INTEGER DEFAULT 0,
         last_played DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `).run();
@@ -160,7 +199,7 @@ app.get('/fuzz/api/init-db', async (c) => {
     await c.env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS bundles (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, image TEXT,
-        price REAL DEFAULT 0, discount INTEGER DEFAULT 0, 
+        price REAL DEFAULT 0, discount INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `).run();
@@ -187,7 +226,7 @@ app.get('/fuzz/api/init-db', async (c) => {
 
     await c.env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS roles (
-        id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, 
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT,
         permissions TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `).run();
@@ -547,8 +586,6 @@ app.get('/fuzz/api/bundles/:id', async (c) => {
     return c.json({ error: 'Server xatosi' }, 500);
   }
 });
-
-// /fuzz/api/bundles/:id/games — userIndex.js da (game_url'siz)
 
 // ==========================================
 // TELEGRAM WEBHOOK (To'liq qayta yozildi)

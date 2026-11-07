@@ -26,34 +26,21 @@ export default function RegisterConfirmPage() {
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    // Brauzerda yoki Telegram WebApp'da ishlaydi
     const tg = window.Telegram?.WebApp;
-    if (tg) {
-      try { tg.ready(); tg.expand(); } catch {}
-    }
-
-    const initData = tg?.initData || '';
-    if (!initData) {
-      // Brauzerda initData yo'q — xavfsizlik zaif, lekin ishlaydi
-      api.post('/api/auth/register/confirm', { token })
-        .then(() => {
-          setPhase('success');
-          setTimeout(() => {
-            if (tg) { try { tg.close(); } catch {} }
-            navigate('/register/form?token=' + token, { replace: true });
-          }, 1500);
-        })
-        .catch((err) => {
-          setErrorMsg(err?.message || 'Tasdiqlashda xato');
-          setPhase('error');
-        });
+    if (!tg) {
+      setErrorMsg('Bu sahifa faqat Telegram orqali ochilishi kerak.');
+      setPhase('error');
       return;
     }
 
-    // Telegram WebApp ichida
+    tg.ready();
+    tg.expand();
+
+    const initData = tg.initData || '';
     setPhase('confirming');
+
     api.post('/api/auth/register/confirm', { token, initData })
-      .then(() => {
+      .then((res) => {
         setPhase('success');
         setTimeout(() => {
           try { tg.close(); } catch {}

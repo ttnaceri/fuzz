@@ -573,10 +573,11 @@ app.post('/fuzz/telegram/webhook', async (c) => {
             return c.json({ ok: true });
           }
           const webAppUrl = `https://fuzz-tau.vercel.app/register/confirm?token=${token}`;
+
           await sendTelegramMessage(
             BOT_TOKEN, chatId,
             "Tasdiqlash uchun quyidagi tugmani bosing:",
-            { inline_keyboard: [[{ text: "✅ Tasdiqlash", url: webAppUrl }]] }
+            { inline_keyboard: [[{ text: "✅ Tasdiqlash", web_app: { url: webAppUrl } }]] } // <--- web_app
           );
           return c.json({ ok: true });
         }

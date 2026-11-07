@@ -6,11 +6,10 @@ import { storage } from '../utils/storage.js';
 
 const TOKEN_RE = /^[a-f0-9]{64}$/;
 
-// Telefon: QR skanerlangandan keyin kompyuterdagi kirishni tasdiqlash
 export default function QrAuthPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
   const token = params.get('token') || '';
   const [state, setState] = useState('confirm'); // confirm | sending | approved | rejected | error
   const [errorMsg, setErrorMsg] = useState('');
@@ -40,6 +39,15 @@ export default function QrAuthPage() {
   const primary = { ...btn, background: 'linear-gradient(90deg, #8a1200 0%, #3d0500 100%)' };
   const secondary = { ...btn, background: '#100b0a', border: '1px solid #48201a', color: '#b9a6a2', marginTop: '0.75rem' };
 
+  if (loading) {
+    return (
+      <div style={box}>
+        <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '2rem', color: '#8a1200' }} />
+        <p style={{ color: '#b9a6a2', marginTop: '1rem' }}>Tekshirilmoqda...</p>
+      </div>
+    );
+  }
+
   if (!TOKEN_RE.test(token)) {
     return (
       <div style={box}>
@@ -51,7 +59,6 @@ export default function QrAuthPage() {
     );
   }
 
-  // Bu yangilanishdan oldin kirgan foydalanuvchilarda sessiya tokeni yo'q
   if (!hasSessionToken) {
     return (
       <div style={box}>
@@ -68,7 +75,9 @@ export default function QrAuthPage() {
       <div style={box}>
         <i className="fa-solid fa-circle-check" style={{ fontSize: '2.5rem', color: '#4caf50' }} />
         <h3 style={{ margin: '1rem 0 0.5rem' }}>Signed in</h3>
-        <p style={{ color: '#b9a6a2', fontSize: '0.9rem' }}>Your computer is now signed in as <strong>{user?.username}</strong>.</p>
+        <p style={{ color: '#b9a6a2', fontSize: '0.9rem' }}>
+          Your computer is now signed in{user?.username ? ` as ${user.username}` : ''}.
+        </p>
         <Link to="/" style={{ ...primary, display: 'block', textDecoration: 'none', marginTop: '1.5rem', boxSizing: 'border-box' }}>Done</Link>
       </div>
     );
@@ -89,7 +98,7 @@ export default function QrAuthPage() {
       <i className="fa-solid fa-desktop" style={{ fontSize: '2.5rem', color: '#8a1200' }} />
       <h3 style={{ margin: '1rem 0 0.5rem' }}>Sign in on another device?</h3>
       <p style={{ color: '#b9a6a2', fontSize: '0.9rem' }}>
-        The device that shows this QR code will get access to <strong>{user?.username}</strong>. Only confirm if it's your own computer and you just opened the sign-in page.
+        The device that shows this QR code will get access to <strong>{user?.username || 'your account'}</strong>. Only confirm if it's your own computer and you just opened the sign-in page.
       </p>
 
       {state === 'error' && (

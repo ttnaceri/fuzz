@@ -5,7 +5,6 @@ import { storage } from '../utils/storage.js';
 
 export const AuthContext = createContext(null);
 
-// Balansni yaxlitlash funksiyasi (float xatolarini oldini oladi)
 function normalizeUser(rawUser) {
   if (!rawUser) return null;
   const balanceNum = rawUser.balance != null ? Number(rawUser.balance) : 0;
@@ -19,13 +18,11 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Foydalanuvchi ma'lumotlarini yangilash (backendda /auth/me yo'qligi sababli, keshdan foydalanamiz)
   const refreshUser = useCallback(async () => {
     try {
       const cached = storage.getAuth();
       if (!cached?.user?.id) return null;
 
-      // Backendda /auth/me yo'q, shuning uchun admin API orqali barcha userlarni olib, o'zimiznikini topamiz
       const res = await api.get('/api/admin/users');
       const currentUser = (res.users || []).find(u => u.id === cached.user.id);
 
@@ -37,23 +34,30 @@ export function AuthProvider({ children }) {
       }
       return null;
     } catch (e) {
-      // Agar backend xato bersa, hech bo'lmaganda keshdagi ma'lumot qoladi
       console.warn("Balansni yangilashda xato:", e.message);
       return null;
     }
   }, []);
 
-  // Sahifa yuklanganda keshdan foydalanuvchini olish
+  // QR login natijasini o'rnatish (desktop tomonda /auth/qr/status "approved" bergach)
+  const setSession = useCallback((sessionUser, sessionToken) => {
+    if (!sessionUser || !sessionToken) return;
+    const normalized = normalizeUser(sessionUser);
+    setUser(normalized);
+    storage.setAuth({ user: normalized, token: sessionToken });
+    // Balansni fonda yangilash
+    setTimeout(() => { refreshUser().catch(() => {}); }, 100);
+  }, [refreshUser]);
+
   useEffect(() => {
     const cached = storage.getAuth();
     if (cached?.user) {
       setUser(normalizeUser(cached.user));
-      refreshUser(); // Balansni fonda yangilash
+      refreshUser();
     }
     setLoading(false);
   }, [refreshUser]);
 
-  // Har 60 soniyada balansni yangilab turish (faqat foydalanuvchi kirgan bo'lsa)
   useEffect(() => {
     if (!user) return;
     const interval = setInterval(() => {
@@ -65,12 +69,10 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (credentials) => {
     const res = await authService.login(credentials);
     if (!res || !res.user) throw new Error(res?.error || "Xatolik");
-    
+
     const normalized = normalizeUser(res.user);
     setUser(normalized);
-    storage.setAuth({ user: normalized });
-    
-    // Login bo'lgandan keyin darhol balansni yangilash
+    storage.setAuth({ user: normalized, token: res.token });
     setTimeout(() => refreshUser(), 100);
     return normalized;
   }, [refreshUser]);
@@ -90,8 +92,9 @@ export function AuthProvider({ children }) {
       login,
       logout,
       refreshUser,
+      setSession,
     }),
-    [user, loading, login, logout, refreshUser]
+    [user, loading, login, logout, refreshUser, setSession]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

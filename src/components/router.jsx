@@ -150,7 +150,7 @@ export const router = createBrowserRouter([
       { path: 'security', element: <ProtectedRoute><SecurityPage /></ProtectedRoute> },
       
       { path: 'qr-scan', element: <ProtectedRoute><QrScanPage /></ProtectedRoute> },
-      { path: 'qr-auth', element: <ProtectedRoute><QrAuthPage /></ProtectedRoute> },
+      { path: 'qr-auth', element: <QrAuthPage /> },
       { path: 'wallet/history', element: <ProtectedRoute><WalletHistoryPage /></ProtectedRoute> },
       { path: 'wallet/topup', element: <ProtectedRoute><WalletTopUpPage /></ProtectedRoute> },
       { path: 'wallet/refund', element: <ProtectedRoute><WalletRefundPage /></ProtectedRoute> },

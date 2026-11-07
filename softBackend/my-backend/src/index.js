@@ -572,13 +572,14 @@ app.post('/fuzz/telegram/webhook', async (c) => {
             await sendTelegramMessage(BOT_TOKEN, chatId, "❌ Bu havola boshqa Telegram akkaunt uchun");
             return c.json({ ok: true });
           }
-                    const webAppUrl = `https://fuzz-tau.vercel.app/register/confirm?token=${token}`;
+          const webAppUrl = `https://fuzz-tau.vercel.app/register/confirm?token=${token}`;
           await sendTelegramMessage(
             BOT_TOKEN, chatId,
             "Tasdiqlash uchun quyidagi tugmani bosing:",
-            { inline_keyboard: [[{ text: "✅ Tasdiqlash", web_app: { url: webAppUrl } }]] } // <--- SHU YERDA web_app BO'LISHI SHART
+            { inline_keyboard: [[{ text: "✅ Tasdiqlash", web_app: { url: webAppUrl } }]] }
           );
           return c.json({ ok: true });
+        }
 
         // pay_
         if (startParam && startParam.startsWith('pay_')) {

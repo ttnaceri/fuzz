@@ -36,7 +36,7 @@ app.use('/fuzz/api/init-db', async (c, next) => {
 });
 
 const MIN_PASSWORD = 6;
-const publicUser = (u) => ({ id: u.id, username: u.username, role: u.role, balance: round2(u.balance || 0) });
+const publicUser = (u) => ({ id: u.id, username: u.username, email: u.email, role: u.role, balance: round2(u.balance || 0) });
 
 const BANNED_WORDS = ['fuck', 'xxx', 'porn', 'sex', 'shit', 'bitch'];
 const isNameValid = (name) => {

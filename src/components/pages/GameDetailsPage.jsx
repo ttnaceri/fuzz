@@ -1,22 +1,28 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
 import { gameService } from '../services/gameService.js';
 import Loading from '../common/Loading.jsx';
 import ErrorState from '../common/ErrorState.jsx';
 import { formatPrice, formatDate } from '../utils/formatters.js';
 import { useCart } from '../context/useCart.js';
+import useAuth from '../hooks/useAuth.js';
 import useToast from '../hooks/useToast.js';
 
 export default function GameDetailsPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  
   const [game, setGame] = useState(null);
-  const [bundles, setBundles] = useState([]); // O'yin tegishli bo'lgan bundle'lar
+  const [bundles, setBundles] = useState([]);
+  const [inWishlist, setInWishlist] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
   const { addItem } = useCart();
-  const { success } = useToast();
+  const { success, error: toastError } = useToast();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -34,8 +40,6 @@ export default function GameDetailsPage() {
             .then(async (res) => {
               const allBundles = res.bundles || [];
               const relatedBundles = [];
-              
-              // Har bir bundle ichidagi o'yinlarni tekshiramiz
               for (const b of allBundles) {
                 try {
                   const bGames = await api.get(`/api/bundles/${b.id}/games`);
@@ -57,6 +61,18 @@ export default function GameDetailsPage() {
     return () => controller.abort();
   }, [id]);
 
+  // 3. Wishlist'da bor-yo'qligini tekshirish
+  useEffect(() => {
+    if (user && game) {
+      api.get(`/api/users/${user.id}/wishlist`)
+        .then(res => {
+          const found = res.games?.some(g => g.id === game.id);
+          setInWishlist(found);
+        })
+        .catch(() => {});
+    }
+  }, [user, game]);
+
   if (loading) return <Loading />;
   if (error) return <ErrorState message={error.message} />;
   if (!game) return <ErrorState title="Game not found" message="This game does not exist." />;
@@ -66,7 +82,32 @@ export default function GameDetailsPage() {
 
   const handleAdd = () => {
     addItem(game);
-    success(`"${game.title}" added to cart`);
+    success(`"${game.title}" savatga qo'shildi`);
+  };
+
+  // Wishlist toggle
+  const toggleWishlist = async () => {
+    if (!user) {
+      toastError("Wishlistga qo'shish uchun tizimga kiring");
+      navigate('/login');
+      return;
+    }
+    setWishlistLoading(true);
+    try {
+      if (inWishlist) {
+        await api.delete(`/api/wishlist/${user.id}/${game.id}`);
+        setInWishlist(false);
+        success("Wishlistdan o'chirildi");
+      } else {
+        await api.post('/api/wishlist', { gameId: game.id });
+        setInWishlist(true);
+        success("Wishlistga qo'shildi");
+      }
+    } catch (err) {
+      toastError(err.message || 'Xatolik yuz berdi');
+    } finally {
+      setWishlistLoading(false);
+    }
   };
 
   return (
@@ -99,10 +140,22 @@ export default function GameDetailsPage() {
             </div>
           )}
           
-          <div className="game-details__actions">
+          <div className="game-details__actions" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <button className="btn btn-primary btn-block" onClick={handleAdd}>
               <i className="fa-solid fa-cart-plus" /> Add to cart
             </button>
+            
+            {/* WISHLIST TUGMASI */}
+            <button 
+              className="btn btn-secondary btn-block" 
+              onClick={toggleWishlist}
+              disabled={wishlistLoading}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+            >
+              <i className={`fa-${inWishlist ? 'solid' : 'regular'} fa-heart`} style={{ color: inWishlist ? '#ed5555' : 'inherit' }} />
+              {wishlistLoading ? 'Yuklanmoqda...' : (inWishlist ? "Wishlistdan o'chirish" : "Wishlistga qo'shish")}
+            </button>
+
             {game.officialStore && (
               <a className="btn btn-secondary btn-block" href={game.officialStore} target="_blank" rel="noreferrer noopener">
                 <i className="fa-solid fa-arrow-up-right-from-square" /> Official store
@@ -119,7 +172,6 @@ export default function GameDetailsPage() {
         </aside>
       </div>
 
-      {/* YANGI: O'yin qaysi bundle'larga tegishli ekanligi */}
       {bundles.length > 0 && (
         <section className="section" style={{ marginTop: '3rem' }}>
           <div className="section__header">

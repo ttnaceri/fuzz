@@ -7,7 +7,7 @@ import { createToken } from './utils/jwt.js';
 import { hashPassword } from './utils/password.js';
 
 const MIN_PASSWORD = 6;
-const CODE_TTL_MS = 10 * 60 * 1000;      // 10 daqiqa
+const CODE_TTL_MS = 5 * 60 * 1000;       // 5 daqiqa (YANGI)
 const MAX_ATTEMPTS = 2;                  // 2 marta xato
 const BLOCK_DURATION_MS = 60 * 60 * 1000; // 1 soat blok
 

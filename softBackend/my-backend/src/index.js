@@ -122,6 +122,23 @@ app.get('/fuzz/api/rates/usd', async (c) => {
   }
 });
 
+
+// ==========================================
+// PUBLIC STARS RATES (frontend uchun)
+// stars_rates jadvalidan paketlarni qaytaradi
+// Admin /admin/stars-rate orqali o'zgartiradi
+// ==========================================
+app.get('/fuzz/api/stars-rates', async (c) => {
+  try {
+    const rates = await c.env.DB.prepare(
+      'SELECT amount_usd, stars_amount FROM stars_rates ORDER BY amount_usd ASC'
+    ).all();
+    return c.json({ rates: rates.results || [] });
+  } catch (err) {
+    return c.json({ rates: [] });
+  }
+});
+
 // Telegram webhook holatini tekshirish (debug uchun)
 app.get('/fuzz/api/telegram/status', async (c) => {
   try {

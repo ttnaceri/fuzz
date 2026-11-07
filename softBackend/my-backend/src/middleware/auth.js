@@ -1,46 +1,53 @@
-// src/middleware/auth.js
+// softBackend/my-backend/src/middleware/auth.js
 import { verifyToken } from '../utils/jwt.js';
 
-const ADMIN_ROLES = ['admin', 'super_admin'];
-export const isAdminRole = (role) => ADMIN_ROLES.includes(role);
-
-// Bearer tokendan foydalanuvchini aniqlaydi. Rol har doim bazadan olinadi —
-// ban yoki rol o'zgarishi darhol kuchga kiradi (tokendagi eski rolga ishonmaymiz).
 export async function getAuthUser(c) {
-  if (c.get('authUser') !== undefined) return c.get('authUser');
-  let user = null;
-  const header = c.req.header('Authorization') || '';
-  if (header.startsWith('Bearer ')) {
-    const payload = await verifyToken(header.slice(7), c.env);
-    if (payload?.sub) {
-      const row = await c.env.DB.prepare('SELECT id, username, role, balance, telegram_id FROM users WHERE id = ?')
-        .bind(payload.sub).first();
-      if (row && row.role !== 'banned') user = row;
-    }
+  try {
+    const header = c.req.header('Authorization') || '';
+    if (!header.startsWith('Bearer ')) return null;
+    const token = header.slice(7).trim();
+    if (!token) return null;
+
+    const payload = await verifyToken(token, c.env);
+    if (!payload?.sub) return null;
+
+    const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(payload.sub).first();
+    if (!user) return null;
+    if (user.role === 'banned') return null;
+    return user;
+  } catch (e) {
+    return null;
   }
-  c.set('authUser', user);
-  return user;
 }
 
-export const requireAuth = async (c, next) => {
+export async function requireAuth(c, next) {
   const user = await getAuthUser(c);
-  if (!user) return c.json({ error: 'Avval tizimga kiring', code: 'AUTH_REQUIRED' }, 401);
+  if (!user) return c.json({ error: 'Avtorizatsiya kerak' }, 401);
+  c.set('user', user);
   await next();
-};
+}
 
-export const requireAdmin = async (c, next) => {
-  const user = await getAuthUser(c);
-  if (!user) return c.json({ error: 'Avval tizimga kiring', code: 'AUTH_REQUIRED' }, 401);
-  if (!isAdminRole(user.role)) return c.json({ error: 'Ruxsat yo\'q: faqat admin', code: 'FORBIDDEN' }, 403);
-  await next();
-};
+export function isAdminRole(role) {
+  return role === 'admin' || role === 'super_admin';
+}
 
-// /users/:userId/... — faqat o'zi yoki admin
-export const requireSelfOrAdmin = (param) => async (c, next) => {
+export async function requireAdmin(c, next) {
   const user = await getAuthUser(c);
-  if (!user) return c.json({ error: 'Avval tizimga kiring', code: 'AUTH_REQUIRED' }, 401);
-  if (user.id !== c.req.param(param) && !isAdminRole(user.role)) {
-    return c.json({ error: 'Ruxsat yo\'q', code: 'FORBIDDEN' }, 403);
-  }
+  if (!user) return c.json({ error: 'Admin ruxsati kerak' }, 401);
+  if (!isAdminRole(user.role)) return c.json({ error: 'Ruxsat yo\'q' }, 403);
+  c.set('user', user);
   await next();
-};
+}
+
+export function requireSelfOrAdmin(paramName = 'userId') {
+  return async (c, next) => {
+    const user = await getAuthUser(c);
+    if (!user) return c.json({ error: 'Avtorizatsiya kerak' }, 401);
+    const paramId = c.req.param(paramName);
+    if (user.id !== paramId && !isAdminRole(user.role)) {
+      return c.json({ error: 'Ruxsat yo\'q' }, 403);
+    }
+    c.set('user', user);
+    await next();
+  };
+}

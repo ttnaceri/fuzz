@@ -3,13 +3,13 @@ import { api } from './api.js';
 const CACHE_KEY = 'fuzz_cached_games';
 
 export const gameService = {
-  // Keshni tozalash funksiyasi (bu yetishmayotgan edi)
+  // Keshni tozalash
   clearCache: () => {
     localStorage.removeItem(CACHE_KEY);
   },
 
-  // Barcha o'yinlarni olish
-  getGames: async (options = {}) => {
+  // Bosh sahifa va boshqa joylar uchun (getAllGames)
+  getAllGames: async (options = {}) => {
     try {
       const res = await api.get('/games', options);
       
@@ -21,16 +21,21 @@ export const gameService = {
       }
       return res;
     } catch (err) {
-      console.warn("[Offline Mode] Serverga ulanib bo'lmadi, keshdan o'qilmoqda...");
+      // Offline mode
       const cachedStr = localStorage.getItem(CACHE_KEY);
       if (cachedStr) {
         try {
           const cached = JSON.parse(cachedStr);
           return { games: cached.data, isOffline: true };
-        } catch (e) { /* ignore */ }
+        } catch (e) {}
       }
       throw err;
     }
+  },
+
+  // Do'kon sahifasi uchun (getGames)
+  getGames: async (options = {}) => {
+    return gameService.getAllGames(options);
   },
 
   // Bitta o'yinni olish
@@ -45,7 +50,7 @@ export const gameService = {
           const cached = JSON.parse(cachedStr);
           const found = cached.data.find(g => g.id === id);
           if (found) return { ...found, isOffline: true };
-        } catch (e) { /* ignore */ }
+        } catch (e) {}
       }
       throw err;
     }

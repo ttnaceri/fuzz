@@ -3,14 +3,12 @@ import { getAuthUser, requireAuth, requireSelfOrAdmin, isAdminRole } from './mid
 
 const userApp = new Hono();
 
-// Shaxsiy ma'lumotlar — faqat egasi yoki admin
 userApp.use('/users/:userId/*', requireSelfOrAdmin('userId'));
 userApp.use('/store/*', requireAuth);
 userApp.use('/wishlist', requireAuth);
 userApp.use('/wishlist/*', requireAuth);
 userApp.use('/games/track-time', requireAuth);
 
-// O'yin havolasi (game_url) ochiq ro'yxatlarda ko'rsatilmaydi — faqat /games/:id/play orqali
 const stripUrl = ({ game_url, ...rest }) => rest;
 
 // User Library
@@ -35,9 +33,7 @@ userApp.get('/users/:userId/owns/:gameId', async (c) => {
   } catch (err) { return c.json({ owned: false }); }
 });
 
-// ==========================================
-// YANGI: FAQAT USERNAME'NI YANGILASH
-// ==========================================
+// FAQAT USERNAME'NI YANGILASH
 userApp.put('/users/:userId/username', async (c) => {
   try {
     const { username } = await c.req.json();
@@ -47,7 +43,6 @@ userApp.put('/users/:userId/username', async (c) => {
       return c.json({ error: 'Username kamida 3 belgidan iborat bo\'lishi kerak!' }, 400);
     }
 
-    // Band emasligini tekshirish
     const existing = await c.env.DB.prepare(
       'SELECT id FROM users WHERE username = ? AND id != ?'
     ).bind(username.trim(), userId).first();
@@ -65,7 +60,7 @@ userApp.put('/users/:userId/username', async (c) => {
   }
 });
 
-// Buy Game — sotib oluvchi har doim tokendagi foydalanuvchi (body'dagi userId e'tiborga olinmaydi)
+// Buy Game
 userApp.post('/store/buy', async (c) => {
   try {
     const me = await getAuthUser(c);
@@ -80,7 +75,6 @@ userApp.post('/store/buy', async (c) => {
     if (game.discount > 0) finalPrice = finalPrice - (finalPrice * (game.discount / 100));
     finalPrice = Math.max(0, Math.round(finalPrice * 100) / 100);
 
-    // Atomik: balans yetarli bo'lsagina ayiriladi (parallel so'rovlar bilan manfiyga tushmaydi)
     const res = await c.env.DB.prepare('UPDATE users SET balance = ROUND(balance - ?, 2) WHERE id = ? AND balance >= ?')
       .bind(finalPrice, me.id, finalPrice).run();
     if (!res.meta?.changes) return c.json({ error: 'Balans yetarli emas!' }, 400);
@@ -91,9 +85,7 @@ userApp.post('/store/buy', async (c) => {
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
-// ==========================================
 // WISHLIST API'LARI
-// ==========================================
 userApp.get('/users/:userId/wishlist', async (c) => {
   try {
     const wishlist = await c.env.DB.prepare(`
@@ -131,7 +123,7 @@ userApp.delete('/wishlist/:userId/:gameId', async (c) => {
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
-// Play Game — faqat sotib olgan (yoki bepul o'yin / admin)
+// Play Game
 userApp.get('/games/:id/play', requireAuth, async (c) => {
   try {
     const me = await getAuthUser(c);
@@ -199,8 +191,6 @@ userApp.get('/events', async (c) => {
   } catch (err) { return c.json({ events: [] }); }
 });
 
-// ... (oldingi user API'lar)
-
 // Public: Bundle ichidagi o'yinlar
 userApp.get('/bundles/:id/games', async (c) => {
   try {
@@ -218,6 +208,30 @@ userApp.get('/bundles', async (c) => {
     const bundles = await c.env.DB.prepare('SELECT * FROM bundles').all();
     return c.json({ bundles: bundles.results || [] });
   } catch (err) { return c.json({ bundles: [] }); }
+});
+
+// ==========================================
+// YANGI: PAYMENT REQUEST (KARTA ORQALI TO'LOV SO'ROVI)
+// ==========================================
+userApp.post('/payment-request', async (c) => {
+  try {
+    const me = await getAuthUser(c);
+    if (!me) return c.json({ error: 'Avtorizatsiya kerak' }, 401);
+
+    const { amount_uzs } = await c.req.json();
+    if (!amount_uzs || Number(amount_uzs) <= 0) {
+      return c.json({ error: 'Noto\'g\'ri miqdor' }, 400);
+    }
+
+    const id = crypto.randomUUID();
+    await c.env.DB.prepare(
+      'INSERT INTO payment_requests (id, user_id, amount_uzs, status) VALUES (?, ?, ?, ?)'
+    ).bind(id, me.id, Number(amount_uzs), 'pending').run();
+
+    return c.json({ success: true, message: 'To\'lov so\'rovi yuborildi', id }, 201);
+  } catch (err) {
+    return c.json({ error: 'Server xatosi: ' + err.message }, 500);
+  }
 });
 
 export default userApp;

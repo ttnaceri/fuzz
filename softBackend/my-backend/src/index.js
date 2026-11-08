@@ -36,7 +36,8 @@ app.use('/fuzz/api/init-db', async (c, next) => {
 });
 
 const MIN_PASSWORD = 6;
-const publicUser = (u) => ({ id: u.id, username: u.username, email: u.email, role: u.role, balance: round2(u.balance || 0) });
+// id ni frontendga yubormaymiz, email ni qo'shamiz
+const publicUser = (u) => ({ username: u.username, email: u.email, role: u.role, balance: round2(u.balance || 0) });
 
 const BANNED_WORDS = ['fuck', 'xxx', 'porn', 'sex', 'shit', 'bitch'];
 const isNameValid = (name) => {
@@ -356,7 +357,7 @@ app.post('/fuzz/api/auth/login', async (c) => {
 
     const { ok, needsRehash } = user ? await verifyPassword(password, user.password) : { ok: false };
     if (!user || !ok) return c.json({ error: 'Parol yoki username xato!' }, 401);
-    if (user.role === 'banned') return c.json({ error: 'Akkaunt bloklangan' }, 403);
+    if (user.role === 'banned') return c.json({ error: 'Akkaunt bloklangan. Administrator bilan bog\'laning.' }, 403);
 
     if (needsRehash) {
       await c.env.DB.prepare('UPDATE users SET password = ? WHERE id = ?').bind(await hashPassword(password), user.id).run();
@@ -502,6 +503,20 @@ app.get('/fuzz/api/payment-methods', async (c) => {
     const methods = await c.env.DB.prepare('SELECT * FROM payment_methods WHERE enabled = 1').all();
     return c.json({ methods: methods.results || [] });
   } catch (err) { return c.json({ methods: [] }); }
+});
+
+// index.js ichida
+app.post('/fuzz/api/payment-request', requireAuth, async (c) => {
+  try {
+    const me = await getAuthUser(c);
+    const { amount_uzs } = await c.req.json();
+    if (!amount_uzs || amount_uzs <= 0) return c.json({ error: 'Miqdor xato' }, 400);
+    
+    await c.env.DB.prepare('INSERT INTO payment_requests (id, user_id, amount_uzs, status) VALUES (?, ?, ?, ?)')
+      .bind(crypto.randomUUID(), me.id, amount_uzs, 'pending').run();
+      
+    return c.json({ message: "So'rov qabul qilindi" }, 201);
+  } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
 // ==========================================

@@ -84,3 +84,12 @@ export function AuthProvider({ children }) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
+
+// AuthProvider ichida:
+useEffect(() => {
+  const cached = storage.getAuth();
+  if (cached?.user) {
+    setUser(normalizeUser(cached.user));
+  }
+  setLoading(false);
+}, []);

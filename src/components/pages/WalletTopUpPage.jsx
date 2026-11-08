@@ -13,7 +13,7 @@ export default function WalletTopUpPage() {
 
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [selectedMethod, setSelectedMethod] = useState(null);
-  const [rate, setRate] = useState(12500);
+  const [rate, setRate] = useState(12500); // Fallback (agar backend ishlamasa)
   const [amount, setAmount] = useState('');
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -24,6 +24,7 @@ export default function WalletTopUpPage() {
   const [starsAmount, setStarsAmount] = useState(10);
 
   useEffect(() => {
+    // 1. Kursni backenddan yuklash
     api.get('/api/rates/usd')
       .then(data => {
         if (data?.usd_uzs && Number(data.usd_uzs) > 0) {
@@ -32,6 +33,7 @@ export default function WalletTopUpPage() {
       })
       .catch(() => {});
 
+    // 2. To'lov usullarini yuklash
     api.get('/api/payment-methods')
       .then(data => {
         setPaymentMethods(data.methods || []);
@@ -39,6 +41,7 @@ export default function WalletTopUpPage() {
       })
       .catch(() => setLoading(false));
 
+    // 3. Stars paketlarini yuklash
     api.get('/api/stars-rates')
       .then(data => setStarsRates(data.rates || []))
       .catch(() => {});
@@ -50,12 +53,10 @@ export default function WalletTopUpPage() {
     setStarsUsd(clean);
     const usd = parseFloat(clean);
     if (!isNaN(usd) && usd > 0) {
-      // stars_rates dan eng yaqin narxni topish
       const exact = starsRates.find(r => Number(r.amount_usd) === usd);
       if (exact) {
         setStarsAmount(Number(exact.stars_amount));
       } else {
-        // default 1 usd = 10 stars
         setStarsAmount(Math.max(1, Math.round(usd * 10)));
       }
     } else {
@@ -68,12 +69,10 @@ export default function WalletTopUpPage() {
     const stars = parseInt(clean, 10) || 0;
     setStarsAmount(stars);
     if (stars >= 1) {
-      // stars_rates dan eng yaqin paketni topish
       const exact = starsRates.find(r => Number(r.stars_amount) === stars);
       if (exact) {
         setStarsUsd(String(exact.amount_usd));
       } else {
-        // default 10 stars = 1 usd
         setStarsUsd((stars / 10).toFixed(2).replace(/\.00$/, ''));
       }
     } else {
@@ -146,15 +145,9 @@ export default function WalletTopUpPage() {
                 key={m.id}
                 onClick={() => m.enabled ? setSelectedMethod(m) : null}
                 style={{
-                  backgroundColor: '#241411',
-                  border: '1px solid #48201a',
-                  borderRadius: '8px',
-                  padding: '1.5rem',
-                  textAlign: 'center',
-                  cursor: m.enabled ? 'pointer' : 'not-allowed',
-                  opacity: m.enabled ? 1 : 0.5,
-                  position: 'relative',
-                  transition: 'transform 0.2s, border-color 0.2s',
+                  backgroundColor: '#241411', border: '1px solid #48201a', borderRadius: '8px',
+                  padding: '1.5rem', textAlign: 'center', cursor: m.enabled ? 'pointer' : 'not-allowed',
+                  opacity: m.enabled ? 1 : 0.5, position: 'relative', transition: 'transform 0.2s, border-color 0.2s',
                 }}
                 onMouseEnter={(e) => m.enabled && (e.currentTarget.style.transform = 'translateY(-3px)')}
                 onMouseLeave={(e) => m.enabled && (e.currentTarget.style.transform = 'translateY(0)')}
@@ -164,11 +157,9 @@ export default function WalletTopUpPage() {
                     {t('wallet.soon')}
                   </div>
                 )}
-
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80px', marginBottom: '1rem' }}>
                   <img src={m.logo_url} alt={m.name} style={{ width: '80px', height: '80px', objectFit: 'contain', borderRadius: '8px' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                 </div>
-
                 <div style={{ color: '#f5eeee', fontWeight: 'bold' }}>{m.name}</div>
               </div>
             ))}
@@ -196,43 +187,19 @@ export default function WalletTopUpPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                   <div className="form-group">
                     <label className="form-label">Fuzz $</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={starsUsd}
-                      onChange={(e) => handleUsdChange(e.target.value)}
-                      placeholder="1.00"
-                    />
+                    <input type="text" className="form-input" value={starsUsd} onChange={(e) => handleUsdChange(e.target.value)} placeholder="1.00" />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Telegram Stars</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={starsAmount}
-                      onChange={(e) => handleStarsChange(e.target.value)}
-                      placeholder="10"
-                    />
+                    <input type="text" className="form-input" value={starsAmount} onChange={(e) => handleStarsChange(e.target.value)} placeholder="10" />
                   </div>
                 </div>
 
                 {starsRates.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
                     {starsRates.map(r => (
-                      <button
-                        key={`${r.amount_usd}-${r.stars_amount}`}
-                        type="button"
-                        onClick={() => { setStarsUsd(String(r.amount_usd)); setStarsAmount(Number(r.stars_amount)); }}
-                        style={{
-                          background: Number(starsUsd) === Number(r.amount_usd) ? '#8a1200' : '#100b0a',
-                          border: '1px solid #48201a',
-                          color: '#f5eeee',
-                          padding: '0.4rem 0.8rem',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '0.8rem',
-                        }}
-                      >
+                      <button key={`${r.amount_usd}-${r.stars_amount}`} type="button" onClick={() => { setStarsUsd(String(r.amount_usd)); setStarsAmount(Number(r.stars_amount)); }}
+                        style={{ background: Number(starsUsd) === Number(r.amount_usd) ? '#8a1200' : '#100b0a', border: '1px solid #48201a', color: '#f5eeee', padding: '0.4rem 0.8rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}>
                         ${r.amount_usd} = {r.stars_amount} ⭐
                       </button>
                     ))}
@@ -240,7 +207,7 @@ export default function WalletTopUpPage() {
                 )}
 
                 <div style={{ fontSize: '0.8rem', color: '#6b524e', marginBottom: '1rem' }}>
-                  * 1 Fuzz $ = 10 Telegram Stars (admin o'zgartirishi mumkin)
+                  * 1 Fuzz $ = 10 Telegram Stars
                 </div>
 
                 <button className="btn btn-primary" onClick={handleStarsPay} style={{ width: '100%' }}>
@@ -256,31 +223,19 @@ export default function WalletTopUpPage() {
                 <div style={{ background: 'var(--color-bg-alt)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontSize: '0.8rem', color: '#b9a6a2', marginBottom: '0.2rem' }}>Karta raqami:</div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: '1px', color: '#f5eeee' }}>
-                      {config.payment.cardNumber}
-                    </div>
-                    <div style={{ fontSize: '0.8rem', color: '#b9a6a2', marginTop: '0.2rem' }}>
-                      {config.payment.cardHolder}
-                    </div>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: '1px', color: '#f5eeee' }}>{config.payment.cardNumber}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#b9a6a2', marginTop: '0.2rem' }}>{config.payment.cardHolder}</div>
                   </div>
-                  <button
-                    onClick={copyCardNumber}
-                    style={{ background: '#100b0a', border: '1px solid #48201a', color: copied ? '#43b581' : '#b9a6a2', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer', transition: '0.2s' }}
-                    title="Karta raqamini nusxalash"
-                  >
+                  <button onClick={copyCardNumber} style={{ background: '#100b0a', border: '1px solid #48201a', color: copied ? '#43b581' : '#b9a6a2', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer', transition: '0.2s' }} title="Karta raqamini nusxalash">
                     <i className={`fa-solid ${copied ? 'fa-check' : 'fa-copy'}`}></i>
                   </button>
                 </div>
 
                 <div className="form-group">
                   <label className="form-label">Miqdor (UZS)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={amount}
+                  <input type="text" className="form-input" value={amount}
                     onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' '))}
-                    placeholder="50 000"
-                  />
+                    placeholder="50 000" />
                   <div style={{ textAlign: 'right', fontSize: '0.8rem', color: '#43b581', marginTop: '0.3rem' }}>
                     ≈ ${(Number(amount.replace(/\s/g, '')) / rate).toFixed(2)}
                   </div>

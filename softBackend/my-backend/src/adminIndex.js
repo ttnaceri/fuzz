@@ -5,7 +5,7 @@ const adminApp = new Hono();
 const round2 = (num) => Math.round(Number(num) * 100) / 100;
 
 // ==========================================
-// ADMIN STATS
+// ADMIN STATS (Dashboard)
 // ==========================================
 adminApp.get('/admin/stats', async (c) => {
   try {
@@ -13,13 +13,17 @@ adminApp.get('/admin/stats', async (c) => {
     const gamesCount = await c.env.DB.prepare('SELECT COUNT(*) as c FROM games').first();
     const bundlesCount = await c.env.DB.prepare('SELECT COUNT(*) as c FROM bundles').first();
     const eventsCount = await c.env.DB.prepare('SELECT COUNT(*) as c FROM events').first();
+    
+    // Faqat to'langan (approved) va o'chirilmagan summalar
     const totalBalance = await c.env.DB.prepare('SELECT SUM(balance) as sum FROM users').first();
+    const totalPayments = await c.env.DB.prepare("SELECT SUM(amount_usd) as sum FROM payments").first();
+    
     return c.json({
       users: usersCount?.c || 0,
       games: gamesCount?.c || 0,
       bundles: bundlesCount?.c || 0,
       events: eventsCount?.c || 0,
-      revenue: round2(totalBalance?.sum || 0)
+      revenue: round2(totalPayments?.sum || totalBalance?.sum || 0)
     });
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
@@ -40,11 +44,7 @@ adminApp.get('/admin/payments', async (c) => {
 adminApp.get('/admin/users', async (c) => {
   try {
     const users = await c.env.DB.prepare('SELECT id, username, email, role, balance, telegram_id, language, created_at FROM users').all();
-    const safeUsers = (users.results || []).map(u => ({
-      ...u,
-      balance: round2(u.balance || 0)
-    }));
-    return c.json({ users: safeUsers });
+    return c.json({ users: (users.results || []).map(u => ({ ...u, balance: round2(u.balance || 0) })) });
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
@@ -55,11 +55,7 @@ adminApp.get('/admin/users/search', async (c) => {
     const users = await c.env.DB.prepare(
       'SELECT id, username, email, role, balance, telegram_id, language, created_at FROM users WHERE username LIKE ? OR email LIKE ? OR telegram_id LIKE ?'
     ).bind(`%${query}%`, `%${query}%`, `%${query}%`).all();
-    const safeUsers = (users.results || []).map(u => ({
-      ...u,
-      balance: round2(u.balance || 0)
-    }));
-    return c.json({ users: safeUsers });
+    return c.json({ users: (users.results || []).map(u => ({ ...u, balance: round2(u.balance || 0) })) });
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
@@ -76,14 +72,11 @@ adminApp.put('/admin/users/:id', async (c) => {
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
-// YANGILANGAN DELETE — barcha bog'liq jadvallardan tozalash
 adminApp.delete('/admin/users/:id', async (c) => {
   try {
     const userId = c.req.param('id');
     const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first();
     if (!user) return c.json({ error: 'Foydalanuvchi topilmadi' }, 404);
-    
-    // 1. Bog'liq jadvallarni tozalash
     await c.env.DB.batch([
       c.env.DB.prepare('DELETE FROM user_library WHERE user_id = ?').bind(userId),
       c.env.DB.prepare('DELETE FROM user_wishlist WHERE user_id = ?').bind(userId),
@@ -91,13 +84,10 @@ adminApp.delete('/admin/users/:id', async (c) => {
       c.env.DB.prepare('DELETE FROM payment_requests WHERE user_id = ?').bind(userId),
       c.env.DB.prepare('DELETE FROM payments WHERE user_id = ?').bind(userId),
       c.env.DB.prepare('DELETE FROM reset_codes WHERE user_id = ?').bind(userId),
-      // Reg_sessions ni telegram_id orqali tozalash
       c.env.DB.prepare('DELETE FROM reg_sessions WHERE telegram_id = ?').bind(user.telegram_id || ''),
-      // Foydalanuvchini o'chirish
       c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(userId)
     ]);
-    
-    return c.json({ success: true, message: `Foydalanuvchi ${user.username} va uning barcha ma'lumotlari o'chirildi.` });
+    return c.json({ success: true, message: `Foydalanuvchi ${user.username} o'chirildi.` });
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
@@ -450,13 +440,9 @@ adminApp.delete('/admin/payment-methods/:id', async (c) => {
 adminApp.get('/admin/server', async (c) => {
   try {
     return c.json({
-      status: 'online',
-      uptime: '99.9%',
-      cpu: Math.floor(Math.random() * 30) + 20,
-      ram: Math.floor(Math.random() * 40) + 40,
-      storage: Math.floor(Math.random() * 20) + 60,
-      api_requests: Math.floor(Math.random() * 1000) + 500,
-      errors: Math.floor(Math.random() * 5),
+      status: 'online', uptime: '99.9%', cpu: Math.floor(Math.random() * 30) + 20,
+      ram: Math.floor(Math.random() * 40) + 40, storage: Math.floor(Math.random() * 20) + 60,
+      api_requests: Math.floor(Math.random() * 1000) + 500, errors: Math.floor(Math.random() * 5),
     });
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
@@ -467,11 +453,7 @@ adminApp.get('/admin/server', async (c) => {
 adminApp.get('/admin/telegram/users', async (c) => {
   try {
     const users = await c.env.DB.prepare('SELECT id, username, telegram_id, balance, created_at FROM users WHERE telegram_id IS NOT NULL').all();
-    const safeUsers = (users.results || []).map(u => ({
-      ...u,
-      balance: round2(u.balance || 0)
-    }));
-    return c.json({ users: safeUsers });
+    return c.json({ users: (users.results || []).map(u => ({ ...u, balance: round2(u.balance || 0) })) });
   } catch (err) { return c.json({ users: [] }); }
 });
 
@@ -486,29 +468,23 @@ adminApp.post('/admin/telegram/reply', async (c) => {
   try {
     const { chatId, text } = await c.req.json();
     if (!chatId || !text) return c.json({ error: 'Chat ID va xabar matni kerak!' }, 400);
-
     const BOT_TOKEN = c.env.BOT_TOKEN;
     if (!BOT_TOKEN) return c.json({ error: 'Bot token yo\'q' }, 500);
-
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_id: chatId, text })
     });
-    
     const resJson = await res.json();
     if (!resJson.ok) return c.json({ error: 'Telegram xatosi: ' + resJson.description }, 500);
-
     const id = crypto.randomUUID();
     await c.env.DB.prepare('INSERT INTO support_messages (id, chat_id, username, message) VALUES (?, ?, ?, ?)')
       .bind(id, chatId, 'Admin', text).run();
-
     return c.json({ success: true });
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
 // ==========================================
-// PAYMENT REQUESTS
+// PAYMENT REQUESTS (TO'G'RILANGAN QISM)
 // ==========================================
 adminApp.get('/admin/payment-requests', async (c) => {
   try {
@@ -517,11 +493,7 @@ adminApp.get('/admin/payment-requests', async (c) => {
       JOIN users u ON pr.user_id = u.id
       ORDER BY pr.created_at DESC
     `).all();
-    const safeRequests = (requests.results || []).map(r => ({
-      ...r,
-      amount_uzs: round2(r.amount_uzs || 0)
-    }));
-    return c.json({ requests: safeRequests });
+    return c.json({ requests: (requests.results || []).map(r => ({ ...r, amount_uzs: round2(r.amount_uzs || 0) })) });
   } catch (err) { return c.json({ requests: [] }); }
 });
 
@@ -535,6 +507,7 @@ adminApp.post('/admin/payment-requests/:id/approve', async (c) => {
     const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(request.user_id).first();
     if (!user) return c.json({ error: 'Foydalanuvchi topilmadi!' }, 404);
 
+    // 15 daqiqa qoidasi
     const createdAt = new Date(request.created_at);
     const now = new Date();
     const diffMinutes = (now - createdAt) / (1000 * 60);
@@ -544,23 +517,35 @@ adminApp.post('/admin/payment-requests/:id/approve', async (c) => {
       finalAmountUzs = finalAmountUzs * 1.15;
     }
 
-    const rate = 12500;
+    // Backenddan joriy kursni olish
+    let rate = 12500; // Default
+    try {
+      const rateRes = await fetch('https://my-backend.updbackend.workers.dev/fuzz/api/rates/usd');
+      const rateData = await rateRes.json();
+      if (rateData?.usd_uzs) rate = rateData.usd_uzs;
+    } catch (e) {}
+
     const amountUsd = round2(finalAmountUzs / rate);
     const currentBalance = Number(user.balance) || 0;
     const newBalance = round2(currentBalance + amountUsd);
 
+    // 1. Balansni yangilash
     await c.env.DB.prepare('UPDATE users SET balance = ? WHERE id = ?')
       .bind(newBalance, request.user_id).run();
 
-    await c.env.DB.prepare('UPDATE payment_requests SET status = ?, approved_at = CURRENT_TIMESTAMP WHERE id = ?')
-      .bind('approved', id).run();
+    // 2. Payments jadvaliga yozish (Dashboard uchun)
+    await c.env.DB.prepare('INSERT INTO payments (id, user_id, amount_usd, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)')
+      .bind(crypto.randomUUID(), request.user_id, amountUsd).run();
 
+    // 3. So'rovni o'chirib tashlash (yoki statusini 'approved' qilib qoldirish, lekin ro'yxatda ko'rinmasligi uchun)
+    await c.env.DB.prepare('DELETE FROM payment_requests WHERE id = ?').bind(id).run();
+
+    // 4. Telegram xabar yuborish
     if (user.telegram_id && c.env.BOT_TOKEN) {
       const bonusText = diffMinutes > 15 ? `\n\n(Bonus: +15% kechikish uchun qo'shildi)` : '';
       try {
         await fetch(`https://api.telegram.org/bot${c.env.BOT_TOKEN}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: user.telegram_id,
             text: `✅ To'lovingiz tasdiqlandi!\n\nMiqdor: ${finalAmountUzs.toLocaleString()} so'm (~$${amountUsd})${bonusText}\nYangi balans: $${newBalance}`,
@@ -570,7 +555,7 @@ adminApp.post('/admin/payment-requests/:id/approve', async (c) => {
     }
 
     return c.json({
-      message: 'Tasdiqlandi!',
+      message: 'Tasdiqlandi va o\'chirildi!',
       amount_uzs: round2(finalAmountUzs),
       amount_usd: amountUsd,
       new_balance: newBalance,
@@ -586,15 +571,15 @@ adminApp.post('/admin/payment-requests/:id/reject', async (c) => {
     if (!request) return c.json({ error: 'So\'rov topilmadi!' }, 404);
     if (request.status !== 'pending') return c.json({ error: 'Bu so\'rov allaqachon ko\'rib chiqilgan!' }, 400);
 
-    await c.env.DB.prepare('UPDATE payment_requests SET status = ? WHERE id = ?')
-      .bind('rejected', id).run();
+    // So'rovni o'chirib tashlash
+    await c.env.DB.prepare('DELETE FROM payment_requests WHERE id = ?').bind(id).run();
 
+    // Foydalanuvchiga xabar yuborish
     const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(request.user_id).first();
     if (user?.telegram_id && c.env.BOT_TOKEN) {
       try {
         await fetch(`https://api.telegram.org/bot${c.env.BOT_TOKEN}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: user.telegram_id,
             text: `❌ To'lov so'rovingiz rad etildi.\n\nMiqdor: ${Number(request.amount_uzs).toLocaleString()} so'm\nAgar xato deb hisoblasangiz, support bilan bog'laning.`,
@@ -603,7 +588,7 @@ adminApp.post('/admin/payment-requests/:id/reject', async (c) => {
       } catch (e) { console.error("Telegram xabar yuborishda xato:", e); }
     }
 
-    return c.json({ message: 'Rad etildi!' });
+    return c.json({ message: 'Rad etildi va o\'chirildi!' });
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 

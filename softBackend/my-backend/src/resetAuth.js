@@ -1,13 +1,10 @@
 // softBackend/my-backend/src/resetAuth.js
-// Parolni tiklash: username/email/telegram_id → kod → yangi parol
-// 5 daqiqa TTL, 5 xonali kod, attempts limiting, reset_token.
-
 import { Hono } from 'hono';
 import { hashPassword } from './utils/password.js';
 
-const CODE_TTL_MS = 5 * 60 * 1000;    // 5 daqiqa
+const CODE_TTL_MS = 5 * 60 * 1000;
 const CODE_MAX_ATTEMPTS = 5;
-const RESET_TOKEN_TTL_MS = 10 * 60 * 1000; // 10 daqiqa
+const RESET_TOKEN_TTL_MS = 10 * 60 * 1000;
 const MIN_PASSWORD = 6;
 
 function randomCode() {
@@ -52,26 +49,33 @@ async function sendBotMessage(botToken, chatId, text) {
 
 const app = new Hono();
 
-// 1) Boshlash: kamida 2 ta identifikator
+// 1) Boshlash
 app.post('/auth/reset/start', async (c) => {
   try {
     await ensureResetTable(c.env.DB);
     const { username, email, telegramId } = await c.req.json();
+    
     const provided = [
       { k: 'username', v: (username || '').trim() },
       { k: 'email', v: (email || '').trim() },
       { k: 'telegram_id', v: (telegramId || '').trim() },
     ].filter((x) => x.v);
 
-    if (provided.length < 2) return c.json({ error: 'Kamida 2 ta maydon kerak (username/email/telegram_id)' }, 400);
+    if (provided.length < 2) {
+      return c.json({ error: 'Kamida 2 ta maydon kerak (username/email/telegram_id)' }, 400);
+    }
 
     const where = provided.map((x) => `${x.k} = ?`).join(' AND ');
     const user = await c.env.DB.prepare(`SELECT * FROM users WHERE ${where}`)
       .bind(...provided.map((x) => x.v)).first();
-    if (!user) return c.json({ error: 'Foydalanuvchi topilmadi yoki ma\'lumotlar mos emas' }, 404);
-    if (!user.telegram_id) return c.json({ error: 'Akkauntga Telegram ulanmagan' }, 400);
+    
+    if (!user) {
+      return c.json({ error: 'Foydalanuvchi topilmadi. Kiritilgan ma\'lumotlar bazadagi ma\'lumotlarga mos kelmadi.' }, 404);
+    }
+    if (!user.telegram_id) {
+      return c.json({ error: 'Akkauntga Telegram ulanmagan' }, 400);
+    }
 
-    // Rate limit: 60 sek
     const last = await c.env.DB.prepare('SELECT created_at FROM reset_codes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1').bind(user.id).first();
     if (last && Date.now() - last.created_at < 60 * 1000) {
       return c.json({ error: 'Kod yaqinda yuborildi. 1 daqiqadan keyin urinib ko\'ring.' }, 429);

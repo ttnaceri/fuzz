@@ -770,4 +770,26 @@ app.route('/fuzz/api', adminApp);
 app.route('/fuzz/api', registerAuth);
 app.route('/fuzz/api', resetAuth);
 
+// ==========================================
+// PAYMENT REQUEST (KARTA ORQALI TO'LOV)
+// ==========================================
+userApp.post('/payment-request', async (c) => {
+  try {
+    const me = await getAuthUser(c); // JWT orqali userni olamiz
+    const { amount_uzs } = await c.req.json();
+
+    if (!amount_uzs || Number(amount_uzs) <= 0) {
+      return c.json({ error: 'Noto\'g\'ri miqdor' }, 400);
+    }
+
+    const id = crypto.randomUUID();
+    await c.env.DB.prepare('INSERT INTO payment_requests (id, user_id, amount_uzs, status) VALUES (?, ?, ?, ?)')
+      .bind(id, me.id, Number(amount_uzs), 'pending').run();
+
+    return c.json({ success: true, message: 'To\'lov so\'rovi yuborildi' }, 201);
+  } catch (err) {
+    return c.json({ error: 'Server xatosi: ' + err.message }, 500);
+  }
+});
+
 export default app;

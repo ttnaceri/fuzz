@@ -4,7 +4,7 @@ const adminApp = new Hono();
 const round2 = (num) => Math.round(Number(num) * 100) / 100;
 
 // ==========================================
-// ADMIN STATS
+// STATS (Dashboard)
 // ==========================================
 adminApp.get('/admin/stats', async (c) => {
   try {
@@ -12,22 +12,19 @@ adminApp.get('/admin/stats', async (c) => {
     const gamesCount = await c.env.DB.prepare('SELECT COUNT(*) as c FROM games').first();
     const bundlesCount = await c.env.DB.prepare('SELECT COUNT(*) as c FROM bundles').first();
     const eventsCount = await c.env.DB.prepare('SELECT COUNT(*) as c FROM events').first();
-    
-    // Dashboardga faqat payment_requests dagi tasdiqlangan summalar (yoki payments) boradi
     const totalPayments = await c.env.DB.prepare("SELECT SUM(amount_usd) as sum FROM payments").first();
-    
     return c.json({
       users: usersCount?.c || 0,
       games: gamesCount?.c || 0,
       bundles: bundlesCount?.c || 0,
       events: eventsCount?.c || 0,
-      revenue: round2(totalPayments?.sum || 0)
+      revenue: round2(totalPayments?.sum || 0),
     });
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
 // ==========================================
-// ADMIN PAYMENTS
+// PAYMENTS
 // ==========================================
 adminApp.get('/admin/payments', async (c) => {
   try {
@@ -37,7 +34,7 @@ adminApp.get('/admin/payments', async (c) => {
 });
 
 // ==========================================
-// ADMIN USERS
+// USERS
 // ==========================================
 adminApp.get('/admin/users', async (c) => {
   try {
@@ -83,14 +80,14 @@ adminApp.delete('/admin/users/:id', async (c) => {
       c.env.DB.prepare('DELETE FROM payments WHERE user_id = ?').bind(userId),
       c.env.DB.prepare('DELETE FROM reset_codes WHERE user_id = ?').bind(userId),
       c.env.DB.prepare('DELETE FROM reg_sessions WHERE telegram_id = ?').bind(user.telegram_id || ''),
-      c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(userId)
+      c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(userId),
     ]);
     return c.json({ success: true, message: `Foydalanuvchi ${user.username} o'chirildi.` });
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
 // ==========================================
-// ADMIN COMPANIES
+// COMPANIES
 // ==========================================
 adminApp.get('/admin/companies', async (c) => {
   try {
@@ -122,7 +119,7 @@ adminApp.put('/admin/companies/:id', async (c) => {
 });
 
 // ==========================================
-// ADMIN GAMES
+// GAMES
 // ==========================================
 adminApp.get('/admin/all-games', async (c) => {
   try {
@@ -161,7 +158,7 @@ adminApp.delete('/admin/games/:id', async (c) => {
 });
 
 // ==========================================
-// ADMIN BUNDLES
+// BUNDLES
 // ==========================================
 adminApp.get('/admin/bundles', async (c) => {
   try {
@@ -212,7 +209,7 @@ adminApp.post('/admin/bundles/:id/games', async (c) => {
 });
 
 // ==========================================
-// ADMIN EVENTS
+// EVENTS
 // ==========================================
 adminApp.get('/admin/events', async (c) => {
   try {
@@ -235,7 +232,7 @@ adminApp.post('/admin/events', async (c) => {
 });
 
 // ==========================================
-// ADMIN API KEYS
+// API KEYS
 // ==========================================
 adminApp.get('/admin/api-keys', async (c) => {
   try {
@@ -263,7 +260,7 @@ adminApp.delete('/admin/api-keys/:id', async (c) => {
 });
 
 // ==========================================
-// ADMIN WEBHOOKS
+// WEBHOOKS
 // ==========================================
 adminApp.get('/admin/webhooks', async (c) => {
   try {
@@ -291,7 +288,7 @@ adminApp.delete('/admin/webhooks/:id', async (c) => {
 });
 
 // ==========================================
-// ADMIN BACKEND SERVICES
+// BACKEND SERVICES
 // ==========================================
 adminApp.get('/admin/backend', async (c) => {
   try {
@@ -311,7 +308,7 @@ adminApp.post('/admin/backend', async (c) => {
 });
 
 // ==========================================
-// ADMIN ROLES
+// ROLES
 // ==========================================
 adminApp.get('/admin/roles', async (c) => {
   try {
@@ -348,7 +345,7 @@ adminApp.delete('/admin/roles/:id', async (c) => {
 });
 
 // ==========================================
-// ADMIN RATES
+// RATES
 // ==========================================
 adminApp.get('/admin/rates', async (c) => {
   try {
@@ -368,7 +365,7 @@ adminApp.post('/admin/rates', async (c) => {
 });
 
 // ==========================================
-// ADMIN STARS RATES
+// STARS RATES
 // ==========================================
 adminApp.get('/admin/stars-rates', async (c) => {
   try {
@@ -396,7 +393,7 @@ adminApp.delete('/admin/stars-rates/:id', async (c) => {
 });
 
 // ==========================================
-// ADMIN PAYMENT METHODS
+// PAYMENT METHODS
 // ==========================================
 adminApp.get('/admin/payment-methods', async (c) => {
   try {
@@ -433,7 +430,7 @@ adminApp.delete('/admin/payment-methods/:id', async (c) => {
 });
 
 // ==========================================
-// ADMIN SERVER STATUS
+// SERVER STATUS
 // ==========================================
 adminApp.get('/admin/server', async (c) => {
   try {
@@ -470,7 +467,7 @@ adminApp.post('/admin/telegram/reply', async (c) => {
     if (!BOT_TOKEN) return c.json({ error: 'Bot token yo\'q' }, 500);
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text })
+      body: JSON.stringify({ chat_id: chatId, text }),
     });
     const resJson = await res.json();
     if (!resJson.ok) return c.json({ error: 'Telegram xatosi: ' + resJson.description }, 500);
@@ -482,7 +479,7 @@ adminApp.post('/admin/telegram/reply', async (c) => {
 });
 
 // ==========================================
-// PAYMENT REQUESTS (TO'G'RILANGAN QISM)
+// PAYMENT REQUESTS (TUZATILGAN)
 // ==========================================
 adminApp.get('/admin/payment-requests', async (c) => {
   try {
@@ -500,10 +497,12 @@ adminApp.post('/admin/payment-requests/:id/approve', async (c) => {
     const id = c.req.param('id');
     const request = await c.env.DB.prepare('SELECT * FROM payment_requests WHERE id = ?').bind(id).first();
     if (!request) return c.json({ error: 'So\'rov topilmadi!' }, 404);
-    
+    if (request.status !== 'pending') return c.json({ error: 'Bu so\'rov allaqachon ko\'rib chiqilgan!' }, 400);
+
     const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(request.user_id).first();
     if (!user) return c.json({ error: 'Foydalanuvchi topilmadi!' }, 404);
 
+    // 15 daqiqa qoidasi
     const createdAt = new Date(request.created_at);
     const now = new Date();
     const diffMinutes = (now - createdAt) / (1000 * 60);
@@ -513,8 +512,8 @@ adminApp.post('/admin/payment-requests/:id/approve', async (c) => {
       finalAmountUzs = finalAmountUzs * 1.15;
     }
 
-    // Backenddan joriy kursni olish (xavfsizroq)
-    let rate = 12500; 
+    // Backenddan joriy kursni olish
+    let rate = 12500;
     try {
       const rateRes = await fetch('https://my-backend.updbackend.workers.dev/fuzz/api/rates/usd');
       const rateData = await rateRes.json();
@@ -555,7 +554,7 @@ adminApp.post('/admin/payment-requests/:id/approve', async (c) => {
       amount_uzs: round2(finalAmountUzs),
       amount_usd: amountUsd,
       new_balance: newBalance,
-      bonus_applied: diffMinutes > 15
+      bonus_applied: diffMinutes > 15,
     });
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });

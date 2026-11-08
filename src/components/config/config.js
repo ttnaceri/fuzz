@@ -14,18 +14,13 @@ export const config = {
   soundEnabled: false,
 
   payment: {
+    // Vercel'dagi VITE_CARD_NUMBER dan o'qiladi, agar bo'lmasa default
     cardNumber: import.meta.env.VITE_CARD_NUMBER || '5614 6818 8775 0416',
     cardHolder: import.meta.env.VITE_CARD_HOLDER || 'H. E.',
-    // Vercel'dan API kalitni o'qiymiz (Agar mavjud bo'lsa)
+    // Vercel'dagi VITE_EXCHANGE_API_KEY dan o'qiladi
     exchangeApiKey: import.meta.env.VITE_EXCHANGE_API_KEY || '',
-    exchangeApiUrl: 'https://v6.exchangerate-api.com/v6/latest/USD', // Fallback
   },
 
-  qrLogin: {
-    path: '/qr-auth',
-  },
-
-  telegram: {
-    botUrl: import.meta.env.VITE_TELEGRAM_BOT_URL || DEFAULT_TELEGRAM_BOT_URL,
-  },
+  qrLogin: { path: '/qr-auth' },
+  telegram: { botUrl: import.meta.env.VITE_TELEGRAM_BOT_URL || DEFAULT_TELEGRAM_BOT_URL },
 };

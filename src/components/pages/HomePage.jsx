@@ -1,79 +1,63 @@
 import { Link } from 'react-router-dom';
-import useGames from '../hooks/useGames.js';
-import GameGrid from '../common/GameGrid.jsx';
+import { useGames } from '../hooks/useGames.js';
+import { formatPrice } from '../utils/formatters.js';
+import { useLanguage } from '../context/useLanguage.js';
 import Loading from '../common/Loading.jsx';
 import ErrorState from '../common/ErrorState.jsx';
-import { useCart } from '../context/useCart.js';
-import { useLanguage } from '../context/useLanguage.js';
 
 export default function HomePage() {
-  const { games, loading, error, reload } = useGames();
-  const { addItem } = useCart();
+  const { games, loading, error, refetch } = useGames();
   const { t } = useLanguage();
 
   return (
     <div className="page">
       {/* Hero Section */}
-      <section className="hero">
-        <div className="hero__content">
-          <h1>{t('home.welcome')}</h1>
-          <p>{t('home.subtitle')}</p>
-          <Link to="/store" className="btn btn-primary">{t('home.browseBtn')}</Link>
-        </div>
-      </section>
+      <div style={{
+        backgroundColor: '#8a1200', padding: '3rem 2rem', borderRadius: '12px',
+        marginBottom: '3rem', backgroundImage: 'linear-gradient(45deg, #8a1200, #3d0500)'
+      }}>
+        <h1 style={{ color: '#fff', fontSize: '2.5rem', marginBottom: '1rem' }}>Xush kelibsiz, Fuzz'ga!</h1>
+        <p style={{ color: '#f5eeee', fontSize: '1.1rem', marginBottom: '1.5rem' }}>
+          Eng sara o'yinlarni bizdan toping. Yangi o'yinlar, chegirmalar va boshqalar.
+        </p>
+        <Link to="/store" style={{
+          display: 'inline-block', backgroundColor: '#100b0a', color: '#fff',
+          padding: '0.8rem 1.5rem', borderRadius: '4px', textDecoration: 'none', fontWeight: 'bold'
+        }}>
+          Do'konni ko'rish
+        </Link>
+      </div>
 
-      {/* Featured Games Section */}
-      <section className="section">
-        <div className="section__header">
-          <h2 className="section__title">{t('home.featured')}</h2>
-          <Link to="/store" className="text-muted">{t('home.viewAll')} →</Link>
-        </div>
-        
-        {loading && <Loading label="Loading games..." />}
-        
-        {error && !loading && (
-          <ErrorState
-            title="Could not load games"
-            message={error.message}
-            onRetry={reload}
-          />
-        )}
-        
-        {!loading && !error && games.length > 0 && (
-          <GameGrid games={games} onAddToCart={addItem} />
-        )}
-        
-        {!loading && !error && games.length === 0 && (
-          <div className="state" style={{ minHeight: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b9a6a2' }}>
-            <div>
-              <i className="fa-solid fa-gamepad" style={{ fontSize: '2rem', marginBottom: '1rem', color: '#48201a' }}></i>
-              <p>Hozircha o'yinlar yo'q. Admin panel orqali o'yin qo'shing.</p>
-            </div>
-          </div>
-        )}
-      </section>
+      {/* Games Section */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+        <h2 style={{ color: '#f5eeee', fontSize: '1.5rem', margin: 0 }}>Tanlangan O'yinlar</h2>
+        <Link to="/store" style={{ color: '#b9a6a2', textDecoration: 'none' }}>Barchasini ko'rish →</Link>
+      </div>
 
-      {/* Quick Links Section */}
-      <section className="section">
-        <div className="section__header">
-          <h2 className="section__title">{t('home.quickLinks')}</h2>
+      {loading ? (
+        <Loading />
+      ) : error ? (
+        <ErrorState message={error} onRetry={refetch} />
+      ) : games.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '3rem', color: '#b9a6a2', backgroundColor: '#241411', borderRadius: '8px' }}>
+          <i className="fa-solid fa-gamepad" style={{ fontSize: '3rem', marginBottom: '1rem' }}></i>
+          <p>Hozircha o'yinlar mavjud emas.</p>
         </div>
-        <div className="game-grid">
-          {[
-            { to: '/new-releases', icon: 'fa-star', label: t('home.newReleases') },
-            { to: '/special-offers', icon: 'fa-tags', label: t('home.specialOffers') },
-            { to: '/free-games', icon: 'fa-gift', label: t('home.freeGames') },
-            { to: '/top-sellers', icon: 'fa-trophy', label: t('home.topSellers') },
-            { to: '/categories', icon: 'fa-layer-group', label: t('home.categories') },
-            { to: '/community', icon: 'fa-users', label: t('home.community') },
-          ].map((l) => (
-            <Link key={l.to} to={l.to} className="card" style={{ padding: '1.5rem', textAlign: 'center' }}>
-              <i className={`fa-solid ${l.icon}`} style={{ fontSize: '2rem', marginBottom: '0.5rem', color: 'var(--color-primary)' }} />
-              <div style={{ fontWeight: 700 }}>{l.label}</div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
+          {games.slice(0, 8).map((game) => (
+            <Link key={game.id} to={`/game/${game.id}`} style={{ textDecoration: 'none' }}>
+              <div style={{ backgroundColor: '#241411', border: '1px solid #48201a', borderRadius: '8px', overflow: 'hidden', transition: 'transform 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+                <img src={game.image || game.cover} alt={game.title} style={{ width: '100%', height: '150px', objectFit: 'cover' }} />
+                <div style={{ padding: '1rem' }}>
+                  <h3 style={{ color: '#f5eeee', margin: '0 0 0.5rem 0', fontSize: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{game.title}</h3>
+                  <div style={{ color: '#43b581', fontWeight: 'bold' }}>{formatPrice(game.price, game.currency)}</div>
+                </div>
+              </div>
             </Link>
           ))}
         </div>
-      </section>
+      )}
     </div>
   );
 }

@@ -1,40 +1,31 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { gameService } from '../services/gameService.js';
 
 export function useGames() {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const abortRef = useRef(null);
 
-  const load = useCallback(async () => {
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    
+  const fetchGames = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
     try {
-      // Keshni tozalash (har safar yangi ma'lumot olish uchun)
-      gameService.clearCache();
-      const data = await gameService.getAllGames({ signal: controller.signal });
-      setGames(data);
+      // gameService dan ma'lumot olish
+      const res = await gameService.getAllGames();
+      // Natija qanday kelishidan qat'i nazar, arrayni ajratib olamiz
+      const dataArray = Array.isArray(res) ? res : (res?.games || []);
+      setGames(dataArray);
     } catch (err) {
-      if (err.name !== 'AbortError') {
-        setError(err);
-      }
+      console.error("Games fetch error:", err);
+      setError(err.message || "Could not load games");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    load();
-    return () => abortRef.current?.abort();
-  }, [load]);
+    fetchGames();
+  }, [fetchGames]);
 
-  return { games, loading, error, reload: load };
+  return { games, loading, error, refetch: fetchGames };
 }
-
-export default useGames;

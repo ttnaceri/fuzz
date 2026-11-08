@@ -23,24 +23,14 @@ export default function WalletTopUpPage() {
   const [starsAmount, setStarsAmount] = useState(10);
 
   useEffect(() => {
-    // 1. Exchange Rate API dan kursni olish (Vercel'dagi kalit orqali)
-    const fetchRate = async () => {
-      try {
-        const apiKey = config.payment.exchangeApiKey;
-        if (!apiKey) {
-          console.warn("VITE_EXCHANGE_API_KEY topilmadi. Fallback (12500) ishlatiladi.");
-          return;
+    // 1. Kursni Backenddan olish (Xavfsiz va ishonchli)
+    api.get('/api/rates/usd')
+      .then(data => {
+        if (data?.usd_uzs && Number(data.usd_uzs) > 0) {
+          setRate(Number(data.usd_uzs));
         }
-        const res = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`);
-        const data = await res.json();
-        if (data?.conversion_rates?.UZS) {
-          setRate(data.conversion_rates.UZS);
-        }
-      } catch (err) {
-        console.error("Kurs olishda xato:", err);
-      }
-    };
-    fetchRate();
+      })
+      .catch((err) => console.warn("Kurs olishda xato, fallback ishlatiladi:", err));
 
     // 2. To'lov usullari
     api.get('/api/payment-methods')
@@ -83,7 +73,7 @@ export default function WalletTopUpPage() {
     if (!starsAmount || starsAmount < 1) { info('Kamida 1 Star'); return; }
     const url = `https://t.me/FuzzAppBot?start=pay_${usd}`;
     window.open(url, '_blank', 'noopener,noreferrer');
-    success("Telegram'da to'lovni yakunlang. To'lov tasdiqlangach balans to'ladi.");
+    success("Telegram'da to'lovni yakunlang.");
   };
 
   const copyCardNumber = () => {

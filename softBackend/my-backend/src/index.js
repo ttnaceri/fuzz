@@ -85,7 +85,7 @@ async function answerCallbackQuery(botToken, callbackQueryId, text = null) {
 app.get('/fuzz/api/health', (c) => c.json({ status: 'ok', time: new Date().toISOString() }));
 
 // ==========================================
-// USD/UZS KURSI
+// USD/UZS KURSI (Backend orqali olish)
 // ==========================================
 let __rateCache = { value: null, fetchedAt: 0 };
 const RATE_CACHE_TTL_MS = 60 * 60 * 1000;
@@ -96,19 +96,21 @@ app.get('/fuzz/api/rates/usd', async (c) => {
     if (__rateCache.value !== null && (now - __rateCache.fetchedAt) < RATE_CACHE_TTL_MS) {
       return c.json({ usd_uzs: __rateCache.value, cached: true });
     }
+
+    // Vercel'dagi yoki Cloudflare'dagi API kalitni olamiz
     const apiKey = c.env.EXCHANGE_RATE_API_KEY;
     if (!apiKey) {
       return c.json({ error: "EXCHANGE_RATE_API_KEY sozlanmagan" }, 500);
     }
+
     const res = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`);
-    if (!res.ok) {
-      return c.json({ error: `Exchange API xato: ${res.status}` }, 502);
-    }
     const data = await res.json();
     const uzs = data?.conversion_rates?.UZS;
+
     if (!uzs || typeof uzs !== 'number') {
       return c.json({ error: 'Kurs olinmadi' }, 502);
     }
+
     __rateCache = { value: uzs, fetchedAt: now };
     return c.json({ usd_uzs: uzs, cached: false });
   } catch (err) {

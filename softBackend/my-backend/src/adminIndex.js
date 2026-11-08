@@ -479,7 +479,7 @@ adminApp.post('/admin/telegram/reply', async (c) => {
 });
 
 // ==========================================
-// PAYMENT REQUESTS (TUZATILGAN)
+// PAYMENT REQUESTS (YANGILANGAN: BULK VA TO'G'RI $ QO'SHISH)
 // ==========================================
 adminApp.get('/admin/payment-requests', async (c) => {
   try {
@@ -492,27 +492,15 @@ adminApp.get('/admin/payment-requests', async (c) => {
   } catch (err) { return c.json({ requests: [] }); }
 });
 
-adminApp.post('/admin/payment-requests/:id/approve', async (c) => {
+adminApp.post('/admin/payment-requests/approve', async (c) => {
   try {
-    const id = c.req.param('id');
-    const request = await c.env.DB.prepare('SELECT * FROM payment_requests WHERE id = ?').bind(id).first();
-    if (!request) return c.json({ error: 'So\'rov topilmadi!' }, 404);
-    if (request.status !== 'pending') return c.json({ error: 'Bu so\'rov allaqachon ko\'rib chiqilgan!' }, 400);
-
-    const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(request.user_id).first();
-    if (!user) return c.json({ error: 'Foydalanuvchi topilmadi!' }, 404);
-
-    // 15 daqiqa qoidasi
-    const createdAt = new Date(request.created_at);
-    const now = new Date();
-    const diffMinutes = (now - createdAt) / (1000 * 60);
-
-    let finalAmountUzs = Number(request.amount_uzs);
-    if (diffMinutes > 15) {
-      finalAmountUzs = finalAmountUzs * 1.15;
+    const { ids } = await c.req.json();
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return c.json({ error: 'So\'rovlar tanlanmagan' }, 400);
     }
 
-    // Backenddan joriy kursni olish
+    let processedCount = 0;
+    // Kursni 1 marta olamiz, ortiqcha so'rov yubormaslik uchun
     let rate = 12500;
     try {
       const rateRes = await fetch('https://my-backend.updbackend.workers.dev/fuzz/api/rates/usd');
@@ -520,64 +508,78 @@ adminApp.post('/admin/payment-requests/:id/approve', async (c) => {
       if (rateData?.usd_uzs) rate = rateData.usd_uzs;
     } catch (e) {}
 
-    const amountUsd = round2(finalAmountUzs / rate);
-    const currentBalance = Number(user.balance) || 0;
-    const newBalance = round2(currentBalance + amountUsd);
+    for (const id of ids) {
+      const request = await c.env.DB.prepare('SELECT * FROM payment_requests WHERE id = ? AND status = "pending"').bind(id).first();
+      if (!request) continue;
 
-    // 1. Balansni yangilash
-    await c.env.DB.prepare('UPDATE users SET balance = ? WHERE id = ?')
-      .bind(newBalance, request.user_id).run();
+      const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(request.user_id).first();
+      if (!user) continue;
 
-    // 2. Payments jadvaliga yozish (Dashboard uchun)
-    await c.env.DB.prepare('INSERT INTO payments (id, user_id, amount_usd, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)')
-      .bind(crypto.randomUUID(), request.user_id, amountUsd).run();
+      const createdAt = new Date(request.created_at);
+      const now = new Date();
+      const diffMinutes = (now - createdAt) / (1000 * 60);
 
-    // 3. So'rovni o'chirib tashlash
-    await c.env.DB.prepare('DELETE FROM payment_requests WHERE id = ?').bind(id).run();
+      let finalAmountUzs = Number(request.amount_uzs);
+      if (diffMinutes > 15) {
+        finalAmountUzs = finalAmountUzs * 1.15;
+      }
 
-    // 4. Telegram xabar
-    if (user.telegram_id && c.env.BOT_TOKEN) {
-      const bonusText = diffMinutes > 15 ? `\n\n(Bonus: +15% kechikish uchun qo'shildi)` : '';
-      try {
-        await fetch(`https://api.telegram.org/bot${c.env.BOT_TOKEN}/sendMessage`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: user.telegram_id,
-            text: `✅ To'lovingiz tasdiqlandi!\n\nMiqdor: ${finalAmountUzs.toLocaleString()} so'm (~$${amountUsd})${bonusText}\nYangi balans: $${newBalance}`,
-          }),
-        });
-      } catch (e) { console.error("Telegram xabar yuborishda xato:", e); }
+      const amountUsd = round2(finalAmountUzs / rate);
+      const currentBalance = Number(user.balance) || 0;
+      const newBalance = round2(currentBalance + amountUsd);
+
+      // Balans, payments, va so'rovni o'chirish (batch)
+      await c.env.DB.batch([
+        c.env.DB.prepare('UPDATE users SET balance = ? WHERE id = ?').bind(newBalance, user.id),
+        c.env.DB.prepare('INSERT INTO payments (id, user_id, amount_usd, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)').bind(crypto.randomUUID(), user.id, amountUsd),
+        c.env.DB.prepare('DELETE FROM payment_requests WHERE id = ?').bind(id)
+      ]);
+
+      // Telegram xabar
+      if (user.telegram_id && c.env.BOT_TOKEN) {
+        const bonusText = diffMinutes > 15 ? `\n\n(Bonus: +15%)` : '';
+        try {
+          await fetch(`https://api.telegram.org/bot${c.env.BOT_TOKEN}/sendMessage`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: user.telegram_id,
+              text: `✅ To'lovingiz tasdiqlandi!\n\nMiqdor: ${finalAmountUzs.toLocaleString()} so'm (~$${amountUsd})${bonusText}\nYangi balans: $${newBalance}`,
+            }),
+          });
+        } catch (e) {}
+      }
+      processedCount++;
     }
 
-    return c.json({
-      message: 'Tasdiqlandi va o\'chirildi!',
-      amount_uzs: round2(finalAmountUzs),
-      amount_usd: amountUsd,
-      new_balance: newBalance,
-      bonus_applied: diffMinutes > 15,
-    });
+    return c.json({ message: `${processedCount} ta tasdiqlandi!` });
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
-adminApp.post('/admin/payment-requests/:id/reject', async (c) => {
+adminApp.post('/admin/payment-requests/reject', async (c) => {
   try {
-    const id = c.req.param('id');
-    const request = await c.env.DB.prepare('SELECT * FROM payment_requests WHERE id = ?').bind(id).first();
-    if (!request) return c.json({ error: 'So\'rov topilmadi!' }, 404);
+    const { ids } = await c.req.json();
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return c.json({ error: 'So\'rovlar tanlanmagan' }, 400);
+    }
 
-    await c.env.DB.prepare('DELETE FROM payment_requests WHERE id = ?').bind(id).run();
+    for (const id of ids) {
+      const request = await c.env.DB.prepare('SELECT * FROM payment_requests WHERE id = ? AND status = "pending"').bind(id).first();
+      if (!request) continue;
 
-    const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(request.user_id).first();
-    if (user?.telegram_id && c.env.BOT_TOKEN) {
-      try {
-        await fetch(`https://api.telegram.org/bot${c.env.BOT_TOKEN}/sendMessage`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: user.telegram_id,
-            text: `❌ To'lov so'rovingiz rad etildi.\n\nMiqdor: ${Number(request.amount_uzs).toLocaleString()} so'm\nAgar xato deb hisoblasangiz, support bilan bog'laning.`,
-          }),
-        });
-      } catch (e) { console.error("Telegram xabar yuborishda xato:", e); }
+      await c.env.DB.prepare('DELETE FROM payment_requests WHERE id = ?').bind(id).run();
+
+      const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(request.user_id).first();
+      if (user?.telegram_id && c.env.BOT_TOKEN) {
+        try {
+          await fetch(`https://api.telegram.org/bot${c.env.BOT_TOKEN}/sendMessage`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: user.telegram_id,
+              text: `❌ To'lov so'rovingiz rad etildi.\n\nMiqdor: ${Number(request.amount_uzs).toLocaleString()} so'm`,
+            }),
+          });
+        } catch (e) {}
+      }
     }
 
     return c.json({ message: 'Rad etildi va o\'chirildi!' });

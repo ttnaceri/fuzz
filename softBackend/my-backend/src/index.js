@@ -19,13 +19,12 @@ app.use('*', cors({
 }));
 
 // ==========================================
-// RUXSATLAR (barcha admin va xizmat endpointlari)
+// RUXSATLAR
 // ==========================================
 app.use('/fuzz/api/admin/*', requireAdmin);
 app.use('/fuzz/api/telegram/*', requireAdmin);
 app.use('/fuzz/api/upload', requireAuth);
 
-// init-db: admin bo'lmagan yangi bazada birinchi marta ochiq, keyin faqat admin
 app.use('/fuzz/api/init-db', async (c, next) => {
   let hasAdmin = false;
   try {
@@ -36,6 +35,7 @@ app.use('/fuzz/api/init-db', async (c, next) => {
 });
 
 const MIN_PASSWORD = 6;
+// YANGILANDI: email qo'shildi
 const publicUser = (u) => ({ id: u.id, username: u.username, email: u.email, role: u.role, balance: round2(u.balance || 0) });
 
 const BANNED_WORDS = ['fuck', 'xxx', 'porn', 'sex', 'shit', 'bitch'];
@@ -47,7 +47,7 @@ const isNameValid = (name) => {
 const round2 = (num) => Math.round(Number(num) * 100) / 100;
 
 // ==========================================
-// TELEGRAM HELPER FUNKSIYALARI
+// TELEGRAM HELPERLARI
 // ==========================================
 async function sendTelegramMessage(botToken, chatId, text, replyMarkup = null) {
   const body = { chat_id: chatId, text };
@@ -130,7 +130,9 @@ app.get('/fuzz/api/stars-rates', async (c) => {
   }
 });
 
-// Telegram webhook holatini tekshirish
+// ==========================================
+// TELEGRAM STATUS
+// ==========================================
 app.get('/fuzz/api/telegram/status', async (c) => {
   try {
     const BOT_TOKEN = c.env.BOT_TOKEN;
@@ -388,7 +390,7 @@ app.post('/fuzz/api/auth/change-password', requireAuth, async (c) => {
 });
 
 // ==========================================
-// CONSOLE COMMANDS
+// CONSOLE COMMANDS (TUZATILGAN KILL)
 // ==========================================
 app.post('/fuzz/api/admin/console', async (c) => {
   try {
@@ -399,7 +401,7 @@ app.post('/fuzz/api/admin/console', async (c) => {
     const action = parts[0].toLowerCase();
     let response = '';
 
-        if (action === 'kill') {
+    if (action === 'kill') {
       const target = parts[1];
       if (!target) {
         response = "Xato: foydalanuvchi nomini kiriting.";
@@ -410,6 +412,7 @@ app.post('/fuzz/api/admin/console', async (c) => {
           c.env.DB.prepare('DELETE FROM game_stats WHERE user_id IN (SELECT id FROM users WHERE role != "admin")'),
           c.env.DB.prepare('DELETE FROM payment_requests WHERE user_id IN (SELECT id FROM users WHERE role != "admin")'),
           c.env.DB.prepare('DELETE FROM payments WHERE user_id IN (SELECT id FROM users WHERE role != "admin")'),
+          c.env.DB.prepare('DELETE FROM reset_codes WHERE user_id IN (SELECT id FROM users WHERE role != "admin")'),
           c.env.DB.prepare('DELETE FROM users WHERE role != "admin"'),
         ]);
         response = "Barcha oddiy foydalanuvchilar va ularning ma'lumotlari o'chirildi.";
@@ -426,13 +429,12 @@ app.post('/fuzz/api/admin/console', async (c) => {
             c.env.DB.prepare('DELETE FROM game_stats WHERE user_id = ?').bind(user.id),
             c.env.DB.prepare('DELETE FROM payment_requests WHERE user_id = ?').bind(user.id),
             c.env.DB.prepare('DELETE FROM payments WHERE user_id = ?').bind(user.id),
-            c.env.DB.prepare('DELETE FROM support_messages WHERE chat_id = ?').bind(user.telegram_id || ''),
+            c.env.DB.prepare('DELETE FROM reset_codes WHERE user_id = ?').bind(user.id),
+            c.env.DB.prepare('DELETE FROM reg_sessions WHERE telegram_id = ?').bind(user.telegram_id || ''),
+            c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(user.id),
           ]);
-          // Keyin userni o'chiramiz
-          await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(user.id).run();
           response = `Foydalanuvchi ${target} va unga tegishli barcha ma'lumotlar o'chirildi.`;
         } else {
-          // Agar foydalanuvchi topilmasa, demak o'yin ID si berilgan
           await c.env.DB.prepare('DELETE FROM games WHERE id = ?').bind(target).run();
           response = `O'yin ${target} o'chirildi.`;
         }
@@ -495,7 +497,7 @@ app.post('/fuzz/api/admin/console', async (c) => {
 });
 
 // ==========================================
-// PUBLIC PAYMENT METHODS API
+// PUBLIC PAYMENT METHODS
 // ==========================================
 app.get('/fuzz/api/payment-methods', async (c) => {
   try {
@@ -505,7 +507,7 @@ app.get('/fuzz/api/payment-methods', async (c) => {
 });
 
 // ==========================================
-// PUBLIC BUNDLES API
+// PUBLIC BUNDLES
 // ==========================================
 app.get('/fuzz/api/bundles/:id', async (c) => {
   try {
@@ -577,7 +579,32 @@ app.post('/fuzz/telegram/webhook', async (c) => {
         const textParts = text.split(' ');
         const startParam = textParts.length > 1 ? textParts[1] : null;
 
-        // pay_
+        if (startParam && startParam.startsWith('reg_')) {
+          const token = startParam.slice(4);
+          if (!/^[a-f0-9]{64}$/.test(token)) {
+            await sendTelegramMessage(BOT_TOKEN, chatId, "❌ Noto'g'ri registratsiya havolasi");
+            return c.json({ ok: true });
+          }
+          const sess = await c.env.DB.prepare(
+            "SELECT * FROM reg_sessions WHERE token = ? AND status = 'pending' AND expires_at > ?"
+          ).bind(token, Date.now()).first();
+          if (!sess) {
+            await sendTelegramMessage(BOT_TOKEN, chatId, "❌ Havola eskirgan yoki ishlatilgan. Saytda qaytadan boshlang.");
+            return c.json({ ok: true });
+          }
+          if (sess.telegram_id !== chatId.toString()) {
+            await sendTelegramMessage(BOT_TOKEN, chatId, "❌ Bu havola boshqa Telegram akkaunt uchun");
+            return c.json({ ok: true });
+          }
+          const webAppUrl = `https://fuzz-tau.vercel.app/register/confirm?token=${token}`;
+          await sendTelegramMessage(
+            BOT_TOKEN, chatId,
+            "Tasdiqlash uchun quyidagi tugmani bosing:",
+            { inline_keyboard: [[{ text: "✅ Tasdiqlash", web_app: { url: webAppUrl } }]] }
+          );
+          return c.json({ ok: true });
+        }
+
         if (startParam && startParam.startsWith('pay_')) {
           const amountUsd = parseFloat(startParam.split('_')[1]);
           const rate = isNaN(amountUsd) ? null : await c.env.DB.prepare(
@@ -606,7 +633,6 @@ app.post('/fuzz/telegram/webhook', async (c) => {
           return c.json({ ok: true });
         }
 
-        // Oddiy /start
         const existing = await c.env.DB.prepare('SELECT * FROM users WHERE telegram_id = ?').bind(chatId.toString()).first();
         if (!existing) {
           const id = crypto.randomUUID();
@@ -628,7 +654,6 @@ app.post('/fuzz/telegram/webhook', async (c) => {
         return c.json({ ok: true });
       }
 
-      // support
       if (text && !text.startsWith('/')) {
         try {
           await c.env.DB.prepare('INSERT INTO support_messages (id, chat_id, username, message) VALUES (?, ?, ?, ?)')

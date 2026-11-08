@@ -13,25 +13,35 @@ export default function WalletTopUpPage() {
 
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [selectedMethod, setSelectedMethod] = useState(null);
-  const [rate, setRate] = useState(12500); // Fallback (agar backend ishlamasa)
+  const [rate, setRate] = useState(12500); // Fallback
   const [amount, setAmount] = useState('');
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Stars uchun
   const [starsRates, setStarsRates] = useState([]);
   const [starsUsd, setStarsUsd] = useState('1');
   const [starsAmount, setStarsAmount] = useState(10);
 
   useEffect(() => {
-    // 1. Kursni backenddan yuklash
-    api.get('/api/rates/usd')
-      .then(data => {
-        if (data?.usd_uzs && Number(data.usd_uzs) > 0) {
-          setRate(Number(data.usd_uzs));
+    // 1. Kursni to'g'ridan-to'g'ri API dan olish (Frontendda)
+    const fetchRate = async () => {
+      try {
+        const apiKey = config.payment.exchangeApiKey;
+        if (!apiKey) {
+          console.warn("Exchange API key topilmadi (VITE_EXCHANGE_API_KEY). Fallback ishlatiladi.");
+          return;
         }
-      })
-      .catch(() => {});
+        // To'g'ri URL: https://v6.exchangerate-api.com/v6/<api_key>/latest/USD
+        const res = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`);
+        const data = await res.json();
+        if (data?.conversion_rates?.UZS) {
+          setRate(data.conversion_rates.UZS);
+        }
+      } catch (err) {
+        console.error("Kurs olishda xato:", err);
+      }
+    };
+    fetchRate();
 
     // 2. To'lov usullarini yuklash
     api.get('/api/payment-methods')
@@ -47,18 +57,13 @@ export default function WalletTopUpPage() {
       .catch(() => {});
   }, []);
 
-  // Fuzz $ ↔ Telegram Stars (bog'langan)
   const handleUsdChange = (v) => {
     const clean = v.replace(/[^\d.]/g, '').replace(/^(\d*\.\d*)\..*/, '$1');
     setStarsUsd(clean);
     const usd = parseFloat(clean);
     if (!isNaN(usd) && usd > 0) {
       const exact = starsRates.find(r => Number(r.amount_usd) === usd);
-      if (exact) {
-        setStarsAmount(Number(exact.stars_amount));
-      } else {
-        setStarsAmount(Math.max(1, Math.round(usd * 10)));
-      }
+      setStarsAmount(exact ? Number(exact.stars_amount) : Math.max(1, Math.round(usd * 10)));
     } else {
       setStarsAmount(0);
     }
@@ -70,11 +75,7 @@ export default function WalletTopUpPage() {
     setStarsAmount(stars);
     if (stars >= 1) {
       const exact = starsRates.find(r => Number(r.stars_amount) === stars);
-      if (exact) {
-        setStarsUsd(String(exact.amount_usd));
-      } else {
-        setStarsUsd((stars / 10).toFixed(2).replace(/\.00$/, ''));
-      }
+      setStarsUsd(exact ? String(exact.amount_usd) : (stars / 10).toFixed(2).replace(/\.00$/, ''));
     } else {
       setStarsUsd('');
     }
@@ -177,13 +178,11 @@ export default function WalletTopUpPage() {
               <h3 style={{ color: '#f5eeee', margin: 0 }}>{selectedMethod.name}</h3>
             </div>
 
-            {/* ========== TELEGRAM STARS ========== */}
             {selectedMethod.id === 'stars' && (
               <div>
                 <p style={{ color: '#b9a6a2', fontSize: '0.85rem', marginBottom: '1rem' }}>
                   Balansni Telegram Stars orqali to'ldiring. To'lov botda amalga oshiriladi.
                 </p>
-
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                   <div className="form-group">
                     <label className="form-label">Fuzz $</label>
@@ -194,7 +193,6 @@ export default function WalletTopUpPage() {
                     <input type="text" className="form-input" value={starsAmount} onChange={(e) => handleStarsChange(e.target.value)} placeholder="10" />
                   </div>
                 </div>
-
                 {starsRates.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
                     {starsRates.map(r => (
@@ -205,11 +203,6 @@ export default function WalletTopUpPage() {
                     ))}
                   </div>
                 )}
-
-                <div style={{ fontSize: '0.8rem', color: '#6b524e', marginBottom: '1rem' }}>
-                  * 1 Fuzz $ = 10 Telegram Stars
-                </div>
-
                 <button className="btn btn-primary" onClick={handleStarsPay} style={{ width: '100%' }}>
                   <i className="fa-brands fa-telegram" style={{ marginRight: '0.5rem' }}></i>
                   Telegram'da to'lash
@@ -217,7 +210,6 @@ export default function WalletTopUpPage() {
               </div>
             )}
 
-            {/* ========== KARTA ========== */}
             {selectedMethod.id === 'card' && (
               <div>
                 <div style={{ background: 'var(--color-bg-alt)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

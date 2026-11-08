@@ -1,9 +1,3 @@
-// src/config/config.js
-//
-// ⚠️ BU FAYL FRONTEND BUNDLE'GA TUSHADI — MAXFIY KALIT YOZMANG!
-// Maxfiy tokenlar (BOT_TOKEN, JWT_SECRET, EXCHANGE_RATE_API_KEY)
-//   faqat backend (Cloudflare Workers) `wrangler secret` da saqlanadi.
-
 const DEFAULT_API_BASE_URL = 'https://my-backend.updbackend.workers.dev/fuzz';
 const DEFAULT_TELEGRAM_BOT_URL = 'https://t.me/FuzzAppBot';
 
@@ -20,13 +14,14 @@ export const config = {
   soundEnabled: false,
 
   payment: {
-    cardNumber: '5614 6818 8775 0416',
-    cardHolder: 'H. E.',
-    // exchangeApiUrl OLIB TASHLANDI — kalit endi backend'da (wrangler secret)
+    cardNumber: import.meta.env.VITE_CARD_NUMBER || '5614 6818 8775 0416',
+    cardHolder: import.meta.env.VITE_CARD_HOLDER || 'H. E.',
+    // Vercel'dan API kalitni o'qiymiz (Agar mavjud bo'lsa)
+    exchangeApiKey: import.meta.env.VITE_EXCHANGE_API_KEY || '',
+    exchangeApiUrl: 'https://v6.exchangerate-api.com/v6/latest/USD', // Fallback
   },
 
   qrLogin: {
-    // Dinamik — window.location.origin. Hardcoded URL emas.
     path: '/qr-auth',
   },
 

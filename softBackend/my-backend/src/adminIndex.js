@@ -1,11 +1,10 @@
 import { Hono } from 'hono';
 
 const adminApp = new Hono();
-
 const round2 = (num) => Math.round(Number(num) * 100) / 100;
 
 // ==========================================
-// ADMIN STATS (Dashboard)
+// ADMIN STATS
 // ==========================================
 adminApp.get('/admin/stats', async (c) => {
   try {
@@ -14,8 +13,7 @@ adminApp.get('/admin/stats', async (c) => {
     const bundlesCount = await c.env.DB.prepare('SELECT COUNT(*) as c FROM bundles').first();
     const eventsCount = await c.env.DB.prepare('SELECT COUNT(*) as c FROM events').first();
     
-    // Faqat to'langan (approved) va o'chirilmagan summalar
-    const totalBalance = await c.env.DB.prepare('SELECT SUM(balance) as sum FROM users').first();
+    // Dashboardga faqat payment_requests dagi tasdiqlangan summalar (yoki payments) boradi
     const totalPayments = await c.env.DB.prepare("SELECT SUM(amount_usd) as sum FROM payments").first();
     
     return c.json({
@@ -23,7 +21,7 @@ adminApp.get('/admin/stats', async (c) => {
       games: gamesCount?.c || 0,
       bundles: bundlesCount?.c || 0,
       events: eventsCount?.c || 0,
-      revenue: round2(totalPayments?.sum || totalBalance?.sum || 0)
+      revenue: round2(totalPayments?.sum || 0)
     });
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
@@ -502,12 +500,10 @@ adminApp.post('/admin/payment-requests/:id/approve', async (c) => {
     const id = c.req.param('id');
     const request = await c.env.DB.prepare('SELECT * FROM payment_requests WHERE id = ?').bind(id).first();
     if (!request) return c.json({ error: 'So\'rov topilmadi!' }, 404);
-    if (request.status !== 'pending') return c.json({ error: 'Bu so\'rov allaqachon ko\'rib chiqilgan!' }, 400);
-
+    
     const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(request.user_id).first();
     if (!user) return c.json({ error: 'Foydalanuvchi topilmadi!' }, 404);
 
-    // 15 daqiqa qoidasi
     const createdAt = new Date(request.created_at);
     const now = new Date();
     const diffMinutes = (now - createdAt) / (1000 * 60);
@@ -517,8 +513,8 @@ adminApp.post('/admin/payment-requests/:id/approve', async (c) => {
       finalAmountUzs = finalAmountUzs * 1.15;
     }
 
-    // Backenddan joriy kursni olish
-    let rate = 12500; // Default
+    // Backenddan joriy kursni olish (xavfsizroq)
+    let rate = 12500; 
     try {
       const rateRes = await fetch('https://my-backend.updbackend.workers.dev/fuzz/api/rates/usd');
       const rateData = await rateRes.json();
@@ -537,10 +533,10 @@ adminApp.post('/admin/payment-requests/:id/approve', async (c) => {
     await c.env.DB.prepare('INSERT INTO payments (id, user_id, amount_usd, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)')
       .bind(crypto.randomUUID(), request.user_id, amountUsd).run();
 
-    // 3. So'rovni o'chirib tashlash (yoki statusini 'approved' qilib qoldirish, lekin ro'yxatda ko'rinmasligi uchun)
+    // 3. So'rovni o'chirib tashlash
     await c.env.DB.prepare('DELETE FROM payment_requests WHERE id = ?').bind(id).run();
 
-    // 4. Telegram xabar yuborish
+    // 4. Telegram xabar
     if (user.telegram_id && c.env.BOT_TOKEN) {
       const bonusText = diffMinutes > 15 ? `\n\n(Bonus: +15% kechikish uchun qo'shildi)` : '';
       try {
@@ -569,12 +565,9 @@ adminApp.post('/admin/payment-requests/:id/reject', async (c) => {
     const id = c.req.param('id');
     const request = await c.env.DB.prepare('SELECT * FROM payment_requests WHERE id = ?').bind(id).first();
     if (!request) return c.json({ error: 'So\'rov topilmadi!' }, 404);
-    if (request.status !== 'pending') return c.json({ error: 'Bu so\'rov allaqachon ko\'rib chiqilgan!' }, 400);
 
-    // So'rovni o'chirib tashlash
     await c.env.DB.prepare('DELETE FROM payment_requests WHERE id = ?').bind(id).run();
 
-    // Foydalanuvchiga xabar yuborish
     const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(request.user_id).first();
     if (user?.telegram_id && c.env.BOT_TOKEN) {
       try {

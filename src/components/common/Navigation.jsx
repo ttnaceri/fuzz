@@ -1,41 +1,68 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useLanguage } from '../context/useLanguage.js';
 import useAuth from '../hooks/useAuth.js';
 
 export default function Navigation() {
   const { t } = useLanguage();
-  const { user } = useAuth();
-  const [hovered, setHovered] = useState(null);
+  const { user, isAuthenticated, refreshUser } = useAuth();
 
-  const menuItems = [
-    { path: '/', label: t('nav.home') || 'Bosh sahifa', key: 'home' },
-    { path: '/store', label: t('nav.store') || "Do'kon", key: 'store' },
-    { path: '/library', label: t('nav.library') || 'Kutubxona', key: 'library' },
-  ];
+  // Balansni hech qanday yaxlitlashsiz, to'liq ko'rsatamiz
+  // Float muammosini oldini olish uchun Number() ishlatamiz
+  const balanceNum = user?.balance != null ? Number(user.balance) : null;
+  const balance = (balanceNum != null && !isNaN(balanceNum))
+    ? `$${balanceNum.toFixed(2)}`
+    : null;
 
   return (
-    <nav className="nav-menu" style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
-      {menuItems.map((item) => (
-        <div 
-          key={item.key} 
-          style={{ position: 'relative', padding: '1rem 0', cursor: 'pointer' }}
-          onMouseEnter={() => setHovered(item.key)}
-          onMouseLeave={() => setHovered(null)}
-        >
-          <Link to={item.path} style={{ color: '#b9a6a2', textDecoration: 'none', fontWeight: '500' }}>
-            {item.label}
-          </Link>
-          
-          {/* Home uchun maxsus submenu */}
-          {item.key === 'home' && hovered === 'home' && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, backgroundColor: '#241411', border: '1px solid #48201a', borderRadius: '6px', minWidth: '150px', zIndex: 1000, boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
-              <Link to="/profile" style={{ display: 'block', padding: '0.6rem 1rem', color: '#f5eeee', textDecoration: 'none', borderBottom: '1px solid #48201a' }}>Profile</Link>
-              <Link to="/security" style={{ display: 'block', padding: '0.6rem 1rem', color: '#f5eeee', textDecoration: 'none' }}>Security</Link>
-            </div>
-          )}
+    <nav className="header__nav" style={{ display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', gap: '0.2rem' }}>
+      <NavLink to="/" end style={{ whiteSpace: 'nowrap' }}>{t('nav.home')}</NavLink>
+
+      <div className="nav-dropdown">
+        <NavLink to="/store" className="nav-dropdown-btn" style={{ whiteSpace: 'nowrap' }}>{t('nav.store')}</NavLink>
+        <div className="nav-dropdown-content">
+          <NavLink to="/store">{t('store.title')}</NavLink>
+          <NavLink to="/new-releases">{t('home.newReleases')}</NavLink>
+          <NavLink to="/top-sellers">{t('home.topSellers')}</NavLink>
         </div>
-      ))}
+      </div>
+
+      <div className="nav-dropdown">
+        <NavLink to="/library" className="nav-dropdown-btn" style={{ whiteSpace: 'nowrap' }}>{t('nav.library')}</NavLink>
+        <div className="nav-dropdown-content">
+          <NavLink to="/library">{t('nav.library')}</NavLink>
+          <NavLink to="/downloads">Downloads</NavLink>
+          <NavLink to="/purchases">Purchases</NavLink>
+        </div>
+      </div>
+
+      {/* WALLET + BALANCE */}
+      <div className="nav-dropdown">
+        <div 
+          className="nav-dropdown-btn" 
+          style={{ 
+            cursor: 'pointer', 
+            whiteSpace: 'nowrap', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.5rem'
+          }}
+          onClick={() => {
+            if (isAuthenticated) refreshUser();
+          }}
+        >
+          <i className="fa-solid fa-wallet" style={{ fontSize: '0.9rem' }}></i>
+          <span>
+            {t('nav.wallet')} 
+            {isAuthenticated && balance && ` (${balance})`}
+          </span>
+        </div>
+        
+        <div className="nav-dropdown-content">
+          <NavLink to="/wallet/history">{t('wallet.history')}</NavLink>
+          <NavLink to="/wallet/topup">{t('wallet.topUp')}</NavLink>
+          <NavLink to="/wallet/refund">{t('wallet.refund')}</NavLink>
+        </div>
+      </div>
     </nav>
   );
 }

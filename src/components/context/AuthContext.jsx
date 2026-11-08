@@ -1,4 +1,3 @@
-// src/components/context/AuthContext.jsx
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { authService } from '../services/authService.js';
 import { storage } from '../utils/storage.js';
@@ -21,7 +20,7 @@ export function AuthProvider({ children }) {
   const refreshUser = useCallback(async () => {
     try {
       const cached = storage.getAuth();
-      if (!cached?.user?.id) return null;
+      if (!cached?.token) return null;
       const res = await authService.me?.();
       if (!res?.user) return null;
       const normalized = normalizeUser(res.user);
@@ -33,7 +32,6 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // QR login natijasini o'rnatish
   const setSession = useCallback((sessionUser, sessionToken) => {
     if (!sessionUser || !sessionToken) return;
     const normalized = normalizeUser(sessionUser);
@@ -55,10 +53,7 @@ export function AuthProvider({ children }) {
 
     const normalized = normalizeUser(res.user);
     setUser(normalized);
-
-    // ✅ ASOSIY TUZATISH: tokenni saqlash
     storage.setAuth({ user: normalized, token: res.token });
-
     return normalized;
   }, []);
 
@@ -84,12 +79,3 @@ export function AuthProvider({ children }) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-
-// AuthProvider ichida:
-useEffect(() => {
-  const cached = storage.getAuth();
-  if (cached?.user) {
-    setUser(normalizeUser(cached.user));
-  }
-  setLoading(false);
-}, []);

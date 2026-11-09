@@ -7,7 +7,6 @@ export default function Navigation() {
   const { user, isAuthenticated, refreshUser } = useAuth();
 
   // Balansni hech qanday yaxlitlashsiz, to'liq ko'rsatamiz
-  // Float muammosini oldini olish uchun Number() ishlatamiz
   const balanceNum = user?.balance != null ? Number(user.balance) : null;
   const balance = (balanceNum != null && !isNaN(balanceNum))
     ? `$${balanceNum.toFixed(2)}`
@@ -15,7 +14,22 @@ export default function Navigation() {
 
   return (
     <nav className="header__nav" style={{ display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', gap: '0.2rem' }}>
-      <NavLink to="/" end style={{ whiteSpace: 'nowrap' }}>{t('nav.home')}</NavLink>
+      
+      {/* HOME + DROPDOWN MENU */}
+      <div className="nav-dropdown">
+        <NavLink to="/" end className="nav-dropdown-btn" style={{ whiteSpace: 'nowrap' }}>
+          {t('nav.home')}
+        </NavLink>
+        
+        {/* Faqat login qilgan foydalanuvchilar uchun menyu */}
+        {isAuthenticated && (
+          <div className="nav-dropdown-content">
+            <NavLink to="/profile">Profile</NavLink>
+            <NavLink to="/settings">Edit Profile</NavLink>
+            <NavLink to="/security">Security</NavLink>
+          </div>
+        )}
+      </div>
 
       <div className="nav-dropdown">
         <NavLink to="/store" className="nav-dropdown-btn" style={{ whiteSpace: 'nowrap' }}>{t('nav.store')}</NavLink>

@@ -5,13 +5,10 @@ import useToast from '../hooks/useToast.js';
 export default function AdminRate() {
   const [rates, setRates] = useState([]);
   const [form, setForm] = useState({ currency: 'USD', rate: '', source: 'manual' });
-  const [loading, setLoading] = useState(false);
   const { success, error: toastError } = useToast();
 
   const loadRates = () => {
-    api.get('/api/admin/rates')
-      .then(data => setRates(data.rates || []))
-      .catch(() => toastError("Kurslarni yuklashda xato"));
+    api.get('/api/admin/rates').then(data => setRates(data.rates || [])).catch(() => {});
   };
 
   useEffect(() => { loadRates(); }, []);
@@ -28,19 +25,14 @@ export default function AdminRate() {
   };
 
   const handleFetchApi = async () => {
-    setLoading(true);
     try {
-      // Backend orqali API dan olamiz (Xavfsiz)
-      const data = await api.get('/api/admin/rates/fetch-api');
-      if (data.rate) {
-        setForm({ ...form, rate: data.rate.toString(), source: 'api' });
+      const res = await fetch('https://v6.exchangerate-api.com/v6/6a1dd308edeaccd55c853818/latest/USD');
+      const data = await res.json();
+      if (data.conversion_rates.UZS) {
+        setForm({ ...form, rate: data.conversion_rates.UZS.toString(), source: 'api' });
         success("API dan kurs olindi!");
       }
-    } catch (err) {
-      toastError(err.message || "API xatosi");
-    } finally {
-      setLoading(false);
-    }
+    } catch { toastError("API xatosi"); }
   };
 
   return (
@@ -49,8 +41,8 @@ export default function AdminRate() {
       
       <div style={{ backgroundColor: '#241411', padding: '1.5rem', borderRadius: '8px', border: '1px solid #48201a', marginBottom: '2rem' }}>
         <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>Yangi Kurs Qo'shish</h3>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: '150px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+          <div style={{ flex: 1 }}>
             <label style={{ color: '#b9a6a2', fontSize: '0.8rem', display: 'block', marginBottom: '0.3rem' }}>Valyuta</label>
             <select value={form.currency} onChange={e => setForm({ ...form, currency: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }}>
               <option value="USD">USD</option>
@@ -58,14 +50,12 @@ export default function AdminRate() {
               <option value="UZS">UZS</option>
             </select>
           </div>
-          <div style={{ flex: 2, minWidth: '150px' }}>
+          <div style={{ flex: 2 }}>
             <label style={{ color: '#b9a6a2', fontSize: '0.8rem', display: 'block', marginBottom: '0.3rem' }}>Kurs</label>
-            <input type="number" step="any" value={form.rate} onChange={e => setForm({ ...form, rate: e.target.value })} placeholder="12500" style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
+            <input type="number" value={form.rate} onChange={e => setForm({ ...form, rate: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
           </div>
           <button type="submit" style={{ padding: '0.8rem 1.5rem', backgroundColor: '#8a1200', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Saqlash</button>
-          <button type="button" onClick={handleFetchApi} disabled={loading} style={{ padding: '0.8rem 1.5rem', backgroundColor: '#43b581', color: '#fff', border: 'none', borderRadius: '4px', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 'bold', opacity: loading ? 0.7 : 1 }}>
-            {loading ? 'Yuklanmoqda...' : 'API dan olish'}
-          </button>
+          <button type="button" onClick={handleFetchApi} style={{ padding: '0.8rem 1.5rem', backgroundColor: '#43b581', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>API dan olish</button>
         </form>
       </div>
 
@@ -81,13 +71,10 @@ export default function AdminRate() {
           {rates.map(r => (
             <tr key={r.id} style={{ borderBottom: '1px solid #48201a', color: '#f5eeee' }}>
               <td style={{ padding: '1rem' }}>{r.currency}</td>
-              <td style={{ padding: '1rem', color: '#43b581', fontWeight: 'bold' }}>{r.rate}</td>
-              <td style={{ padding: '1rem', textTransform: 'uppercase', fontSize: '0.8rem' }}>{r.source}</td>
+              <td style={{ padding: '1rem', color: '#43b581' }}>{r.rate}</td>
+              <td style={{ padding: '1rem' }}>{r.source}</td>
             </tr>
           ))}
-          {rates.length === 0 && (
-            <tr><td colSpan="3" style={{ padding: '2rem', textAlign: 'center', color: '#b9a6a2' }}>Kurslar mavjud emas</td></tr>
-          )}
         </tbody>
       </table>
     </div>

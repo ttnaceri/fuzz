@@ -17,15 +17,13 @@ export default function AdminPaymentRequests() {
       const newRequests = data.requests || [];
       const prevIds = prevRequestsRef.current.map(r => r.id);
       const newOnes = newRequests.filter(r => !prevIds.includes(r.id));
+
       if (newOnes.length > 0) {
         newOnes.forEach(r => {
           if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('Yangi To\'lov So\'rovi!', {
-              body: `${r.username} - ${r.amount_uzs.toLocaleString()} so'm`,
-              icon: '/image/logo.png'
-            });
+            new Notification('Yangi To\'lov So\'rovi!', { body: `${r.username} - ${r.amount_uzs.toLocaleString()} so'm`, icon: '/image/logo.png' });
           }
-          info(`Yangi to'lov so'rovi: ${r.username}`);
+          info(`Yangi to'lov so'rovi: ${r.username} - ${r.amount_uzs.toLocaleString()} so'm`);
         });
       }
       setRequests(newRequests);
@@ -34,7 +32,7 @@ export default function AdminPaymentRequests() {
   };
 
   useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+    if ('Notification' in window && Notification.permission === 'default') { Notification.requestPermission(); }
     loadRequests();
     const interval = setInterval(loadRequests, 5000);
     return () => clearInterval(interval);
@@ -44,7 +42,7 @@ export default function AdminPaymentRequests() {
     if (!modalAction) return;
     const handleKeyDown = (e) => {
       if (e.key === 'Enter') { e.preventDefault(); handleBulkAction(modalAction); }
-      if (e.key === 'Escape') setModalAction(null);
+      if (e.key === 'Escape') { setModalAction(null); }
     };
     window.addEventListener('keydown', handleKeyDown);
     if (modalInputRef.current) modalInputRef.current.focus();
@@ -63,14 +61,18 @@ export default function AdminPaymentRequests() {
   const handleBulkAction = async (action) => {
     if (selectedIds.length === 0) { toastError("Hech qanday so'rov tanlanmagan!"); return; }
     try {
-      if (action === 'approve') {
-        // YANGI BACKEND FORMATI: { ids: [...] } → POST /api/admin/payment-requests/approve
-        await api.post('/api/admin/payment-requests/approve', { ids: selectedIds });
-        success(`${selectedIds.length} ta so'rov tasdiqlandi!`);
-      } else {
-        await api.post('/api/admin/payment-requests/reject', { ids: selectedIds });
-        success(`${selectedIds.length} ta so'rov rad etildi!`);
+      // Har bir ID uchun alohida so'rov yuborish (agar sizning backend bitta ID qabul qilsa)
+      // Agar backend `{ ids: [...] }` qabul qilsa, o'zgartirish shart emas.
+      // Hozirgi holatda sizning adminIndex.js bitta ID qabul qiladi (c.req.param('id')).
+      // Shuning uchun biz bittalab jo'natamiz.
+      for (const id of selectedIds) {
+        if (action === 'approve') {
+          await api.post(`/api/admin/payment-requests/${id}/approve`, {});
+        } else {
+          await api.post(`/api/admin/payment-requests/${id}/reject`, {});
+        }
       }
+      success(`${selectedIds.length} ta so'rov ${action === 'approve' ? 'tasdiqlandi' : 'rad etildi'}!`);
       setSelectedIds([]);
       setModalAction(null);
       loadRequests();
@@ -80,15 +82,10 @@ export default function AdminPaymentRequests() {
   return (
     <div>
       <h1 style={{ color: '#f5eeee', marginBottom: '1.5rem' }}>To'lov So'rovlari</h1>
-
       {'Notification' in window && Notification.permission !== 'granted' && (
         <div style={{ backgroundColor: 'rgba(240, 180, 77, 0.1)', border: '1px solid #f0b44d', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ color: '#f0b44d' }}>
-            <i className="fa-solid fa-bell"></i> Yangi so'rovlar haqida bildirishnoma olish uchun ruxsat bering.
-          </div>
-          <button onClick={() => Notification.requestPermission()} style={{ backgroundColor: '#f0b44d', color: '#000', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
-            Ruxsat berish
-          </button>
+          <div style={{ color: '#f0b44d' }}><i className="fa-solid fa-bell"></i> Yangi so'rovlar haqida bildirishnoma olish uchun ruxsat bering.</div>
+          <button onClick={() => Notification.requestPermission()} style={{ backgroundColor: '#f0b44d', color: '#000', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Ruxsat berish</button>
         </div>
       )}
 
@@ -129,12 +126,8 @@ export default function AdminPaymentRequests() {
               <td style={{ padding: '1rem', color: '#43b581' }}>{r.amount_uzs.toLocaleString()} so'm</td>
               <td style={{ padding: '1rem', fontSize: '0.8rem' }}>{new Date(r.created_at).toLocaleString()}</td>
               <td style={{ padding: '1rem' }}>
-                <button onClick={() => { setSelectedIds([r.id]); setModalAction('approve'); }} style={{ background: 'none', border: 'none', color: '#43b581', cursor: 'pointer', marginRight: '0.5rem' }} title="Tasdiqlash">
-                  <i className="fa-solid fa-check"></i>
-                </button>
-                <button onClick={() => { setSelectedIds([r.id]); setModalAction('reject'); }} style={{ background: 'none', border: 'none', color: '#ed5555', cursor: 'pointer' }} title="Rad etish">
-                  <i className="fa-solid fa-xmark"></i>
-                </button>
+                <button onClick={() => { setSelectedIds([r.id]); setModalAction('approve'); }} style={{ background: 'none', border: 'none', color: '#43b581', cursor: 'pointer', marginRight: '0.5rem' }} title="Tasdiqlash"><i className="fa-solid fa-check"></i></button>
+                <button onClick={() => { setSelectedIds([r.id]); setModalAction('reject'); }} style={{ background: 'none', border: 'none', color: '#ed5555', cursor: 'pointer' }} title="Rad etish"><i className="fa-solid fa-xmark"></i></button>
               </td>
             </tr>
           ))}
@@ -144,15 +137,10 @@ export default function AdminPaymentRequests() {
       {modalAction && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div ref={modalInputRef} tabIndex={-1} style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', border: '1px solid #48201a', width: '400px', outline: 'none' }}>
-            <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>
-              {modalAction === 'approve' ? 'Tasdiqlashni tasdiqlang' : 'Rad etishni tasdiqlang'}
-            </h3>
-            <p style={{ color: '#b9a6a2', marginBottom: '1.5rem' }}>
-              Siz {selectedIds.length} ta so'rovni {modalAction === 'approve' ? 'tasdiqlamoqchisiz' : 'rad etmoqchisiz'}.
-            </p>
+            <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>{modalAction === 'approve' ? 'Tasdiqlashni tasdiqlang' : 'Rad etishni tasdiqlang'}</h3>
+            <p style={{ color: '#b9a6a2', marginBottom: '1.5rem' }}>Siz {selectedIds.length} ta so'rovni {modalAction === 'approve' ? 'tasdiqlamoqchisiz' : 'rad etmoqchisiz'}.</p>
             <div style={{ display: 'flex', gap: '1rem' }}>
-              <button onClick={() => handleBulkAction(modalAction)}
-                style={{ flex: 1, padding: '0.8rem', backgroundColor: modalAction === 'approve' ? '#43b581' : '#ed5555', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+              <button onClick={() => handleBulkAction(modalAction)} style={{ flex: 1, padding: '0.8rem', backgroundColor: modalAction === 'approve' ? '#43b581' : '#ed5555', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
                 {modalAction === 'approve' ? 'Tasdiqlash' : 'Rad etish'}
               </button>
               <button onClick={() => setModalAction(null)} style={{ flex: 1, padding: '0.8rem', backgroundColor: '#48201a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>

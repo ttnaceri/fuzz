@@ -17,24 +17,6 @@ function normalizeUser(rawUser) {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
-
-  // Online/Offline holatini kuzatish
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOffline(false);
-      // Onlayn bo'lganda foydalanuvchini yangilash
-      refreshUser();
-    };
-    const handleOffline = () => setIsOffline(true);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -47,12 +29,6 @@ export function AuthProvider({ children }) {
       storage.setAuth({ user: normalized, token: cached.token });
       return normalized;
     } catch (e) {
-      // Offline bo'lsa — cached user'ni qaytaramiz
-      const cached = storage.getAuth();
-      if (cached?.user) {
-        setUser(normalizeUser(cached.user));
-        return normalizeUser(cached.user);
-      }
       return null;
     }
   }, []);
@@ -79,7 +55,10 @@ export function AuthProvider({ children }) {
 
     const normalized = normalizeUser(res.user);
     setUser(normalized);
+
+    // ✅ ASOSIY TUZATISH: tokenni saqlash
     storage.setAuth({ user: normalized, token: res.token });
+
     return normalized;
   }, []);
 
@@ -95,13 +74,12 @@ export function AuthProvider({ children }) {
       isAuthenticated: !!user,
       isAdmin: !!user && (user.role === 'admin' || user.role === 'super_admin'),
       loading,
-      isOffline,
       login,
       logout,
       refreshUser,
       setSession,
     }),
-    [user, loading, isOffline, login, logout, refreshUser, setSession]
+    [user, loading, login, logout, refreshUser, setSession]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

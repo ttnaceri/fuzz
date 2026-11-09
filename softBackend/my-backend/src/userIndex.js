@@ -60,6 +60,141 @@ userApp.put('/users/:userId/username', async (c) => {
   }
 });
 
+// ==========================================
+// TELEGRAM ID NI O'ZGARTIRISH (Kod yuborish)
+// ==========================================
+userApp.post('/users/:userId/telegram/request', async (c) => {
+  try {
+    const userId = c.req.param('userId');
+    const { telegramId } = await c.req.json();
+    const newTid = String(telegramId || '').trim();
+
+    if (!/^\d{6,15}$/.test(newTid)) {
+      return c.json({ error: 'Noto\'g\'ri Telegram ID' }, 400);
+    }
+
+    // Bu ID boshqa foydalanuvchida band emasligini tekshirish
+    const existing = await c.env.DB.prepare(
+      'SELECT id FROM users WHERE telegram_id = ? AND id != ?'
+    ).bind(newTid, userId).first();
+    if (existing) {
+      return c.json({ error: 'Bu Telegram ID allaqachon boshqa akkauntda ishlatilgan' }, 409);
+    }
+
+    // 5 xonali kod generatsiyasi
+    const n = crypto.getRandomValues(new Uint32Array(1))[0] % 100000;
+    const code = n.toString().padStart(5, '0');
+
+    // Vaqtinchalik jadvalga yozish (users jadvaliga hali yozmaymiz)
+    await c.env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS telegram_change_codes (
+        user_id TEXT PRIMARY KEY,
+        new_telegram_id TEXT NOT NULL,
+        code TEXT NOT NULL,
+        expires_at INTEGER NOT NULL,
+        created_at INTEGER DEFAULT (unixepoch())
+      )
+    `).run();
+
+    const expiresAt = Math.floor(Date.now() / 1000) + 300; // 5 daqiqa
+    await c.env.DB.prepare(`
+      INSERT INTO telegram_change_codes (user_id, new_telegram_id, code, expires_at)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(user_id) DO UPDATE SET
+        new_telegram_id = excluded.new_telegram_id,
+        code = excluded.code,
+        expires_at = excluded.expires_at,
+        created_at = unixepoch()
+    `).bind(userId, newTid, code, expiresAt).run();
+
+    // Botga kod yuborish (BOT_TOKEN mavjud bo'lsa)
+    if (c.env.BOT_TOKEN) {
+      try {
+        await fetch(`https://api.telegram.org/bot${c.env.BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: newTid,
+            text: `🔐 *Fuzz Telegram ID o'zgartirish kodi*\n\n\`${code}\`\n\nKod 5 daqiqa amal qiladi.`,
+            parse_mode: 'Markdown',
+          }),
+        });
+      } catch (e) {
+        console.error('Bot xabar yuborishda xato:', e);
+        return c.json({ error: 'Kod yuborilmadi. Bot bilan bog\'lanishni tekshiring.' }, 502);
+      }
+    } else {
+      return c.json({ error: 'BOT_TOKEN sozlanmagan' }, 500);
+    }
+
+    return c.json({ success: true, message: 'Kod yangi Telegram ID ga yuborildi' });
+  } catch (err) {
+    return c.json({ error: 'Xato: ' + err.message }, 500);
+  }
+});
+
+// ==========================================
+// TELEGRAM ID NI O'ZGARTIRISH (Kodni tekshirish)
+// ==========================================
+userApp.post('/users/:userId/telegram/verify', async (c) => {
+  try {
+    const userId = c.req.param('userId');
+    const { code } = await c.req.json();
+
+    if (!code || String(code).length !== 5) {
+      return c.json({ error: '5 xonali kodni kiriting' }, 400);
+    }
+
+    const row = await c.env.DB.prepare(
+      'SELECT * FROM telegram_change_codes WHERE user_id = ?'
+    ).bind(userId).first();
+
+    if (!row) return c.json({ error: 'Kod so\'ralmagan' }, 400);
+    if (row.expires_at < Math.floor(Date.now() / 1000)) return c.json({ error: 'Kod muddati o\'tgan' }, 400);
+    if (row.code !== String(code)) return c.json({ error: 'Kod xato' }, 400);
+
+    // Telegram ID ni yangilash
+    await c.env.DB.prepare('UPDATE users SET telegram_id = ? WHERE id = ?')
+      .bind(row.new_telegram_id, userId).run();
+
+    // Kodni o'chirish
+    await c.env.DB.prepare('DELETE FROM telegram_change_codes WHERE user_id = ?').bind(userId).run();
+
+    return c.json({ success: true, message: 'Telegram ID yangilandi', telegram_id: row.new_telegram_id });
+  } catch (err) {
+    return c.json({ error: 'Xato: ' + err.message }, 500);
+  }
+});
+
+// ==========================================
+// DANGER ZONE: AKKAUNTNI O'CHIRISH
+// ==========================================
+userApp.delete('/users/:userId/danger', async (c) => {
+  try {
+    const userId = c.req.param('userId');
+    const me = await getAuthUser(c);
+    if (me.id !== userId && !isAdminRole(me.role)) {
+      return c.json({ error: 'Ruxsat yo\'q' }, 403);
+    }
+
+    // Bog'liq jadvallardan tozalash
+    await c.env.DB.batch([
+      c.env.DB.prepare('DELETE FROM user_library WHERE user_id = ?').bind(userId),
+      c.env.DB.prepare('DELETE FROM user_wishlist WHERE user_id = ?').bind(userId),
+      c.env.DB.prepare('DELETE FROM game_stats WHERE user_id = ?').bind(userId),
+      c.env.DB.prepare('DELETE FROM payment_requests WHERE user_id = ?').bind(userId),
+      c.env.DB.prepare('DELETE FROM payments WHERE user_id = ?').bind(userId),
+      c.env.DB.prepare('DELETE FROM reset_codes WHERE user_id = ?').bind(userId),
+      c.env.DB.prepare('DELETE FROM telegram_change_codes WHERE user_id = ?').bind(userId),
+      c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(userId),
+    ]);
+
+    return c.json({ success: true, message: 'Akkaunt o\'chirildi' });
+  } catch (err) {
+    return c.json({ error: 'Xato: ' + err.message }, 500);
+  }
+});
+
 // Buy Game
 userApp.post('/store/buy', async (c) => {
   try {
@@ -210,9 +345,7 @@ userApp.get('/bundles', async (c) => {
   } catch (err) { return c.json({ bundles: [] }); }
 });
 
-// ==========================================
-// YANGI: PAYMENT REQUEST (KARTA ORQALI TO'LOV SO'ROVI)
-// ==========================================
+// PAYMENT REQUEST (KARTA ORQALI TO'LOV SO'ROVI)
 userApp.post('/payment-request', async (c) => {
   try {
     const me = await getAuthUser(c);

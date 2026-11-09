@@ -7,6 +7,7 @@ import { LanguageProvider } from './context/LanguageContext.jsx';
 import { router } from './router.jsx';
 import { ToastHost } from './common/Toast.jsx';
 import useToast from './hooks/useToast.js';
+import OfflineBanner from './components/common/OfflineBanner.jsx';
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -44,6 +45,7 @@ export default function App() {
             <CartProvider>
               <RouterProvider router={router} />
               <GlobalToastHost />
+              <OfflineBanner />
             </CartProvider>
           </AuthProvider>
         </LanguageProvider>

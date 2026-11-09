@@ -1,19 +1,15 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 import fs from 'node:fs';
 import path from 'node:path';
 
-/**
- * Build vaqtida config.example.js -> config.js nusxalash.
- * (Vercel'da config.js .gitignore tufayli mavjud emas)
- */
 function ensureConfigExists() {
   return {
     name: 'ensure-config-exists',
     buildStart() {
       const configPath = path.resolve(process.cwd(), 'src/components/config/config.js');
       const examplePath = path.resolve(process.cwd(), 'src/components/config/config.example.js');
-      
       if (!fs.existsSync(configPath)) {
         if (fs.existsSync(examplePath)) {
           fs.copyFileSync(examplePath, configPath);
@@ -90,14 +86,52 @@ function serveRootAssets() {
 }
 
 export default defineConfig({
-  plugins: [react(), ensureConfigExists(), serveRootAssets(), copyRootAssets()],
-  server: {
-    port: 5173,
-    open: false,
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: false,
-    chunkSizeWarningLimit: 1200,
-  },
+  plugins: [
+    react(),
+    ensureConfigExists(),
+    serveRootAssets(),
+    copyRootAssets(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'image/logo.png'],
+      manifest: {
+        name: 'Fuzz — PC Gaming Platform',
+        short_name: 'Fuzz',
+        description: 'Fuzz — Professional PC Gaming Platform',
+        theme_color: '#100b0a',
+        background_color: '#100b0a',
+        display: 'standalone',
+        start_url: '/',
+        icons: [
+          { src: '/image/logo.png', sizes: '192x192', type: 'image/png' },
+          { src: '/image/logo.png', sizes: '512x512', type: 'image/png' },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,json}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/my-backend\.updbackend\.workers\.dev\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 },
+              networkTimeoutSeconds: 5,
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'images-cache',
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
+        ],
+      },
+    }),
+  ],
+  server: { port: 5173, open: false },
+  build: { outDir: 'dist', sourcemap: false, chunkSizeWarningLimit: 1200 },
 });

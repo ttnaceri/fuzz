@@ -345,11 +345,11 @@ adminApp.delete('/admin/roles/:id', async (c) => {
 });
 
 // ==========================================
-// RATES
+// RATES (Kurslarni boshqarish)
 // ==========================================
 adminApp.get('/admin/rates', async (c) => {
   try {
-    const rates = await c.env.DB.prepare('SELECT * FROM rates').all();
+    const rates = await c.env.DB.prepare('SELECT * FROM rates ORDER BY created_at DESC').all();
     return c.json({ rates: rates.results || [] });
   } catch (err) { return c.json({ rates: [] }); }
 });
@@ -358,10 +358,35 @@ adminApp.post('/admin/rates', async (c) => {
   try {
     const { currency, rate, source } = await c.req.json();
     const id = crypto.randomUUID();
+    // Yangi kurs qo'shishdan oldin, eski kurslarni o'chirib tashlaymiz (agar xohlasangiz)
+    // await c.env.DB.prepare('DELETE FROM rates WHERE currency = ?').bind(currency).run();
     await c.env.DB.prepare('INSERT INTO rates (id, currency, rate, source) VALUES (?, ?, ?, ?)')
       .bind(id, currency, parseFloat(rate), source || 'manual').run();
     return c.json({ message: "Kurs saqlandi!", id }, 201);
-  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
+  } catch (err) { return c.json({ error: 'Server xatosi: ' + err.message }, 500); }
+});
+
+// YANGI: API dan kursni olish (AdminRate uchun)
+adminApp.get('/admin/rates/fetch-api', async (c) => {
+  try {
+    const apiKey = c.env.EXCHANGE_RATE_API_KEY;
+    if (!apiKey) return c.json({ error: "EXCHANGE_RATE_API_KEY sozlanmagan (wrangler secret put)" }, 500);
+
+    const res = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`);
+    const data = await res.json();
+    const uzs = data?.conversion_rates?.UZS;
+
+    if (!uzs) return c.json({ error: 'Kurs olinmadi' }, 502);
+    
+    // Avtomatik ravishda bazaga yozamiz
+    const id = crypto.randomUUID();
+    await c.env.DB.prepare('INSERT INTO rates (id, currency, rate, source) VALUES (?, ?, ?, ?)')
+      .bind(id, 'USD', uzs, 'api').run();
+
+    return c.json({ rate: uzs, currency: 'USD', source: 'api' });
+  } catch (err) {
+    return c.json({ error: 'Server xatosi: ' + err.message }, 500);
+  }
 });
 
 // ==========================================
@@ -479,7 +504,7 @@ adminApp.post('/admin/telegram/reply', async (c) => {
 });
 
 // ==========================================
-// PAYMENT REQUESTS (YANGILANGAN: BULK VA TO'G'RI $ QO'SHISH)
+// PAYMENT REQUESTS
 // ==========================================
 adminApp.get('/admin/payment-requests', async (c) => {
   try {
@@ -500,7 +525,6 @@ adminApp.post('/admin/payment-requests/approve', async (c) => {
     }
 
     let processedCount = 0;
-    // Kursni 1 marta olamiz, ortiqcha so'rov yubormaslik uchun
     let rate = 12500;
     try {
       const rateRes = await fetch('https://my-backend.updbackend.workers.dev/fuzz/api/rates/usd');
@@ -528,14 +552,12 @@ adminApp.post('/admin/payment-requests/approve', async (c) => {
       const currentBalance = Number(user.balance) || 0;
       const newBalance = round2(currentBalance + amountUsd);
 
-      // Balans, payments, va so'rovni o'chirish (batch)
       await c.env.DB.batch([
         c.env.DB.prepare('UPDATE users SET balance = ? WHERE id = ?').bind(newBalance, user.id),
         c.env.DB.prepare('INSERT INTO payments (id, user_id, amount_usd, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)').bind(crypto.randomUUID(), user.id, amountUsd),
         c.env.DB.prepare('DELETE FROM payment_requests WHERE id = ?').bind(id)
       ]);
 
-      // Telegram xabar
       if (user.telegram_id && c.env.BOT_TOKEN) {
         const bonusText = diffMinutes > 15 ? `\n\n(Bonus: +15%)` : '';
         try {

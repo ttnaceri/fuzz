@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTheme } from '../context/useTheme.js';
 import useAuth from '../hooks/useAuth.js';
 import useToast from '../hooks/useToast.js';
+import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService.js';
 import Sidebar from '../common/Sidebar.jsx';
 
@@ -9,6 +10,7 @@ export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const { user, refreshUser, logout } = useAuth();
   const { success, error: toastError } = useToast();
+  const navigate = useNavigate();
 
   // Telegram ID o'zgartirish
   const [tgStep, setTgStep] = useState(1); // 1: yangi ID, 2: kod

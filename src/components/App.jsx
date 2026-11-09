@@ -7,7 +7,7 @@ import { LanguageProvider } from './context/LanguageContext.jsx';
 import { router } from './router.jsx';
 import { ToastHost } from './common/Toast.jsx';
 import useToast from './hooks/useToast.js';
-import OfflineBanner from './components/common/OfflineBanner.jsx';
+import OfflineBanner from './common/OfflineBanner.jsx';
 
 class ErrorBoundary extends Component {
   constructor(props) {

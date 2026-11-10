@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api.js';
 import useToast from '../hooks/useToast.js';
+import useAuth from '../hooks/useAuth.js';
 
 export default function AdminPaymentRequests() {
   const [requests, setRequests] = useState([]);
@@ -10,6 +11,7 @@ export default function AdminPaymentRequests() {
   const modalInputRef = useRef(null);
   const { success, error: toastError, info } = useToast();
   const prevRequestsRef = useRef([]);
+  const { refreshUser } = useAuth();
 
   const loadRequests = async () => {
     try {
@@ -67,12 +69,9 @@ export default function AdminPaymentRequests() {
   console.log(`🔵 [Bulk] Boshlanmoqda: action=${action}, ids=`, selectedIds);
 
   try {
-    const endpoint = action === 'approve' 
-      ? '/api/admin/payment-requests/approve' 
+    const endpoint = action === 'approve'
+      ? '/api/admin/payment-requests/approve'
       : '/api/admin/payment-requests/reject';
-    
-    console.log(`🔵 [Bulk] URL: ${endpoint}`);
-    console.log(`🔵 [Bulk] Body:`, { ids: selectedIds });
 
     const res = await api.post(endpoint, { ids: selectedIds });
     console.log(`🟢 [Bulk] Backend javobi:`, res);
@@ -80,6 +79,14 @@ export default function AdminPaymentRequests() {
     success(`${selectedIds.length} ta so'rov ${action === 'approve' ? 'tasdiqlandi' : 'rad etildi'}!`);
     setSelectedIds([]);
     setModalAction(null);
+
+    // Foydalanuvchini yangilash
+    if (refreshUser) {
+      console.log("🔵 [Bulk] refreshUser chaqirilmoqda...");
+      await refreshUser();
+      console.log("✅ [Bulk] Foydalanuvchi yangilandi");
+    }
+
     loadRequests();
   } catch (err) {
     console.error(`🔴 [Bulk] Xatosi:`, err.message, err);

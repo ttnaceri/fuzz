@@ -4,7 +4,7 @@ const adminApp = new Hono();
 const round2 = (num) => Math.round(Number(num) * 100) / 100;
 
 // ==========================================
-// STATS (Dashboard)
+// STATS
 // ==========================================
 adminApp.get('/admin/stats', async (c) => {
   try {
@@ -364,6 +364,20 @@ adminApp.post('/admin/rates', async (c) => {
   } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
 });
 
+adminApp.get('/admin/rates/fetch-api', async (c) => {
+  try {
+    const apiKey = c.env.EXCHANGE_RATE_API_KEY;
+    if (!apiKey) return c.json({ error: "EXCHANGE_RATE_API_KEY sozlanmagan" }, 500);
+    const res = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`);
+    const data = await res.json();
+    const uzs = data?.conversion_rates?.UZS;
+    if (!uzs) return c.json({ error: 'Kurs olinmadi' }, 502);
+    return c.json({ rate: uzs, currency: 'USD', source: 'api' });
+  } catch (err) {
+    return c.json({ error: 'Server xatosi: ' + err.message }, 500);
+  }
+});
+
 // ==========================================
 // STARS RATES
 // ==========================================
@@ -479,7 +493,7 @@ adminApp.post('/admin/telegram/reply', async (c) => {
 });
 
 // ==========================================
-// PAYMENT REQUESTS (YANGILANGAN: BULK VA TO'G'RI $ QO'SHISH)
+// PAYMENT REQUESTS (BULK APPROVE/REJECT)
 // ==========================================
 adminApp.get('/admin/payment-requests', async (c) => {
   try {
@@ -500,7 +514,6 @@ adminApp.post('/admin/payment-requests/approve', async (c) => {
 
     const { ids } = body;
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      console.error("🔴 [Approve] IDs yo'q yoki bo'sh");
       return c.json({ error: 'So\'rovlar tanlanmagan' }, 400);
     }
 
@@ -520,7 +533,7 @@ adminApp.post('/admin/payment-requests/approve', async (c) => {
 
       const request = await c.env.DB.prepare('SELECT * FROM payment_requests WHERE id = ? AND status = "pending"').bind(id).first();
       if (!request) {
-        console.warn(`🟡 [Approve] So'rov topilmadi yoki allaqachon tasdiqlangan: ${id}`);
+        console.warn(`🟡 [Approve] So'rov topilmadi: ${id}`);
         continue;
       }
       console.log(`🟢 [Approve] So'rov topildi:`, request);
@@ -530,7 +543,7 @@ adminApp.post('/admin/payment-requests/approve', async (c) => {
         console.warn(`🟡 [Approve] Foydalanuvchi topilmadi: ${request.user_id}`);
         continue;
       }
-      console.log(`🟢 [Approve] Foydalanuvchi:`, user.username, 'balans:', user.balance);
+      console.log(`🟢 [Approve] Foydalanuvchi: ${user.username}, balans: ${user.balance}`);
 
       const createdAt = new Date(request.created_at);
       const now = new Date();
@@ -546,12 +559,23 @@ adminApp.post('/admin/payment-requests/approve', async (c) => {
       console.log(`🔵 [Approve] Hisob: ${finalAmountUzs} UZS / ${rate} = $${amountUsd}`);
       console.log(`🔵 [Approve] Yangi balans: $${currentBalance} + $${amountUsd} = $${newBalance}`);
 
-      await c.env.DB.batch([
+      // ==========================================
+      // BATCH NATIJASINI TEKSHIRISH
+      // ==========================================
+      const batchResults = await c.env.DB.batch([
         c.env.DB.prepare('UPDATE users SET balance = ? WHERE id = ?').bind(newBalance, user.id),
         c.env.DB.prepare('INSERT INTO payments (id, user_id, amount_usd, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)').bind(crypto.randomUUID(), user.id, amountUsd),
         c.env.DB.prepare('DELETE FROM payment_requests WHERE id = ?').bind(id)
       ]);
-      console.log(`🟢 [Approve] Balans yangilandi va so'rov o'chirildi`);
+
+      console.log("🔵 [Approve] Batch natijasi:", batchResults);
+      console.log("🔵 [Approve] UPDATE meta:", batchResults[0]?.meta);
+
+      // ==========================================
+      // YANGILANGAN BALANSNI TEKSHIRISH
+      // ==========================================
+      const freshUser = await c.env.DB.prepare('SELECT balance FROM users WHERE id = ?').bind(user.id).first();
+      console.log("✅ [Approve] Yangilangan balans (DB'dan):", freshUser?.balance);
 
       if (user.telegram_id && c.env.BOT_TOKEN) {
         const bonusText = diffMinutes > 15 ? `\n\n(Bonus: +15%)` : '';
@@ -615,37 +639,6 @@ adminApp.post('/admin/payment-requests/reject', async (c) => {
     console.error("🔴 [Reject] Xato:", err.message, err);
     return c.json({ error: 'Xato: ' + err.message }, 500);
   }
-});
-
-adminApp.post('/admin/payment-requests/reject', async (c) => {
-  try {
-    const { ids } = await c.req.json();
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return c.json({ error: 'So\'rovlar tanlanmagan' }, 400);
-    }
-
-    for (const id of ids) {
-      const request = await c.env.DB.prepare('SELECT * FROM payment_requests WHERE id = ? AND status = "pending"').bind(id).first();
-      if (!request) continue;
-
-      await c.env.DB.prepare('DELETE FROM payment_requests WHERE id = ?').bind(id).run();
-
-      const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(request.user_id).first();
-      if (user?.telegram_id && c.env.BOT_TOKEN) {
-        try {
-          await fetch(`https://api.telegram.org/bot${c.env.BOT_TOKEN}/sendMessage`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: user.telegram_id,
-              text: `❌ To'lov so'rovingiz rad etildi.\n\nMiqdor: ${Number(request.amount_uzs).toLocaleString()} so'm`,
-            }),
-          });
-        } catch (e) {}
-      }
-    }
-
-    return c.json({ message: 'Rad etildi va o\'chirildi!' });
-  } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
 export default adminApp;

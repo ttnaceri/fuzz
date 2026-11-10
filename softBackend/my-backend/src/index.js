@@ -119,56 +119,16 @@ app.get('/fuzz/api/rates/usd', async (c) => {
 });
 
 // ==========================================
-// PUBLIC STARS RATES
+// PUBLIC STARS RATES (frontend uchun)
 // ==========================================
-
-app.get('/fuzz/api/rates/usd', async (c) => {
-  console.log("🔵 [Backend Rate] Endpoint chaqirildi");
+app.get('/fuzz/api/stars-rates', async (c) => {
   try {
-    const now = Date.now();
-    if (__rateCache.value !== null && (now - __rateCache.fetchedAt) < RATE_CACHE_TTL_MS) {
-      console.log("🟢 [Backend Rate] Cache'dan qaytarildi:", __rateCache.value);
-      return c.json({ usd_uzs: __rateCache.value, cached: true });
-    }
-
-    const apiKey = c.env.EXCHANGE_RATE_API_KEY;
-    console.log("🔵 [Backend Rate] API key:", apiKey ? `Mavjud (${apiKey.substring(0, 10)}...)` : "❌ TOPILMADI");
-    console.log("🔵 [Backend Rate] env keys:", Object.keys(c.env).filter(k => !k.startsWith('_')));
-
-    if (!apiKey) {
-      console.error("🔴 [Backend Rate] EXCHANGE_RATE_API_KEY yo'q!");
-      return c.json({
-        error: "EXCHANGE_RATE_API_KEY sozlanmagan",
-        hint: "npx wrangler secret put EXCHANGE_RATE_API_KEY",
-      }, 500);
-    }
-
-    const url = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`;
-    console.log("🔵 [Backend Rate] API URL:", url.replace(apiKey, apiKey.substring(0, 8) + '...'));
-
-    const res = await fetch(url);
-    console.log("🟢 [Backend Rate] HTTP status:", res.status);
-
-    if (!res.ok) {
-      console.error("🔴 [Backend Rate] HTTP xatosi:", res.status);
-      return c.json({ error: `Exchange API xato: ${res.status}` }, 502);
-    }
-
-    const data = await res.json();
-    console.log("🟢 [Backend Rate] API javobi:", data);
-
-    const uzs = data?.conversion_rates?.UZS;
-    if (!uzs || typeof uzs !== 'number') {
-      console.error("🔴 [Backend Rate] UZS topilmadi. Natija:", data);
-      return c.json({ error: 'Kurs olinmadi', details: data }, 502);
-    }
-
-    __rateCache = { value: uzs, fetchedAt: now };
-    console.log("✅ [Backend Rate] Kurs olindi:", uzs);
-    return c.json({ usd_uzs: uzs, cached: false });
+    const rates = await c.env.DB.prepare(
+      'SELECT amount_usd, stars_amount FROM stars_rates ORDER BY amount_usd ASC'
+    ).all();
+    return c.json({ rates: rates.results || [] });
   } catch (err) {
-    console.error("🔴 [Backend Rate] Server xatosi:", err.message, err);
-    return c.json({ error: 'Server xatosi: ' + err.message }, 500);
+    return c.json({ rates: [] });
   }
 });
 

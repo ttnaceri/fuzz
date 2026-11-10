@@ -23,25 +23,68 @@ export default function WalletTopUpPage() {
   const [starsAmount, setStarsAmount] = useState(10);
 
   useEffect(() => {
-    // 1. Kursni Backenddan olish (Xavfsiz va ishonchli)
-    api.get('/api/rates/usd')
-      .then(data => {
-        if (data?.usd_uzs && Number(data.usd_uzs) > 0) {
-          setRate(Number(data.usd_uzs));
-        }
-      })
-      .catch((err) => console.warn("Kurs olishda xato, fallback ishlatiladi:", err));
+  // ==========================================
+  // DEBUG: Exchange Rate API chaqiruvi
+  // ==========================================
+  const fetchRate = async () => {
+    console.log("🔵 [Rate] Boshlanmoqda...");
+    console.log("🔵 [Rate] config.payment:", config.payment);
+    console.log("🔵 [Rate] exchangeApiKey:", config.payment?.exchangeApiKey ? `Mavjud (${config.payment.exchangeApiKey.substring(0, 10)}...)` : "❌ TOPILMADI");
 
-    // 2. To'lov usullari
-    api.get('/api/payment-methods')
-      .then(data => { setPaymentMethods(data.methods || []); setLoading(false); })
-      .catch(() => setLoading(false));
+    try {
+      // Avval backend orqali urinamiz (xavfsizroq)
+      console.log("🔵 [Rate] Backend endpointni sinab ko'ramiz: /api/rates/usd");
+      const backendRes = await api.get('/api/rates/usd');
+      console.log("🟢 [Rate] Backend javobi:", backendRes);
 
-    // 3. Stars paketlari
-    api.get('/api/stars-rates')
-      .then(data => setStarsRates(data.rates || []))
-      .catch(() => {});
-  }, []);
+      if (backendRes?.usd_uzs && Number(backendRes.usd_uzs) > 0) {
+        console.log("✅ [Rate] Backend'dan kurs olindi:", backendRes.usd_uzs);
+        setRate(Number(backendRes.usd_uzs));
+        return;
+      }
+    } catch (backendErr) {
+      console.error("🔴 [Rate] Backend xatosi:", backendErr.message, backendErr);
+    }
+
+    // Agar backend ishlamasa, to'g'ridan-to'g'ri API
+    const apiKey = config.payment?.exchangeApiKey;
+    if (!apiKey) {
+      console.warn("🟡 [Rate] VITE_EXCHANGE_API_KEY topilmadi, fallback (12500) ishlatiladi");
+      return;
+    }
+
+    const url = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`;
+    console.log("🔵 [Rate] API URL:", url.replace(apiKey, apiKey.substring(0, 8) + '...'));
+
+    try {
+      const res = await fetch(url);
+      console.log("🟢 [Rate] HTTP status:", res.status);
+      const data = await res.json();
+      console.log("🟢 [Rate] API javobi:", data);
+
+      if (data?.conversion_rates?.UZS) {
+        console.log("✅ [Rate] API'dan kurs olindi:", data.conversion_rates.UZS);
+        setRate(data.conversion_rates.UZS);
+      } else {
+        console.error("🔴 [Rate] API'da UZS topilmadi. Natija:", data);
+      }
+    } catch (err) {
+      console.error("🔴 [Rate] API fetch xatosi:", err.message, err);
+    }
+  };
+
+  fetchRate();
+
+  // 2. To'lov usullari
+  api.get('/api/payment-methods')
+    .then(data => { setPaymentMethods(data.methods || []); setLoading(false); })
+    .catch(() => setLoading(false));
+
+  // 3. Stars paketlari
+  api.get('/api/stars-rates')
+    .then(data => setStarsRates(data.rates || []))
+    .catch(() => {});
+}, []);
 
   const handleUsdChange = (v) => {
     const clean = v.replace(/[^\d.]/g, '').replace(/^(\d*\.\d*)\..*/, '$1');

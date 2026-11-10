@@ -59,25 +59,33 @@ export default function AdminPaymentRequests() {
   };
 
   const handleBulkAction = async (action) => {
-    if (selectedIds.length === 0) { toastError("Hech qanday so'rov tanlanmagan!"); return; }
-    try {
-      // Har bir ID uchun alohida so'rov yuborish (agar sizning backend bitta ID qabul qilsa)
-      // Agar backend `{ ids: [...] }` qabul qilsa, o'zgartirish shart emas.
-      // Hozirgi holatda sizning adminIndex.js bitta ID qabul qiladi (c.req.param('id')).
-      // Shuning uchun biz bittalab jo'natamiz.
-      for (const id of selectedIds) {
-        if (action === 'approve') {
-          await api.post(`/api/admin/payment-requests/${id}/approve`, {});
-        } else {
-          await api.post(`/api/admin/payment-requests/${id}/reject`, {});
-        }
-      }
-      success(`${selectedIds.length} ta so'rov ${action === 'approve' ? 'tasdiqlandi' : 'rad etildi'}!`);
-      setSelectedIds([]);
-      setModalAction(null);
-      loadRequests();
-    } catch (err) { toastError(err.message || "Xato"); }
-  };
+  if (selectedIds.length === 0) {
+    toastError("Hech qanday so'rov tanlanmagan!");
+    return;
+  }
+
+  console.log(`🔵 [Bulk] Boshlanmoqda: action=${action}, ids=`, selectedIds);
+
+  try {
+    const endpoint = action === 'approve' 
+      ? '/api/admin/payment-requests/approve' 
+      : '/api/admin/payment-requests/reject';
+    
+    console.log(`🔵 [Bulk] URL: ${endpoint}`);
+    console.log(`🔵 [Bulk] Body:`, { ids: selectedIds });
+
+    const res = await api.post(endpoint, { ids: selectedIds });
+    console.log(`🟢 [Bulk] Backend javobi:`, res);
+
+    success(`${selectedIds.length} ta so'rov ${action === 'approve' ? 'tasdiqlandi' : 'rad etildi'}!`);
+    setSelectedIds([]);
+    setModalAction(null);
+    loadRequests();
+  } catch (err) {
+    console.error(`🔴 [Bulk] Xatosi:`, err.message, err);
+    toastError(err.message || "Xato");
+  }
+};
 
   return (
     <div>

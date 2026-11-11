@@ -29,12 +29,10 @@ export default function GameDetailsPage() {
     setLoading(true);
     setError(null);
 
-    // 1. O'yinni yuklash
     gameService
       .getGameById(id, { signal: controller.signal })
       .then((g) => {
         setGame(g);
-        // 2. Agar o'yin topsa, uni qaysi bundle'larga tegishli ekanligini qidirish
         if (g) {
           api.get('/api/bundles')
             .then(async (res) => {
@@ -61,7 +59,6 @@ export default function GameDetailsPage() {
     return () => controller.abort();
   }, [id]);
 
-  // 3. Wishlist'da bor-yo'qligini tekshirish
   useEffect(() => {
     if (user && game) {
       api.get(`/api/users/${user.id}/wishlist`)
@@ -80,12 +77,17 @@ export default function GameDetailsPage() {
   const cover = game.cover || game.image;
   const unavailable = game.available === false || game.availability === 'unavailable';
 
+  // ✅ YANGI: Chegirmani hisoblash (GameCard bilan bir xil mantiq)
+  const discount = Number(game.discount) || 0;
+  const originalPrice = Number(game.price) || 0;
+  const finalPrice = discount > 0 ? originalPrice - (originalPrice * discount / 100) : originalPrice;
+  const hasDiscount = discount > 0;
+
   const handleAdd = () => {
     addItem(game);
     success(`"${game.title}" savatga qo'shildi`);
   };
 
-  // Wishlist toggle
   const toggleWishlist = async () => {
     if (!user) {
       toastError("Wishlistga qo'shish uchun tizimga kiring");
@@ -132,7 +134,26 @@ export default function GameDetailsPage() {
         </div>
         
         <aside className="game-details__side">
-          <div className="game-details__price">{formatPrice(game.price, game.currency)}</div>
+          {/* ==========================================
+              YANGI: Chegirma bilan narxni ko'rsatish
+              ========================================== */}
+          {hasDiscount ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+              <div className="game-details__price" style={{ color: '#43b581', margin: 0 }}>
+                {formatPrice(finalPrice, game.currency)}
+              </div>
+              <div style={{ textDecoration: 'line-through', color: '#b9a6a2', fontSize: '1rem' }}>
+                {formatPrice(originalPrice, game.currency)}
+              </div>
+              <div style={{ backgroundColor: '#f0b44d', color: '#000', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                -{discount}%
+              </div>
+            </div>
+          ) : (
+            <div className="game-details__price" style={{ marginBottom: '1rem' }}>
+              {formatPrice(originalPrice, game.currency)}
+            </div>
+          )}
           
           {unavailable && (
             <div className="unavailable-notice">
@@ -145,7 +166,6 @@ export default function GameDetailsPage() {
               <i className="fa-solid fa-cart-plus" /> Add to cart
             </button>
             
-            {/* WISHLIST TUGMASI */}
             <button 
               className="btn btn-secondary btn-block" 
               onClick={toggleWishlist}

@@ -367,4 +367,23 @@ userApp.post('/payment-request', async (c) => {
   }
 });
 
+// ==========================================
+// USER PAYMENTS (Xaridlar tarixi uchun)
+// ==========================================
+userApp.get('/users/:userId/payments', async (c) => {
+  try {
+    const userId = c.req.param('userId');
+    const me = await getAuthUser(c);
+    if (me.id !== userId && !isAdminRole(me.role)) return c.json({ error: 'Ruxsat yo\'q' }, 403);
+
+    const payments = await c.env.DB.prepare(
+      'SELECT id, amount_usd, stars_paid, created_at FROM payments WHERE user_id = ? ORDER BY created_at DESC'
+    ).bind(userId).all();
+
+    return c.json({ payments: payments.results || [] });
+  } catch (err) {
+    return c.json({ error: 'Xato: ' + err.message }, 500);
+  }
+});
+
 export default userApp;

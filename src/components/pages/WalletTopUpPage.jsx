@@ -13,78 +13,37 @@ export default function WalletTopUpPage() {
 
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [selectedMethod, setSelectedMethod] = useState(null);
-  const [rate, setRate] = useState(12500); // Fallback
+  const [rate, setRate] = useState(12500);
   const [amount, setAmount] = useState('');
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [uzumCard, setUzumCard] = useState({ cardNumber: '', cardHolder: '', fee: 2500 });
 
   const [starsRates, setStarsRates] = useState([]);
   const [starsUsd, setStarsUsd] = useState('1');
   const [starsAmount, setStarsAmount] = useState(10);
 
   useEffect(() => {
-  // ==========================================
-  // DEBUG: Exchange Rate API chaqiruvi
-  // ==========================================
-  const fetchRate = async () => {
-    console.log("🔵 [Rate] Boshlanmoqda...");
-    console.log("🔵 [Rate] config.payment:", config.payment);
-    console.log("🔵 [Rate] exchangeApiKey:", config.payment?.exchangeApiKey ? `Mavjud (${config.payment.exchangeApiKey.substring(0, 10)}...)` : "❌ TOPILMADI");
+    // Kursni backenddan olish
+    api.get('/api/rates/usd')
+      .then(data => { if (data?.usd_uzs) setRate(Number(data.usd_uzs)); })
+      .catch(() => {});
 
-    try {
-      // Avval backend orqali urinamiz (xavfsizroq)
-      console.log("🔵 [Rate] Backend endpointni sinab ko'ramiz: /api/rates/usd");
-      const backendRes = await api.get('/api/rates/usd');
-      console.log("🟢 [Rate] Backend javobi:", backendRes);
+    // To'lov usullari
+    api.get('/api/payment-methods')
+      .then(data => { setPaymentMethods(data.methods || []); setLoading(false); })
+      .catch(() => setLoading(false));
 
-      if (backendRes?.usd_uzs && Number(backendRes.usd_uzs) > 0) {
-        console.log("✅ [Rate] Backend'dan kurs olindi:", backendRes.usd_uzs);
-        setRate(Number(backendRes.usd_uzs));
-        return;
-      }
-    } catch (backendErr) {
-      console.error("🔴 [Rate] Backend xatosi:", backendErr.message, backendErr);
-    }
+    // Stars paketlari
+    api.get('/api/stars-rates')
+      .then(data => setStarsRates(data.rates || []))
+      .catch(() => {});
 
-    // Agar backend ishlamasa, to'g'ridan-to'g'ri API
-    const apiKey = config.payment?.exchangeApiKey;
-    if (!apiKey) {
-      console.warn("🟡 [Rate] VITE_EXCHANGE_API_KEY topilmadi, fallback (12500) ishlatiladi");
-      return;
-    }
-
-    const url = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`;
-    console.log("🔵 [Rate] API URL:", url.replace(apiKey, apiKey.substring(0, 8) + '...'));
-
-    try {
-      const res = await fetch(url);
-      console.log("🟢 [Rate] HTTP status:", res.status);
-      const data = await res.json();
-      console.log("🟢 [Rate] API javobi:", data);
-
-      if (data?.conversion_rates?.UZS) {
-        console.log("✅ [Rate] API'dan kurs olindi:", data.conversion_rates.UZS);
-        setRate(data.conversion_rates.UZS);
-      } else {
-        console.error("🔴 [Rate] API'da UZS topilmadi. Natija:", data);
-      }
-    } catch (err) {
-      console.error("🔴 [Rate] API fetch xatosi:", err.message, err);
-    }
-  };
-
-  fetchRate();
-
-  // 2. To'lov usullari
-  api.get('/api/payment-methods')
-    .then(data => { setPaymentMethods(data.methods || []); setLoading(false); })
-    .catch(() => setLoading(false));
-
-  // 3. Stars paketlari
-  api.get('/api/stars-rates')
-    .then(data => setStarsRates(data.rates || []))
-    .catch(() => {});
-}, []);
+    // UZUM Card ma'lumotlari
+    api.get('/api/payment/uzum-card')
+      .then(data => setUzumCard(data))
+      .catch(() => {});
+  }, []);
 
   const handleUsdChange = (v) => {
     const clean = v.replace(/[^\d.]/g, '').replace(/^(\d*\.\d*)\..*/, '$1');
@@ -119,15 +78,15 @@ export default function WalletTopUpPage() {
     success("Telegram'da to'lovni yakunlang.");
   };
 
-  const copyCardNumber = () => {
-    const cleanNumber = config.payment.cardNumber.replace(/\s/g, '');
+  const copyCardNumber = (number) => {
+    const cleanNumber = number.replace(/\s/g, '');
     navigator.clipboard.writeText(cleanNumber);
     setCopied(true);
     info("Karta raqami nusxalandi!");
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleCardPay = async () => {
+  const handleCardPay = async (method = 'card') => {
     const cleanAmount = amount.replace(/\s/g, '');
     if (!cleanAmount || Number(cleanAmount) <= 0) {
       info("Iltimos, to'g'ri miqdor kiriting.");
@@ -135,7 +94,10 @@ export default function WalletTopUpPage() {
     }
 
     try {
-      await api.post('/api/payment-request', { amount_uzs: Number(cleanAmount) });
+      await api.post('/api/payment-request', {
+        amount_uzs: Number(cleanAmount),
+        method, // 'card' yoki 'uzum_card'
+      });
       success("So'rov yuborildi! Admin tasdiqlagach balansingiz to'ladi.");
       setAmount('');
       setSelectedMethod(null);
@@ -186,6 +148,7 @@ export default function WalletTopUpPage() {
             <button onClick={() => { setSelectedMethod(null); setStarsUsd('1'); setStarsAmount(10); }} style={{ background: 'none', border: 'none', color: '#b9a6a2', cursor: 'pointer', marginBottom: '1rem', padding: 0 }}>
               <i className="fa-solid fa-arrow-left"></i> Orqaga
             </button>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
               <div style={{ width: '60px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <img src={selectedMethod.logo_url} alt={selectedMethod.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} onError={(e) => e.currentTarget.style.display = 'none'} />
@@ -193,6 +156,7 @@ export default function WalletTopUpPage() {
               <h3 style={{ color: '#f5eeee', margin: 0 }}>{selectedMethod.name}</h3>
             </div>
 
+            {/* ========== TELEGRAM STARS ========== */}
             {selectedMethod.id === 'stars' && (
               <div>
                 <p style={{ color: '#b9a6a2', fontSize: '0.85rem', marginBottom: '1rem' }}>Balansni Telegram Stars orqali to'ldiring.</p>
@@ -216,6 +180,7 @@ export default function WalletTopUpPage() {
               </div>
             )}
 
+            {/* ========== KARTA ========== */}
             {selectedMethod.id === 'card' && (
               <div>
                 <div style={{ background: 'var(--color-bg-alt)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -224,7 +189,7 @@ export default function WalletTopUpPage() {
                     <div style={{ fontSize: '1.2rem', fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: '1px', color: '#f5eeee' }}>{config.payment.cardNumber}</div>
                     <div style={{ fontSize: '0.8rem', color: '#b9a6a2', marginTop: '0.2rem' }}>{config.payment.cardHolder}</div>
                   </div>
-                  <button onClick={copyCardNumber} style={{ background: '#100b0a', border: '1px solid #48201a', color: copied ? '#43b581' : '#b9a6a2', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer' }} title="Nusxalash">
+                  <button onClick={() => copyCardNumber(config.payment.cardNumber)} style={{ background: '#100b0a', border: '1px solid #48201a', color: copied ? '#43b581' : '#b9a6a2', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer' }} title="Nusxalash">
                     <i className={`fa-solid ${copied ? 'fa-check' : 'fa-copy'}`}></i>
                   </button>
                 </div>
@@ -235,7 +200,39 @@ export default function WalletTopUpPage() {
                     ≈ ${(Number(amount.replace(/\s/g, '')) / rate).toFixed(2)}
                   </div>
                 </div>
-                <button className="btn btn-primary" onClick={handleCardPay} style={{ width: '100%', marginTop: '1rem' }}>So'rov yuborish</button>
+                <button className="btn btn-primary" onClick={() => handleCardPay('card')} style={{ width: '100%', marginTop: '1rem' }}>So'rov yuborish</button>
+              </div>
+            )}
+
+            {/* ========== UZUM CARD ========== */}
+            {selectedMethod.id === 'uzum_card' && (
+              <div>
+                <div style={{ background: 'var(--color-bg-alt)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#b9a6a2', marginBottom: '0.2rem' }}>UZUM Card raqami:</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: '1px', color: '#f5eeee' }}>
+                      {uzumCard.cardNumber || 'Yuklanmoqda...'}
+                    </div>
+                    {uzumCard.cardNumber && (
+                      <button onClick={() => copyCardNumber(uzumCard.cardNumber)} style={{ background: '#100b0a', border: '1px solid #48201a', color: copied ? '#43b581' : '#b9a6a2', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer' }}>
+                        <i className={`fa-solid ${copied ? 'fa-check' : 'fa-copy'}`}></i>
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#b9a6a2', marginTop: '0.2rem' }}>{uzumCard.cardHolder}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#f0b44d', marginTop: '0.5rem' }}>
+                    <i className="fa-solid fa-info-circle"></i> Bu kartaga pul tashlash komissiyasi: <strong>+{uzumCard.fee.toLocaleString()} so'm</strong>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Miqdor (UZS)</label>
+                  <input type="text" className="form-input" value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' '))} placeholder="50 000" />
+                  <div style={{ textAlign: 'right', fontSize: '0.8rem', color: '#43b581', marginTop: '0.3rem' }}>
+                    ≈ ${((Number(amount.replace(/\s/g, '')) + uzumCard.fee) / rate).toFixed(2)}
+                    <span style={{ color: '#f0b44d', marginLeft: '0.5rem', fontSize: '0.7rem' }}>(+{uzumCard.fee.toLocaleString()} so'm komissiya)</span>
+                  </div>
+                </div>
+                <button className="btn btn-primary" onClick={() => handleCardPay('uzum_card')} style={{ width: '100%', marginTop: '1rem' }}>So'rov yuborish</button>
               </div>
             )}
           </div>

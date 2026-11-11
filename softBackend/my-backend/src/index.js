@@ -509,6 +509,30 @@ app.get('/fuzz/api/payment-methods', async (c) => {
 });
 
 // ==========================================
+// UZUM CARD MA'LUMOTLARINI QAYTARISH
+// ==========================================
+app.get('/fuzz/api/payment/uzum-card', async (c) => {
+  try {
+    const cardNumber = c.env.UZUM_CARD_NUMBER;
+    const cardHolder = c.env.UZUM_CARD_HOLDER;
+
+    if (!cardNumber) {
+      return c.json({ error: "UZUM_CARD_NUMBER sozlanmagan" }, 500);
+    }
+
+    return c.json({
+      cardNumber,
+      cardHolder: cardHolder || '—',
+      currency: 'UZS',
+      fee: 2500,
+    });
+  } catch (err) {
+    return c.json({ error: 'Server xatosi: ' + err.message }, 500);
+  }
+});
+
+
+// ==========================================
 // PUBLIC BUNDLES
 // ==========================================
 app.get('/fuzz/api/bundles/:id', async (c) => {

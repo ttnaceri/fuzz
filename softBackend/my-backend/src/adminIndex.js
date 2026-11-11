@@ -506,13 +506,23 @@ adminApp.get('/admin/payment-requests', async (c) => {
   } catch (err) { return c.json({ requests: [] }); }
 });
 
-adminApp.post('/admin/payment-requests/approve', async (c) => {
-  console.log("🔵 [Approve] Endpoint chaqirildi");
+// ==========================================
+// PAYMENT REQUESTS (UZUM Card komissiyasi bilan)
+// ==========================================
+adminApp.get('/admin/payment-requests', async (c) => {
   try {
-    const body = await c.req.json();
-    console.log("🔵 [Approve] Body:", body);
+    const requests = await c.env.DB.prepare(`
+      SELECT pr.*, u.username FROM payment_requests pr
+      JOIN users u ON pr.user_id = u.id
+      ORDER BY pr.created_at DESC
+    `).all();
+    return c.json({ requests: (requests.results || []).map(r => ({ ...r, amount_uzs: round2(r.amount_uzs || 0) })) });
+  } catch (err) { return c.json({ requests: [] }); }
+});
 
-    const { ids } = body;
+adminApp.post('/admin/payment-requests/approve', async (c) => {
+  try {
+    const { ids } = await c.req.json();
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return c.json({ error: 'So\'rovlar tanlanmagan' }, 400);
     }
@@ -523,81 +533,90 @@ adminApp.post('/admin/payment-requests/approve', async (c) => {
       const rateRes = await fetch('https://my-backend.updbackend.workers.dev/fuzz/api/rates/usd');
       const rateData = await rateRes.json();
       if (rateData?.usd_uzs) rate = rateData.usd_uzs;
-      console.log("🟢 [Approve] Joriy kurs:", rate);
-    } catch (e) {
-      console.error("🔴 [Approve] Kurs olishda xato:", e.message);
-    }
+    } catch (e) {}
 
     for (const id of ids) {
-      console.log(`🔵 [Approve] So'rov ID: ${id}`);
-
       const request = await c.env.DB.prepare('SELECT * FROM payment_requests WHERE id = ? AND status = "pending"').bind(id).first();
-      if (!request) {
-        console.warn(`🟡 [Approve] So'rov topilmadi: ${id}`);
-        continue;
-      }
-      console.log(`🟢 [Approve] So'rov topildi:`, request);
+      if (!request) continue;
 
       const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(request.user_id).first();
-      if (!user) {
-        console.warn(`🟡 [Approve] Foydalanuvchi topilmadi: ${request.user_id}`);
-        continue;
+      if (!user) continue;
+
+      // ==========================================
+      // UZUM Card: +2 500 so'm komissiya
+      // ==========================================
+      let bonusUzs = 0;
+      if (request.method === 'uzum_card') {
+        bonusUzs = 2500;
+        console.log(`🔵 [Approve] UZUM Card komissiyasi: +${bonusUzs} so'm`);
       }
-      console.log(`🟢 [Approve] Foydalanuvchi: ${user.username}, balans: ${user.balance}`);
 
       const createdAt = new Date(request.created_at);
       const now = new Date();
       const diffMinutes = (now - createdAt) / (1000 * 60);
 
-      let finalAmountUzs = Number(request.amount_uzs);
+      let finalAmountUzs = Number(request.amount_uzs) + bonusUzs;
       if (diffMinutes > 15) finalAmountUzs *= 1.15;
 
       const amountUsd = round2(finalAmountUzs / rate);
       const currentBalance = Number(user.balance) || 0;
       const newBalance = round2(currentBalance + amountUsd);
 
-      console.log(`🔵 [Approve] Hisob: ${finalAmountUzs} UZS / ${rate} = $${amountUsd}`);
-      console.log(`🔵 [Approve] Yangi balans: $${currentBalance} + $${amountUsd} = $${newBalance}`);
-
-      // ==========================================
-      // BATCH NATIJASINI TEKSHIRISH
-      // ==========================================
-      const batchResults = await c.env.DB.batch([
+      await c.env.DB.batch([
         c.env.DB.prepare('UPDATE users SET balance = ? WHERE id = ?').bind(newBalance, user.id),
         c.env.DB.prepare('INSERT INTO payments (id, user_id, amount_usd, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)').bind(crypto.randomUUID(), user.id, amountUsd),
         c.env.DB.prepare('DELETE FROM payment_requests WHERE id = ?').bind(id)
       ]);
 
-      console.log("🔵 [Approve] Batch natijasi:", batchResults);
-      console.log("🔵 [Approve] UPDATE meta:", batchResults[0]?.meta);
-
-      // ==========================================
-      // YANGILANGAN BALANSNI TEKSHIRISH
-      // ==========================================
-      const freshUser = await c.env.DB.prepare('SELECT balance FROM users WHERE id = ?').bind(user.id).first();
-      console.log("✅ [Approve] Yangilangan balans (DB'dan):", freshUser?.balance);
-
       if (user.telegram_id && c.env.BOT_TOKEN) {
         const bonusText = diffMinutes > 15 ? `\n\n(Bonus: +15%)` : '';
+        const uzumText = bonusUzs > 0 ? `\n(UZUM Card: +${bonusUzs.toLocaleString()} so'm)` : '';
         try {
           await fetch(`https://api.telegram.org/bot${c.env.BOT_TOKEN}/sendMessage`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               chat_id: user.telegram_id,
-              text: `✅ To'lovingiz tasdiqlandi!\n\nMiqdor: ${finalAmountUzs.toLocaleString()} so'm (~$${amountUsd})${bonusText}\nYangi balans: $${newBalance}`,
+              text: `✅ To'lovingiz tasdiqlandi!\n\nMiqdor: ${finalAmountUzs.toLocaleString()} so'm (~$${amountUsd})${bonusText}${uzumText}\nYangi balans: $${newBalance}`,
             }),
           });
-        } catch (e) { console.error("🔴 [Approve] Telegram xatosi:", e.message); }
+        } catch (e) {}
       }
       processedCount++;
     }
 
-    console.log(`✅ [Approve] Jami tasdiqlandi: ${processedCount}`);
     return c.json({ message: `${processedCount} ta tasdiqlandi!`, processedCount });
-  } catch (err) {
-    console.error("🔴 [Approve] Xato:", err.message, err);
-    return c.json({ error: 'Xato: ' + err.message }, 500);
-  }
+  } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
+});
+
+adminApp.post('/admin/payment-requests/reject', async (c) => {
+  try {
+    const { ids } = await c.req.json();
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return c.json({ error: 'So\'rovlar tanlanmagan' }, 400);
+    }
+
+    for (const id of ids) {
+      const request = await c.env.DB.prepare('SELECT * FROM payment_requests WHERE id = ? AND status = "pending"').bind(id).first();
+      if (!request) continue;
+
+      await c.env.DB.prepare('DELETE FROM payment_requests WHERE id = ?').bind(id).run();
+
+      const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(request.user_id).first();
+      if (user?.telegram_id && c.env.BOT_TOKEN) {
+        try {
+          await fetch(`https://api.telegram.org/bot${c.env.BOT_TOKEN}/sendMessage`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: user.telegram_id,
+              text: `❌ To'lov so'rovingiz rad etildi.\n\nMiqdor: ${Number(request.amount_uzs).toLocaleString()} so'm`,
+            }),
+          });
+        } catch (e) {}
+      }
+    }
+
+    return c.json({ message: 'Rad etildi va o\'chirildi!' });
+  } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
 adminApp.post('/admin/payment-requests/reject', async (c) => {

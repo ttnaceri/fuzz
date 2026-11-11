@@ -23,7 +23,6 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const handleOnline = () => {
       setIsOffline(false);
-      // Onlayn bo'lganda foydalanuvchini yangilash
       refreshUser();
     };
     const handleOffline = () => setIsOffline(true);
@@ -37,22 +36,22 @@ export function AuthProvider({ children }) {
   }, []);
 
   const refreshUser = useCallback(async () => {
-  try {
-    const cached = storage.getAuth();
-    if (!cached?.user?.id) return null;
+    try {
+      const cached = storage.getAuth();
+      if (!cached?.user?.id) return null;
 
-    const res = await authService.me();
-    if (!res?.user) return null;
+      const res = await authService.me();
+      if (!res?.user) return null;
 
-    const normalized = normalizeUser(res.user);
-    setUser(normalized);
-    storage.setAuth({ user: normalized, token: cached.token });
-    return normalized;
-  } catch (e) {
-    console.warn("refreshUser xato:", e.message);
-    return null;
-  }
-}, []);
+      const normalized = normalizeUser(res.user);
+      setUser(normalized);
+      storage.setAuth({ user: normalized, token: cached.token });
+      return normalized;
+    } catch (e) {
+      console.warn("refreshUser xato:", e.message);
+      return null;
+    }
+  }, []);
 
   // QR login natijasini o'rnatish
   const setSession = useCallback((sessionUser, sessionToken) => {
@@ -69,6 +68,18 @@ export function AuthProvider({ children }) {
     }
     setLoading(false);
   }, []);
+
+  // ==========================================
+  // YANGI: Har 30 sekundda foydalanuvchini yangilash
+  // (Admin balansni o'zgartirganda user 30 soniya ichida ko'radi)
+  // ==========================================
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(() => {
+      refreshUser().catch(() => {});
+    }, 30000); // 30 sekund
+    return () => clearInterval(interval);
+  }, [user, refreshUser]);
 
   const login = useCallback(async (credentials) => {
     const res = await authService.login(credentials);

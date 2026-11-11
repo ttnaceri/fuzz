@@ -74,12 +74,14 @@ export function AuthProvider({ children }) {
   // (Admin balansni o'zgartirganda user 30 soniya ichida ko'radi)
   // ==========================================
   useEffect(() => {
-    if (!user) return;
-    const interval = setInterval(() => {
-      refreshUser().catch(() => {});
-    }, 30000); // 30 sekund
-    return () => clearInterval(interval);
-  }, [user, refreshUser]);
+  const cached = storage.getAuth();
+  if (cached?.user) {
+    setUser(normalizeUser(cached.user));
+    // ✅ Mount'da backenddan yangilash
+    refreshUser().catch(() => {});
+  }
+  setLoading(false);
+}, [refreshUser]);
 
   const login = useCallback(async (credentials) => {
     const res = await authService.login(credentials);

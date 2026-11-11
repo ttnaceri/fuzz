@@ -23,9 +23,12 @@ export const authService = {
     return api.post('/api/auth/logout', {});
   },
 
-  // ==========================================
-  // YANGI: TELEGRAM ID O'ZGARTIRISH
-  // ==========================================
+  // ✅ YANGI: Foydalanuvchi ma'lumotlarini olish (refreshUser uchun)
+  async me() {
+    return api.get('/api/auth/me');
+  },
+
+  // Telegram ID o'zgartirish
   async requestTelegramChange(userId, telegramId) {
     return api.post(`/api/users/${userId}/telegram/request`, { telegramId });
   },

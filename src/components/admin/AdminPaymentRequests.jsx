@@ -66,8 +66,6 @@ export default function AdminPaymentRequests() {
     return;
   }
 
-  console.log(`🔵 [Bulk] Boshlanmoqda: action=${action}, ids=`, selectedIds);
-
   try {
     const endpoint = action === 'approve'
       ? '/api/admin/payment-requests/approve'
@@ -80,13 +78,7 @@ export default function AdminPaymentRequests() {
     setSelectedIds([]);
     setModalAction(null);
 
-    // Foydalanuvchini yangilash
-    if (refreshUser) {
-      console.log("🔵 [Bulk] refreshUser chaqirilmoqda...");
-      await refreshUser();
-      console.log("✅ [Bulk] Foydalanuvchi yangilandi");
-    }
-
+    // ❌ refreshUser OLIB TASHLANDI (admin o'zini yangilash kerak emas)
     loadRequests();
   } catch (err) {
     console.error(`🔴 [Bulk] Xatosi:`, err.message, err);

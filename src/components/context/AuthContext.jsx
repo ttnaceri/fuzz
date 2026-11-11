@@ -37,25 +37,22 @@ export function AuthProvider({ children }) {
   }, []);
 
   const refreshUser = useCallback(async () => {
-    try {
-      const cached = storage.getAuth();
-      if (!cached?.user?.id) return null;
-      const res = await authService.me?.();
-      if (!res?.user) return null;
-      const normalized = normalizeUser(res.user);
-      setUser(normalized);
-      storage.setAuth({ user: normalized, token: cached.token });
-      return normalized;
-    } catch (e) {
-      // Offline bo'lsa — cached user'ni qaytaramiz
-      const cached = storage.getAuth();
-      if (cached?.user) {
-        setUser(normalizeUser(cached.user));
-        return normalizeUser(cached.user);
-      }
-      return null;
-    }
-  }, []);
+  try {
+    const cached = storage.getAuth();
+    if (!cached?.user?.id) return null;
+
+    const res = await authService.me();
+    if (!res?.user) return null;
+
+    const normalized = normalizeUser(res.user);
+    setUser(normalized);
+    storage.setAuth({ user: normalized, token: cached.token });
+    return normalized;
+  } catch (e) {
+    console.warn("refreshUser xato:", e.message);
+    return null;
+  }
+}, []);
 
   // QR login natijasini o'rnatish
   const setSession = useCallback((sessionUser, sessionToken) => {

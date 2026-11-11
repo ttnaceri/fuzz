@@ -635,12 +635,7 @@ app.post('/fuzz/telegram/webhook', async (c) => {
           return c.json({ ok: true });
         }
 
-        const existing = await c.env.DB.prepare('SELECT * FROM users WHERE telegram_id = ?').bind(chatId.toString()).first();
-        if (!existing) {
-          const id = crypto.randomUUID();
-          await c.env.DB.prepare('INSERT INTO users (id, username, email, password, role, telegram_id) VALUES (?, ?, ?, ?, ?, ?)')
-            .bind(id, tgUsername || firstName, `${chatId}@tg.temp`, await randomPasswordHash(), 'user', chatId.toString()).run();
-        }
+        
 
         await sendTelegramMessage(
           BOT_TOKEN, chatId,

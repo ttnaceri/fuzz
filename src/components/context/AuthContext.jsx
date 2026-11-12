@@ -14,18 +14,6 @@ function normalizeUser(rawUser) {
   };
 }
 
-// Ikkala storage'dan auth olish
-function getStoredAuth() {
-  return storage.getAuth() || storage.getAuthSession();
-}
-
-// Qaysi storage'da saqlanganini aniqlash
-function getAuthSource() {
-  if (storage.getAuth()?.token) return 'local';
-  if (storage.getAuthSession()?.token) return 'session';
-  return null;
-}
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -48,83 +36,78 @@ export function AuthProvider({ children }) {
   }, []);
 
   const refreshUser = useCallback(async () => {
-    try {
-      const cached = getStoredAuth();
-      if (!cached?.user?.id) return null;
+  try {
+    const cached = storage.getAuth() || storage.getAuthSession();
+    if (!cached?.user?.id) return null;
 
-      const res = await authService.me();
-      if (!res?.user) return null;
+    const res = await authService.me();
+    if (!res?.user) return null;
 
-      const normalized = normalizeUser(res.user);
+    const normalized = normalizeUser(res.user);
 
-      // Qaysi storage'da saqlangan bo'lsa, o'shanga yozish
-      const source = getAuthSource();
-      if (source === 'session') {
-        storage.setAuthSession({ user: normalized, token: cached.token });
-      } else {
-        storage.setAuth({ user: normalized, token: cached.token });
-      }
-
-      setUser(normalized);
-      return normalized;
-    } catch (e) {
-      console.warn("refreshUser xato:", e.message);
-      return null;
-    }
-  }, []);
-
-  // QR login natijasini o'rnatish (mode: 'local' | 'session')
-  const setSession = useCallback((sessionUser, sessionToken, mode = 'local') => {
-    if (!sessionUser || !sessionToken) return;
-    const normalized = normalizeUser(sessionUser);
-
-    if (mode === 'session') {
-      storage.clearAuth();
-      storage.setAuthSession({ user: normalized, token: sessionToken });
+    // Qaysi storage'da saqlangan bo'lsa, o'shanga yozish
+    if (storage.getAuth()) {
+      storage.setAuth({ user: normalized, token: cached.token });
     } else {
-      storage.clearAuthSession();
-      storage.setAuth({ user: normalized, token: sessionToken });
+      storage.setAuthSession({ user: normalized, token: cached.token });
     }
 
     setUser(normalized);
+    return normalized;
+  } catch (e) {
+    console.warn("refreshUser xato:", e.message);
+    return null;
+  }
+}, []);
+
+  // QR login natijasini o'rnatish
+  const setSession = useCallback((sessionUser, sessionToken) => {
+    if (!sessionUser || !sessionToken) return;
+    const normalized = normalizeUser(sessionUser);
+    setUser(normalized);
+    storage.setAuth({ user: normalized, token: sessionToken });
   }, []);
 
-  // Mount: ikkala storage'dan o'qish + backenddan yangilash
   useEffect(() => {
-    const cached = getStoredAuth();
-    if (cached?.user) {
-      setUser(normalizeUser(cached.user));
-      refreshUser().catch(() => {});
-    }
-    setLoading(false);
-  }, [refreshUser]);
+  // Ikkala storage'dan o'qish (localStorage + sessionStorage)
+  const cached = storage.getAuth() || storage.getAuthSession();
+  if (cached?.user) {
+    setUser(normalizeUser(cached.user));
+    refreshUser().catch(() => {});
+  }
+  setLoading(false);
+}, [refreshUser]);
 
-  // Har 30 sekundda yangilash
+  // ==========================================
+  // YANGI: Har 30 sekundda foydalanuvchini yangilash
+  // (Admin balansni o'zgartirganda user 30 soniya ichida ko'radi)
+  // ==========================================
   useEffect(() => {
-    if (!user) return;
-    const interval = setInterval(() => {
-      refreshUser().catch(() => {});
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [user, refreshUser]);
+  const cached = storage.getAuth();
+  if (cached?.user) {
+    setUser(normalizeUser(cached.user));
+    // ✅ Mount'da backenddan yangilash
+    refreshUser().catch(() => {});
+  }
+  setLoading(false);
+}, [refreshUser]);
 
   const login = useCallback(async (credentials) => {
     const res = await authService.login(credentials);
     if (!res || !res.user || !res.token) throw new Error(res?.error || 'Token olinmadi');
 
     const normalized = normalizeUser(res.user);
-    storage.clearAuthSession();
-    storage.setAuth({ user: normalized, token: res.token });
     setUser(normalized);
+    storage.setAuth({ user: normalized, token: res.token });
     return normalized;
   }, []);
 
   const logout = useCallback(async () => {
-    try { await authService.logout(); } catch (e) {}
-    setUser(null);
-    storage.clearAuth();
-    storage.clearAuthSession();
-  }, []);
+  try { await authService.logout(); } catch (e) {}
+  setUser(null);
+  storage.clearAuth();
+  storage.clearAuthSession();
+}, []);
 
   const value = useMemo(
     () => ({

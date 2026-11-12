@@ -13,12 +13,15 @@ export const authService = {
   async qrStatus(token) {
     return api.get('/api/auth/qr/status', { params: { token } });
   },
-  async qrApprove(token, expiresIn = '30d') {
-  return api.post('/api/auth/qr/approve', { token, expiresIn });
+  async qrApprove(token, mode = 'my_device', guestHours = 1) {
+  return api.post('/api/auth/qr/approve', { token, mode, guestHours });
 },
-  async qrReject(token) {
-    return api.post('/api/auth/qr/reject', { token });
-  },
+async qrVerifyCode(token, code) {
+  return api.post('/api/auth/qr/verify-code', { token, code });
+},
+async qrReject(token) {
+  return api.post('/api/auth/qr/reject', { token });
+},
   async logout() {
     return api.post('/api/auth/logout', {});
   },

@@ -1,21 +1,15 @@
 // softBackend/my-backend/src/utils/jwt.js
 import { sign, verify } from 'hono/jwt';
 
-const DEFAULT_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 kun
+// 10 yil — "cheksiz" sessiya uchun
+const FOREVER_SECONDS = 60 * 60 * 24 * 365 * 10;
 
-const TTL_MAP = {
-  '5m': 5 * 60,
-  '1h': 60 * 60,
-  '24h': 60 * 60 * 24,
-  '30d': 60 * 60 * 24 * 30,
-};
-
-export async function createToken(payload, env, expiresIn = '30d') {
+export async function createToken(payload, env, ttlSeconds = FOREVER_SECONDS) {
   const secret = env?.JWT_SECRET;
   if (!secret) throw new Error('JWT_SECRET sozlanmagan');
 
-  const ttl = TTL_MAP[expiresIn] || DEFAULT_TTL_SECONDS;
   const now = Math.floor(Date.now() / 1000);
+  const ttl = Number(ttlSeconds) > 0 ? Number(ttlSeconds) : FOREVER_SECONDS;
   const body = { ...payload, iat: now, exp: now + ttl };
   return await sign(body, secret);
 }

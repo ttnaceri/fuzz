@@ -4,6 +4,42 @@ export const translations = {
   // UZBEK
   // ==========================================
   uz: {
+    game: {
+  // ... mavjud
+  notFound: "O'yin topilmadi",
+  notFoundSub: "Bu o'yin mavjud emas",
+  addedToCart: "savatga qo'shildi",
+  backToStore: "Do'konga qaytish",
+  officialStore: "Rasmiy do'kon",
+  inBundles: "Ushbu o'yin kiritilgan Bundle'lar",
+},
+wishlist: {
+  // ... mavjud
+  loginRequired: "Wishlistga qo'shish uchun tizimga kiring",
+},
+    wallet: {
+  // ... mavjud
+  cardNumber: "Karta raqami",
+  copy: "Nusxalash",
+  copied: "Nusxalandi",
+  requestSent: "So'rov yuborildi",
+  uzumCardNumber: "UZUM Card raqami",
+  commission: "Komissiya",
+},
+purchases: {
+  title: "Xaridlar Tarixi",
+  date: "Sana",
+  amount: "Miqdor",
+  stars: "Stars",
+  exportExcel: "Excel'ga yuklash",
+  empty: "Hali xaridlar yo'q",
+  emptySub: "Siz hali hech qanday to'lov qilmadingiz",
+},
+    common: {
+  // ... mavjud
+  downloads: "Yuklab olishlar",
+  purchases: "Xaridlar",
+},
     // Nav
 admin: {
   // ... mavjud
@@ -365,6 +401,38 @@ header: {
   // RUSSIAN
   // ==========================================
   ru: {
+    game: {
+  notFound: "Игра не найдена",
+  notFoundSub: "Эта игра не существует",
+  addedToCart: "добавлена в корзину",
+  backToStore: "Вернуться в магазин",
+  officialStore: "Официальный магазин",
+  inBundles: "Наборы с этой игрой",
+},
+wishlist: {
+  loginRequired: "Войдите, чтобы добавить в список желаемого",
+},
+    wallet: {
+  cardNumber: "Номер карты",
+  copy: "Копировать",
+  copied: "Скопировано",
+  requestSent: "Запрос отправлен",
+  uzumCardNumber: "Номер карты UZUM",
+  commission: "Комиссия",
+},
+purchases: {
+  title: "История покупок",
+  date: "Дата",
+  amount: "Сумма",
+  stars: "Звёзды",
+  exportExcel: "Экспорт в Excel",
+  empty: "Покупок пока нет",
+  emptySub: "Вы ещё не совершали платежей",
+},
+    common: {
+  downloads: "Загрузки",
+  purchases: "Покупки",
+},
 
     admin: {
   recentActivity1: "Новый пользователь зарегистрирован",
@@ -684,6 +752,38 @@ header: {
   // ENGLISH
   // ==========================================
   en: {
+    game: {
+  notFound: "Game not found",
+  notFoundSub: "This game does not exist",
+  addedToCart: "added to cart",
+  backToStore: "Back to store",
+  officialStore: "Official store",
+  inBundles: "Bundles containing this game",
+},
+wishlist: {
+  loginRequired: "Sign in to add to wishlist",
+},
+    wallet: {
+  cardNumber: "Card number",
+  copy: "Copy",
+  copied: "Copied",
+  requestSent: "Request sent",
+  uzumCardNumber: "UZUM Card number",
+  commission: "Commission",
+},
+purchases: {
+  title: "Purchase History",
+  date: "Date",
+  amount: "Amount",
+  stars: "Stars",
+  exportExcel: "Export to Excel",
+  empty: "No purchases yet",
+  emptySub: "You haven't made any payments yet",
+},
+    common: {
+  downloads: "Downloads",
+  purchases: "Purchases",
+},
     admin: {
   recentActivity1: "New user registered",
   recentActivity2: "Game purchased",

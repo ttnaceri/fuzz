@@ -2,47 +2,52 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api.js';
 import useAuth from '../hooks/useAuth.js';
+import { useLanguage } from '../context/useLanguage.js';
+import Sidebar from '../common/Sidebar.jsx';
+import Loading from '../common/Loading.jsx';
+import EmptyState from '../common/EmptyState.jsx';
+import { formatPrice } from '../../utils/formatters.js';
 
 export default function LibraryPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) { setLoading(false); return; }
-    
+    if (!user?.id) return;
     api.get(`/api/users/${user.id}/library`)
-      .then(data => { setGames(data.games || []); setLoading(false); })
-      .catch(() => setLoading(false));
+      .then(data => setGames(data.games || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [user]);
 
-  if (loading) return <div style={{ color: '#fff', padding: '2rem' }}>Yuklanmoqda...</div>;
-
   return (
-    <div className="page" style={{ padding: '2rem' }}>
-      <h1 className="page-title" style={{ color: '#f5eeee' }}>Mening Kutubxonam</h1>
-      
-      {games.length === 0 ? (
-        <div style={{ textAlign: 'center', marginTop: '3rem' }}>
-          <i className="fa-solid fa-box-open" style={{ fontSize: '3rem', color: '#48201a', marginBottom: '1rem' }}></i>
-          <h3 style={{ color: '#f5eeee' }}>Sizda hali o'yinlar yo'q</h3>
-          <Link to="/store" className="btn btn-primary mt-2">Do'konga o'tish</Link>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
-          {games.map(game => (
-            <div key={game.id} style={{ backgroundColor: '#241411', borderRadius: '8px', border: '1px solid #48201a', overflow: 'hidden' }}>
-              {game.image && <img src={game.image} alt={game.title} style={{ width: '100%', height: '150px', objectFit: 'cover' }} />}
-              <div style={{ padding: '1rem' }}>
-                <h3 style={{ color: '#f5eeee', margin: '0 0 1rem 0' }}>{game.title}</h3>
-                <Link to={`/game/${game.id}/play`} style={{ display: 'block', textAlign: 'center', backgroundColor: '#8a1200', color: '#fff', padding: '0.5rem', borderRadius: '4px', textDecoration: 'none', fontWeight: 'bold' }}>
-                  <i className="fa-solid fa-play"></i> O'ynash
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+    <div className="with-sidebar">
+      <Sidebar />
+      <div style={{ flex: 1, padding: '1.5rem' }}>
+        <h1 className="page-title">{t('library.title')}</h1>
+
+        {loading && <Loading />}
+        {!loading && games.length === 0 && (
+          <EmptyState icon="fa-gamepad" title={t('library.empty')} message={t('library.emptySub')} />
+        )}
+
+        {!loading && games.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
+            {games.map(game => (
+              <Link key={game.id} to={`/game/${game.id}/play`} style={{ textDecoration: 'none' }}>
+                <div className="card" style={{ padding: '1rem' }}>
+                  {game.image && <img src={game.image} alt={game.title} style={{ width: '100%', borderRadius: '8px', marginBottom: '0.5rem' }} />}
+                  <h3 style={{ color: '#f5eeee', margin: '0 0 0.5rem' }}>{game.title}</h3>
+                  <p style={{ color: '#b9a6a2', fontSize: '0.85rem' }}>{formatPrice(game.price)}</p>
+                  <button className="btn btn-primary btn-sm" style={{ width: '100%', marginTop: '0.5rem' }}>{t('library.play')}</button>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

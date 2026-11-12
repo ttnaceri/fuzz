@@ -1,31 +1,41 @@
-import { useLanguage } from '../context/useLanguage.js';
+import { useState } from 'react';
+import { api } from '../services/api.js';
 import useAuth from '../hooks/useAuth.js';
-import Sidebar from '../common/Sidebar.jsx';
 import useToast from '../hooks/useToast.js';
+import { useLanguage } from '../context/useLanguage.js';
+import Sidebar from '../common/Sidebar.jsx';
 
 export default function WalletRefundPage() {
+  const { user } = useAuth();
   const { t } = useLanguage();
-  const { isAuthenticated } = useAuth();
   const { success, error: toastError } = useToast();
 
-  // Demo balans (keyinchalik backenddan olinadi). Hozircha 0.
-  const balanceUZS = 0; 
-  const canRefund = balanceUZS >= 50000;
+  const [amount, setAmount] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleRefund = () => {
-    if (!canRefund) {
-      toastError(t('wallet.notEnoughBalance'));
-      return;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const clean = amount.replace(/\s/g, '');
+    if (!clean || Number(clean) <= 0) return toastError(t('wallet.notEnoughBalance'));
+
+    setLoading(true);
+    try {
+      await api.post('/api/payment-request', { amount_uzs: Number(clean), method: 'refund' });
+      success(t('refund.success'));
+      setAmount('');
+    } catch (err) {
+      toastError(err.message || 'Error');
+    } finally {
+      setLoading(false);
     }
-    success(t('wallet.refundSuccess'));
   };
 
-  if (!isAuthenticated) {
+  if (!user) {
     return (
       <div className="with-sidebar">
         <Sidebar />
         <div style={{ flex: 1, padding: '1.5rem' }}>
-          <h1 className="page-title">{t('wallet.refund')}</h1>
+          <h1 className="page-title">{t('refund.title')}</h1>
           <div className="unavailable-notice">{t('wallet.loginRequired')}</div>
         </div>
       </div>
@@ -36,20 +46,21 @@ export default function WalletRefundPage() {
     <div className="with-sidebar">
       <Sidebar />
       <div style={{ flex: 1, padding: '1.5rem' }}>
-        <h1 className="page-title">{t('wallet.refund')}</h1>
-        
-        <div className="card" style={{ padding: '1.5rem', maxWidth: '500px' }}>
-          <p className="text-muted mb-2">{t('wallet.refundRule')}</p>
-          <p><strong>{t('wallet.currentBalance')}:</strong> {balanceUZS.toLocaleString()} UZS</p>
+        <h1 className="page-title">{t('refund.title')}</h1>
 
-          <button 
-            className="btn btn-primary" 
-            onClick={handleRefund}
-            disabled={!canRefund}
-            style={{ marginTop: '1rem', opacity: canRefund ? 1 : 0.5 }}
-          >
-            {t('wallet.refund')}
-          </button>
+        <div className="card" style={{ padding: '1.5rem', maxWidth: '500px' }}>
+          <p style={{ color: '#b9a6a2', marginBottom: '1rem' }}>{t('refund.rule')}</p>
+          <p style={{ color: '#43b581', marginBottom: '1.5rem' }}>{t('wallet.currentBalance')}: <strong>${user.balance?.toFixed(2)}</strong></p>
+
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label className="form-label">{t('refund.amount')} (UZS)</label>
+              <input type="text" className="form-input" value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' '))} placeholder="50 000" />
+            </div>
+            <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '1rem' }}>
+              {loading ? '...' : t('refund.submit')}
+            </button>
+          </form>
         </div>
       </div>
     </div>

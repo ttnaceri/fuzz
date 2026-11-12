@@ -6,6 +6,17 @@ import { useLanguage } from '../context/useLanguage.js';
 import Navigation from './Navigation.jsx';
 import SearchBar from './SearchBar.jsx';
 import useToast from '../hooks/useToast.js';
+import { useTranslation } from 'react-i18next';
+
+export default function Header() {
+  const { t, i18n } = useTranslation();
+  // ...
+  return (
+    <button onClick={() => i18n.changeLanguage(i18n.language === 'uz' ? 'ru' : i18n.language === 'ru' ? 'en' : 'uz')}>
+      {i18n.language.toUpperCase()}
+    </button>
+  );
+}
 
 export default function Header() {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();

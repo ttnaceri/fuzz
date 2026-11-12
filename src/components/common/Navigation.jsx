@@ -6,7 +6,6 @@ export default function Navigation() {
   const { t } = useLanguage();
   const { user, isAuthenticated, refreshUser } = useAuth();
 
-  // Balansni hech qanday yaxlitlashsiz, to'liq ko'rsatamiz
   const balanceNum = user?.balance != null ? Number(user.balance) : null;
   const balance = (balanceNum != null && !isNaN(balanceNum))
     ? `$${balanceNum.toFixed(2)}`
@@ -14,19 +13,15 @@ export default function Navigation() {
 
   return (
     <nav className="header__nav" style={{ display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', gap: '0.2rem' }}>
-      
-      {/* HOME + DROPDOWN MENU */}
       <div className="nav-dropdown">
         <NavLink to="/" end className="nav-dropdown-btn" style={{ whiteSpace: 'nowrap' }}>
           {t('nav.home')}
         </NavLink>
-        
-        {/* Faqat login qilgan foydalanuvchilar uchun menyu */}
         {isAuthenticated && (
           <div className="nav-dropdown-content">
-            <NavLink to="/profile">Profile</NavLink>
-            <NavLink to="/settings">Edit Profile</NavLink>
-            <NavLink to="/security">Security</NavLink>
+            <NavLink to="/profile">{t('nav.profile')}</NavLink>
+            <NavLink to="/settings">{t('nav.editProfile')}</NavLink>
+            <NavLink to="/security">{t('nav.security')}</NavLink>
           </div>
         )}
       </div>
@@ -49,28 +44,18 @@ export default function Navigation() {
         </div>
       </div>
 
-      {/* WALLET + BALANCE */}
       <div className="nav-dropdown">
-        <div 
-          className="nav-dropdown-btn" 
-          style={{ 
-            cursor: 'pointer', 
-            whiteSpace: 'nowrap', 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '0.5rem'
-          }}
-          onClick={() => {
-            if (isAuthenticated) refreshUser();
-          }}
+        <div
+          className="nav-dropdown-btn"
+          style={{ cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          onClick={() => { if (isAuthenticated) refreshUser(); }}
         >
           <i className="fa-solid fa-wallet" style={{ fontSize: '0.9rem' }}></i>
           <span>
-            {t('nav.wallet')} 
+            {t('nav.wallet')}
             {isAuthenticated && balance && ` (${balance})`}
           </span>
         </div>
-        
         <div className="nav-dropdown-content">
           <NavLink to="/wallet/history">{t('wallet.history')}</NavLink>
           <NavLink to="/wallet/topup">{t('wallet.topUp')}</NavLink>

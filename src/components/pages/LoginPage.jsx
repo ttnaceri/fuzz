@@ -129,67 +129,51 @@ export default function LoginPage() {
   }, []);
 
   const pollStatus = useCallback(async (token) => {
-    try {
-      const res = await api.get('/api/auth/qr/status', { params: { token } });
-      if (!isMountedRef.current) return;
+  try {
+    const res = await api.get('/api/auth/qr/status', { params: { token } });
+    if (!isMountedRef.current) return;
 
-      if (res?.status === 'approved' && res?.token && res?.user) {
-        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-        setQrUser(res.user);
-        setSuccessPhase('verifying');
+    if (res?.status === 'approved' && res?.token && res?.user) {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      setQrUser(res.user);
+      setSuccessPhase('verifying');
 
-        // Mode: my_device | fuzz_client | guest | single_use
-        const mode = res.mode || 'my_device';
+      const mode = res.mode || 'my_device';
+      const storageMode = mode === 'fuzz_client' ? 'session' : 'local';
+
+      setTimeout(() => {
+        if (!isMountedRef.current) return;
+        setSession(res.user, res.token, storageMode);
+        setSuccessPhase('success');
+        success(`Tizimga kirdingiz: ${res.user.username}`);
 
         setTimeout(() => {
-          if (!isMountedRef.current) return;
-
-          // ==========================================
-          // ASOSIY LOGIKA: Fuzz Client → sessionStorage
-          // ==========================================
-          if (mode === 'fuzz_client') {
-            // sessionStorage — brauzer yopilganda avtomatik o'chadi
-            storage.clearAuth();
-            storage.setAuthSession({ user: res.user, token: res.token });
-            console.log('🔵 [QR] Fuzz Client — sessionStorage');
-          } else {
-            // localStorage — doimiy (sign out qilmaguncha)
-            storage.clearAuthSession();
-            storage.setAuth({ user: res.user, token: res.token });
-            console.log(`🔵 [QR] ${mode} — localStorage`);
-          }
-
-          setSession(res.user, res.token);
-          setSuccessPhase('success');
-          success(`Tizimga kirdingiz: ${res.user.username}`);
-
-          setTimeout(() => {
-            if (!isMountedRef.current || navigatedRef.current) return;
-            navigatedRef.current = true;
-            navigate(location.state?.from || '/account', { replace: true });
-          }, 1500);
-        }, 200);
-        return;
-      }
-
-      if (res?.status === 'expired' || res?.status === 'consumed') {
-        setQrStatus('expired');
-        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-        setTimeout(() => { if (isMountedRef.current) createQrChallenge(); }, 1500);
-        return;
-      }
-
-      setQrStatus('pending');
-    } catch (err) {
-      if (!isMountedRef.current) return;
-      if (err?.status === 400) {
-        setQrStatus('error');
-        setQrError(err.message || 'QR tokenda xato');
-        return;
-      }
-      console.warn('QR poll xatosi (davom etadi):', err?.message);
+          if (!isMountedRef.current || navigatedRef.current) return;
+          navigatedRef.current = true;
+          navigate(location.state?.from || '/account', { replace: true });
+        }, 1500);
+      }, 200);
+      return;
     }
-  }, [setSession, success, navigate, location.state, createQrChallenge]);
+
+    if (res?.status === 'expired' || res?.status === 'consumed') {
+      setQrStatus('expired');
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      setTimeout(() => { if (isMountedRef.current) createQrChallenge(); }, 1500);
+      return;
+    }
+
+    setQrStatus('pending');
+  } catch (err) {
+    if (!isMountedRef.current) return;
+    if (err?.status === 400) {
+      setQrStatus('error');
+      setQrError(err.message || 'QR tokenda xato');
+      return;
+    }
+    console.warn('QR poll xatosi (davom etadi):', err?.message);
+  }
+}, [setSession, success, navigate, location.state, createQrChallenge]);
 
   useEffect(() => {
     isMountedRef.current = true;

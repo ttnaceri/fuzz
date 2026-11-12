@@ -24,7 +24,7 @@ export function setItem(key, value) {
   if (!hasLocal) return;
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
-  } catch { /* ignore */ }
+  } catch { /* ignore quota errors */ }
 }
 
 export function removeItem(key) {

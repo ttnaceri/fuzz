@@ -10,57 +10,57 @@ export default function Footer() {
   };
 
   const footerLinks = [
-    { title: 'Fuzz haqida', links: [
-      { name: 'Fuzz', path: '/footer/about' },
-      { name: 'Ish o\'rinlari', path: '/footer/jobs' },
-      { name: 'Fuzzworks', path: '/footer/steamworks' },
-      { name: 'Fuzz Distribution', path: '/footer/distribution' },
-      { name: 'Yordam', path: '/footer/support' }
-    ]},
-    { title: 'Huquqiy', links: [
-      { name: 'Maxfiylik siyosati', path: '/footer/privacy' },
-      { name: 'Huquqiy ma\'lumotlar', path: '/footer/legal' },
-      { name: 'Obunachilar shartnomasi', path: '/footer/subscriber-agreement' },
-      { name: 'Pulni qaytarish', path: '/footer/refunds' },
-      { name: 'Xizmat ko\'rsatish shartlari', path: '/footer/terms' },
-      { name: 'Cookie sozlamalari', path: '/footer/cookies' }
-    ]},
-    { title: 'Ko\'proq', links: [
-      { name: 'Barcha o\'yinlar', path: '/store' },
-      { name: 'Kategoriyalar', path: '/categories' },
-      { name: 'Yangi chiqqanlar', path: '/new-releases' },
-      { name: 'Maxsus takliflar', path: '/special-offers' },
-      { name: 'Bepul o\'yinlar', path: '/free-games' }
-    ]}
+    {
+      title: t('footer.about'),
+      links: [
+        { name: t('footer.aboutFuzz'), path: '/footer/about' },
+        { name: t('footer.jobs'), path: '/footer/jobs' },
+        { name: t('footer.steamworks'), path: '/footer/steamworks' },
+        { name: t('footer.distribution'), path: '/footer/distribution' },
+        { name: t('footer.support'), path: '/footer/support' },
+      ],
+    },
+    {
+      title: t('footer.legal'),
+      links: [
+        { name: t('footer.privacy'), path: '/footer/privacy' },
+        { name: t('footer.legalPage'), path: '/footer/legal' },
+        { name: t('footer.subscriberAgreement'), path: '/footer/subscriber-agreement' },
+        { name: t('footer.refunds'), path: '/footer/refunds' },
+        { name: t('footer.terms'), path: '/footer/terms' },
+        { name: t('footer.cookies'), path: '/footer/cookies' },
+      ],
+    },
+    {
+      title: t('footer.more'),
+      links: [
+        { name: t('footer.allGames'), path: '/store' },
+        { name: t('home.categories'), path: '/categories' },
+        { name: t('home.newReleases'), path: '/new-releases' },
+        { name: t('home.specialOffers'), path: '/special-offers' },
+        { name: t('home.freeGames'), path: '/free-games' },
+      ],
+    },
   ];
 
   return (
     <footer style={{ backgroundColor: '#19100e', borderTop: '1px solid #48201a', padding: '4rem 0 2rem 0', color: '#b9a6a2' }}>
       <div className="container">
-        
-        {/* Yuqori qism: Logotiplar va Linklar */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3rem', justifyContent: 'space-between', marginBottom: '3rem' }}>
-          
-          {/* Logotiplar */}
           <div style={{ flex: '1 1 300px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-              <img 
-                src="/image/logo.png" 
-                alt="Fuzz Logo" 
-                style={{ height: '48px', objectFit: 'contain' }} 
+              <img
+                src="/image/logo.png"
+                alt="Fuzz Logo"
+                style={{ height: '48px', objectFit: 'contain' }}
                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <a 
-                href="https://github.com/ttnaceri" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="update-logo-link"
-              >
-                <img 
-                  src="/image/update.png" 
-                  alt="Update Inc." 
+              <a href="https://github.com/ttnaceri" target="_blank" rel="noopener noreferrer" className="update-logo-link">
+                <img
+                  src="/image/update.png"
+                  alt="Update Inc."
                   style={{ height: '40px', objectFit: 'contain', transition: 'opacity 0.2s' }}
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                   className="update-logo-img"
@@ -69,7 +69,6 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Linklar bo'limi */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3rem', flex: '2 1 600px' }}>
             {footerLinks.map((col, idx) => (
               <div key={idx} style={{ minWidth: '150px' }}>
@@ -79,11 +78,11 @@ export default function Footer() {
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                   {col.links.map((link, lIdx) => (
                     <li key={lIdx}>
-                      <Link 
-                        to={link.path} 
+                      <Link
+                        to={link.path}
                         style={{ color: '#b9a6a2', fontSize: '0.85rem', textDecoration: 'none', transition: 'color 0.2s' }}
-                        onMouseEnter={(e) => e.target.style.color = '#f5eeee'}
-                        onMouseLeave={(e) => e.target.style.color = '#b9a6a2'}
+                        onMouseEnter={(e) => (e.target.style.color = '#f5eeee')}
+                        onMouseLeave={(e) => (e.target.style.color = '#b9a6a2')}
                       >
                         {link.name}
                       </Link>
@@ -95,16 +94,15 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Pastki qism: Copyright va Ijtimoiy Tarmoqlar */}
         <div style={{ borderTop: '1px solid #48201a', paddingTop: '2rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-          <p 
+          <p
             style={{ fontSize: '0.75rem', userSelect: 'none', WebkitUserSelect: 'none', margin: 0, maxWidth: '800px', lineHeight: '1.5' }}
             onCopy={preventCopy}
             onContextMenu={preventCopy}
           >
             © {new Date().getFullYear()} Fuzz. by: UPDATE Inc.
           </p>
-          
+
           <div style={{ display: 'flex', gap: '1rem' }}>
             <a href="https://github.com/ttnaceri/" target="_blank" rel="noopener noreferrer" style={{ color: '#b9a6a2', fontSize: '1.2rem' }} title="GitHub">
               <i className="fa-brands fa-github"></i>
@@ -119,7 +117,6 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Hover effekti uchun qo'shimcha CSS */}
       <style>{`
         .update-logo-link:hover .update-logo-img {
           content: url('/image/updateHover.png');

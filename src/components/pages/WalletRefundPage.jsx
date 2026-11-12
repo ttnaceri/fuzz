@@ -5,19 +5,18 @@ import useToast from '../hooks/useToast.js';
 
 export default function WalletRefundPage() {
   const { t } = useLanguage();
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { success, error: toastError } = useToast();
 
-  // Demo balans (keyinchalik backenddan olinadi). Hozircha 0.
-  const balanceUZS = 0; 
+  const balanceUZS = Number(user?.balance || 0) * 12500;
   const canRefund = balanceUZS >= 50000;
 
   const handleRefund = () => {
     if (!canRefund) {
-      toastError(t('wallet.notEnoughBalance'));
+      toastError(t('refund.notEnough'));
       return;
     }
-    success(t('wallet.refundSuccess'));
+    success(t('refund.success'));
   };
 
   if (!isAuthenticated) {
@@ -25,7 +24,7 @@ export default function WalletRefundPage() {
       <div className="with-sidebar">
         <Sidebar />
         <div style={{ flex: 1, padding: '1.5rem' }}>
-          <h1 className="page-title">{t('wallet.refund')}</h1>
+          <h1 className="page-title">{t('refund.title')}</h1>
           <div className="unavailable-notice">{t('wallet.loginRequired')}</div>
         </div>
       </div>
@@ -36,19 +35,19 @@ export default function WalletRefundPage() {
     <div className="with-sidebar">
       <Sidebar />
       <div style={{ flex: 1, padding: '1.5rem' }}>
-        <h1 className="page-title">{t('wallet.refund')}</h1>
-        
+        <h1 className="page-title">{t('refund.title')}</h1>
+
         <div className="card" style={{ padding: '1.5rem', maxWidth: '500px' }}>
-          <p className="text-muted mb-2">{t('wallet.refundRule')}</p>
+          <p className="text-muted mb-2">{t('refund.rule')}</p>
           <p><strong>{t('wallet.currentBalance')}:</strong> {balanceUZS.toLocaleString()} UZS</p>
 
-          <button 
-            className="btn btn-primary" 
+          <button
+            className="btn btn-primary"
             onClick={handleRefund}
             disabled={!canRefund}
             style={{ marginTop: '1rem', opacity: canRefund ? 1 : 0.5 }}
           >
-            {t('wallet.refund')}
+            {t('refund.submit')}
           </button>
         </div>
       </div>

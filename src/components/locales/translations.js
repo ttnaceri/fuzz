@@ -5,6 +5,18 @@ export const translations = {
   // ==========================================
   uz: {
     // Nav
+admin: {
+  // ... mavjud
+  recentActivity1: "Yangi foydalanuvchi ro'yxatdan o'tdi",
+  recentActivity2: "O'yin sotib olindi",
+  recentActivity3: "Yangi event rejalashtirildi",
+},
+
+    cart: {
+  bundleGames: "Ichidagi o'yinlar",
+  checkoutSuccess: "Barcha o'yinlar muvaffaqiyatli sotib olindi!",
+},
+
     nav: {
       home: "Bosh sahifa",
       store: "Do'kon",
@@ -17,6 +29,22 @@ export const translations = {
       editProfile: "Profilni tahrirlash",
       security: "Xavfsizlik",
     },
+
+    footer: {
+  // ... mavjud
+  legalPage: "Huquqiy ma'lumotlar",
+  more: "Ko'proq",
+  allGames: "Barcha o'yinlar",
+},
+common: {
+  // ... mavjud
+  downloads: "Yuklab olishlar",
+  purchases: "Xaridlar",
+},
+header: {
+  download: "Fuzz'ni yuklab olish",
+  installHint: "Ilovani o'rnatish uchun brauzer menyusidan foydalaning.",
+},
 
     // Auth
     auth: {
@@ -337,6 +365,18 @@ export const translations = {
   // RUSSIAN
   // ==========================================
   ru: {
+
+    admin: {
+  recentActivity1: "Новый пользователь зарегистрирован",
+  recentActivity2: "Куплена игра",
+  recentActivity3: "Запланировано новое событие",
+},
+
+    cart: {
+  bundleGames: "Игры в наборе",
+  checkoutSuccess: "Все игры успешно куплены!",
+},
+
     nav: {
       home: "Главная",
       store: "Магазин",
@@ -349,6 +389,20 @@ export const translations = {
       editProfile: "Редактировать профиль",
       security: "Безопасность",
     },
+
+    footer: {
+  legalPage: "Юридическая информация",
+  more: "Ещё",
+  allGames: "Все игры",
+},
+common: {
+  downloads: "Загрузки",
+  purchases: "Покупки",
+},
+header: {
+  download: "Скачать Fuzz",
+  installHint: "Установите приложение через меню браузера.",
+},
 
     auth: {
       login: "Войти",
@@ -630,6 +684,30 @@ export const translations = {
   // ENGLISH
   // ==========================================
   en: {
+    admin: {
+  recentActivity1: "New user registered",
+  recentActivity2: "Game purchased",
+  recentActivity3: "New event scheduled",
+},
+    cart: {
+  bundleGames: "Included games",
+  checkoutSuccess: "All games purchased successfully!",
+},
+
+    footer: {
+  legalPage: "Legal Information",
+  more: "More",
+  allGames: "All Games",
+},
+common: {
+  downloads: "Downloads",
+  purchases: "Purchases",
+},
+header: {
+  download: "Download Fuzz",
+  installHint: "Use the browser menu to install the app.",
+},
+
     nav: {
       home: "Home",
       store: "Store",

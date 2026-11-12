@@ -1,35 +1,10 @@
 import { useState, useEffect } from 'react';
-import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, Link } from 'react-router-dom';
+import { useLanguage } from '../context/useLanguage.js';
 import AdminConsole from '../admin/AdminConsole.jsx';
 
-const ADMIN_LINKS = [
-  { to: '/admin', label: 'Dashboard', icon: 'fa-gauge', end: true },
-  { to: '/admin/users', label: 'Users', icon: 'fa-users' },
-  { to: '/admin/edit-user', label: 'Edit User', icon: 'fa-user-pen' },
-  { to: '/admin/new-game', label: 'Add Game', icon: 'fa-plus' },
-  { to: '/admin/all-games', label: 'All Games', icon: 'fa-gamepad' },
-  { to: '/admin/companies', label: 'Companies', icon: 'fa-building' },
-  { to: '/admin/new-company', label: 'Add Company', icon: 'fa-plus-square' },
-  { to: '/admin/events', label: 'Events', icon: 'fa-calendar' },
-  { to: '/admin/bundles', label: 'Bundles', icon: 'fa-box-open' },
-  { to: '/admin/platform', label: 'Platform Finance', icon: 'fa-chart-line' },
-  { to: '/admin/rate', label: 'Rates', icon: 'fa-money-bill-transfer' },
-  { to: '/admin/stars-rate', label: 'Stars Rate', icon: 'fa-star' },
-  { to: '/admin/payments', label: 'Payment Methods', icon: 'fa-credit-card' },
-  { to: '/admin/payment-requests', label: 'Payment Requests', icon: 'fa-money-check' },
-  { to: '/admin/server', label: 'Server Status', icon: 'fa-server' },
-  { to: '/admin/telegram', label: 'Telegram & Support', icon: 'fa-paper-plane' },
-  { to: '/admin/api', label: 'API Keys', icon: 'fa-key' },
-  { to: '/admin/webhooks', label: 'Webhooks', icon: 'fa-link' }, // Icon qo'shildi
-  { to: '/admin/backend', label: 'Backend Services', icon: 'fa-database' },
-  { to: '/admin/logs', label: 'Admin Logs', icon: 'fa-list' },
-  { to: '/admin/user-logs', label: 'User Logs', icon: 'fa-history' },
-  { to: '/admin/roles', label: 'Roles', icon: 'fa-user-shield' },
-  { to: '/admin/permissions', label: 'Permissions', icon: 'fa-lock' },
-];
-
 export default function AdminLayout() {
-  const navigate = useNavigate();
+  const { t } = useLanguage();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
@@ -39,14 +14,46 @@ export default function AdminLayout() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Admin linklar — tarjima kalitlari bilan
+  const ADMIN_LINKS = [
+    { to: '/admin', labelKey: 'admin.dashboard', icon: 'fa-gauge', end: true },
+    { to: '/admin/users', labelKey: 'admin.users', icon: 'fa-users' },
+    { to: '/admin/edit-user', labelKey: 'admin.editUser', icon: 'fa-user-pen' },
+    { to: '/admin/new-game', labelKey: 'admin.addGame', icon: 'fa-plus' },
+    { to: '/admin/all-games', labelKey: 'admin.allGames', icon: 'fa-gamepad' },
+    { to: '/admin/companies', labelKey: 'admin.companies', icon: 'fa-building' },
+    { to: '/admin/new-company', labelKey: 'admin.addCompany', icon: 'fa-plus-square' },
+    { to: '/admin/events', labelKey: 'admin.events', icon: 'fa-calendar' },
+    { to: '/admin/bundles', labelKey: 'admin.bundles', icon: 'fa-box-open' },
+    { to: '/admin/platform', labelKey: 'admin.platformFinance', icon: 'fa-chart-line' },
+    { to: '/admin/rate', labelKey: 'admin.rates', icon: 'fa-money-bill-transfer' },
+    { to: '/admin/stars-rate', labelKey: 'admin.starsRate', icon: 'fa-star' },
+    { to: '/admin/payments', labelKey: 'admin.paymentMethods', icon: 'fa-credit-card' },
+    { to: '/admin/payment-requests', labelKey: 'admin.paymentRequests', icon: 'fa-money-check' },
+    { to: '/admin/server', labelKey: 'admin.serverStatus', icon: 'fa-server' },
+    { to: '/admin/telegram', labelKey: 'admin.telegramSupport', icon: 'fa-paper-plane' },
+    { to: '/admin/api', labelKey: 'admin.apiKeys', icon: 'fa-key' },
+    { to: '/admin/webhooks', labelKey: 'admin.webhooks', icon: 'fa-link' },
+    { to: '/admin/backend', labelKey: 'admin.backendServices', icon: 'fa-database' },
+    { to: '/admin/logs', labelKey: 'admin.logs', icon: 'fa-list' },
+    { to: '/admin/user-logs', labelKey: 'admin.userLogs', icon: 'fa-history' },
+    { to: '/admin/roles', labelKey: 'admin.roles', icon: 'fa-user-shield' },
+    { to: '/admin/permissions', labelKey: 'admin.permissions', icon: 'fa-lock' },
+  ];
+
   return (
     <div className="admin-layout" style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#100b0a', flexDirection: isMobile ? 'column' : 'row' }}>
       
       {/* Mobil burger tugmasi */}
       {isMobile && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', backgroundColor: '#19100e', borderBottom: '1px solid #48201a' }}>
-          <Link to="/" style={{ color: '#8a1200', fontSize: '1.2rem', fontWeight: 'bold', textDecoration: 'none' }}>Fuzz Admin</Link>
-          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} style={{ background: 'none', border: 'none', color: '#f5eeee', fontSize: '1.5rem' }}>
+          <Link to="/" style={{ color: '#8a1200', fontSize: '1.2rem', fontWeight: 'bold', textDecoration: 'none' }}>
+            Fuzz Admin
+          </Link>
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            style={{ background: 'none', border: 'none', color: '#f5eeee', fontSize: '1.5rem' }}
+          >
             <i className={`fa-solid ${isMobileMenuOpen ? 'fa-xmark' : 'fa-bars'}`}></i>
           </button>
         </div>
@@ -62,9 +69,9 @@ export default function AdminLayout() {
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
             {ADMIN_LINKS.map((link) => (
-              <NavLink 
-                key={link.to} 
-                to={link.to} 
+              <NavLink
+                key={link.to}
+                to={link.to}
                 end={link.end}
                 onClick={() => isMobile && setIsMobileMenuOpen(false)}
                 style={({ isActive }) => ({
@@ -77,11 +84,11 @@ export default function AdminLayout() {
                   backgroundColor: isActive ? '#241411' : 'transparent',
                   textDecoration: 'none',
                   fontSize: '0.9rem',
-                  fontWeight: '500'
+                  fontWeight: '500',
                 })}
               >
                 <i className={`fa-solid ${link.icon}`} style={{ width: '20px' }}></i>
-                {link.label}
+                {t(link.labelKey)}
               </NavLink>
             ))}
           </div>

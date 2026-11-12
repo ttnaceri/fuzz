@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import useAuth from '../hooks/useAuth.js';
 import useToast from '../hooks/useToast.js';
+import { useLanguage } from '../context/useLanguage.js';
 import { api } from '../services/api.js';
 
 export default function ProfilePage() {
   const { user, refreshUser } = useAuth();
   const { success, error: toastError } = useToast();
+  const { t } = useLanguage();
 
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,7 +23,7 @@ export default function ProfilePage() {
     e.preventDefault();
     if (!user) return;
     if (!username.trim() || username.trim().length < 3) {
-      return toastError("Username kamida 3 belgidan iborat bo'lishi kerak!");
+      return toastError(t('profile.minLength'));
     }
     if (username.trim() === user.username) {
       setEditing(false);
@@ -31,11 +33,11 @@ export default function ProfilePage() {
     setLoading(true);
     try {
       await api.put(`/api/users/${user.id}/username`, { username: username.trim() });
-      success("Username muvaffaqiyatli yangilandi!");
+      success(t('profile.success'));
       if (refreshUser) await refreshUser();
       setEditing(false);
     } catch (err) {
-      toastError(err.message || "Xato yuz berdi");
+      toastError(err.message || t('profile.error'));
     } finally {
       setLoading(false);
     }
@@ -48,21 +50,19 @@ export default function ProfilePage() {
 
   return (
     <div className="page">
-      <h1 className="page-title">Profile</h1>
+      <h1 className="page-title">{t('profile.title')}</h1>
 
-      {/* Asosiy ma'lumotlar */}
       <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h2 style={{ color: '#f5eeee', margin: 0, fontSize: '1.2rem' }}>
-            <i className="fa-solid fa-user"></i> Hisob ma'lumotlari
+            <i className="fa-solid fa-user"></i> {t('profile.accountInfo')}
           </h2>
         </div>
 
         <div style={{ display: 'grid', gap: '1rem' }}>
-          {/* Username (editable) */}
           <div>
             <label style={{ display: 'block', color: '#b9a6a2', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
-              Username
+              {t('profile.username')}
             </label>
 
             {!editing ? (
@@ -82,7 +82,7 @@ export default function ProfilePage() {
                     fontSize: '0.8rem',
                   }}
                 >
-                  <i className="fa-solid fa-pen"></i> O'zgartirish
+                  <i className="fa-solid fa-pen"></i> {t('profile.editUsername')}
                 </button>
               </div>
             ) : (
@@ -92,7 +92,7 @@ export default function ProfilePage() {
                   className="form-input"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Yangi username"
+                  placeholder={t('profile.username')}
                   autoFocus
                   style={{ flex: 1, minWidth: '200px' }}
                 />
@@ -101,7 +101,7 @@ export default function ProfilePage() {
                   className="btn btn-primary"
                   disabled={loading || !username.trim() || username.trim().length < 3}
                 >
-                  {loading ? 'Saqlanmoqda...' : 'Saqlash'}
+                  {loading ? t('profile.saving') : t('common.save')}
                 </button>
                 <button
                   type="button"
@@ -109,24 +109,22 @@ export default function ProfilePage() {
                   onClick={handleCancel}
                   disabled={loading}
                 >
-                  Bekor qilish
+                  {t('common.cancel')}
                 </button>
               </form>
             )}
           </div>
 
-          {/* Email (read-only) */}
           <div>
             <label style={{ display: 'block', color: '#b9a6a2', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
-              Email
+              {t('profile.email')}
             </label>
             <strong style={{ color: '#f5eeee' }}>{user?.email || '—'}</strong>
           </div>
 
-          {/* Role (read-only) */}
           <div>
             <label style={{ display: 'block', color: '#b9a6a2', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
-              Role
+              {t('profile.role')}
             </label>
             <strong style={{ color: '#f5eeee' }}>{user?.role || 'user'}</strong>
           </div>

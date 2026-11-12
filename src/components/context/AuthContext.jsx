@@ -36,22 +36,29 @@ export function AuthProvider({ children }) {
   }, []);
 
   const refreshUser = useCallback(async () => {
-    try {
-      const cached = storage.getAuth();
-      if (!cached?.user?.id) return null;
+  try {
+    const cached = storage.getAuth() || storage.getAuthSession();
+    if (!cached?.user?.id) return null;
 
-      const res = await authService.me();
-      if (!res?.user) return null;
+    const res = await authService.me();
+    if (!res?.user) return null;
 
-      const normalized = normalizeUser(res.user);
-      setUser(normalized);
+    const normalized = normalizeUser(res.user);
+
+    // Qaysi storage'da saqlangan bo'lsa, o'shanga yozish
+    if (storage.getAuth()) {
       storage.setAuth({ user: normalized, token: cached.token });
-      return normalized;
-    } catch (e) {
-      console.warn("refreshUser xato:", e.message);
-      return null;
+    } else {
+      storage.setAuthSession({ user: normalized, token: cached.token });
     }
-  }, []);
+
+    setUser(normalized);
+    return normalized;
+  } catch (e) {
+    console.warn("refreshUser xato:", e.message);
+    return null;
+  }
+}, []);
 
   // QR login natijasini o'rnatish
   const setSession = useCallback((sessionUser, sessionToken) => {
@@ -62,12 +69,14 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    const cached = storage.getAuth();
-    if (cached?.user) {
-      setUser(normalizeUser(cached.user));
-    }
-    setLoading(false);
-  }, []);
+  // Ikkala storage'dan o'qish (localStorage + sessionStorage)
+  const cached = storage.getAuth() || storage.getAuthSession();
+  if (cached?.user) {
+    setUser(normalizeUser(cached.user));
+    refreshUser().catch(() => {});
+  }
+  setLoading(false);
+}, [refreshUser]);
 
   // ==========================================
   // YANGI: Har 30 sekundda foydalanuvchini yangilash
@@ -94,10 +103,11 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
-    try { await authService.logout(); } catch (e) {}
-    setUser(null);
-    storage.clearAuth();
-  }, []);
+  try { await authService.logout(); } catch (e) {}
+  setUser(null);
+  storage.clearAuth();
+  storage.clearAuthSession();
+}, []);
 
   const value = useMemo(
     () => ({

@@ -5,6 +5,7 @@ import useToast from '../hooks/useToast.js';
 import useAuth from '../hooks/useAuth.js';
 import { api } from '../services/api.js';
 import { config } from '../config/config.js';
+import { storage } from '../utils/storage.js';
 
 class QRBoundary extends Component {
   constructor(props) {
@@ -29,92 +30,27 @@ const getQrOrigin = () => {
 
 const POLL_INTERVAL_MS = 2000;
 
-// Steam-uslubidagi "success" overlay uchun CSS keyframes
 const SUCCESS_ANIM_ID = 'fuzz-qr-success-anim';
 if (typeof document !== 'undefined' && !document.getElementById(SUCCESS_ANIM_ID)) {
   const style = document.createElement('style');
   style.id = SUCCESS_ANIM_ID;
   style.textContent = `
-    @keyframes fuzzSpinIn {
-      0%   { transform: rotate(0deg) scale(0.4); opacity: 0; }
-      60%  { transform: rotate(360deg) scale(1.05); opacity: 1; }
-      100% { transform: rotate(360deg) scale(1); opacity: 1; }
-    }
-    @keyframes fuzzCheckDraw {
-      0%   { stroke-dashoffset: 100; }
-      100% { stroke-dashoffset: 0; }
-    }
-    @keyframes fuzzRingPulse {
-      0%   { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.5); }
-      70%  { box-shadow: 0 0 0 24px rgba(76, 175, 80, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
-    }
-    @keyframes fuzzFadeIn {
-      from { opacity: 0; }
-      to   { opacity: 1; }
-    }
-    .fuzz-qr-success-overlay {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: rgba(16, 11, 10, 0.92);
-      border-radius: 8px;
-      animation: fuzzFadeIn 200ms ease-out;
-      z-index: 10;
-    }
-    .fuzz-qr-spinner {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      border: 4px solid rgba(138, 18, 0, 0.2);
-      border-top-color: #8a1200;
-      animation: fuzzSpinIn 700ms ease-out, spin 900ms linear infinite;
-    }
+    @keyframes fuzzSpinIn { 0% { transform: rotate(0deg) scale(0.4); opacity: 0; } 60% { transform: rotate(360deg) scale(1.05); opacity: 1; } 100% { transform: rotate(360deg) scale(1); opacity: 1; } }
+    @keyframes fuzzCheckDraw { 0% { stroke-dashoffset: 100; } 100% { stroke-dashoffset: 0; } }
+    @keyframes fuzzRingPulse { 0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.5); } 70% { box-shadow: 0 0 0 24px rgba(76, 175, 80, 0); } 100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); } }
+    @keyframes fuzzFadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .fuzz-qr-check-circle {
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      background: #4caf50;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      animation: fuzzSpinIn 500ms ease-out, fuzzRingPulse 1200ms ease-out;
-    }
-    .fuzz-qr-check-circle svg {
-      width: 40px;
-      height: 40px;
-    }
-    .fuzz-qr-check-circle path {
-      stroke: #fff;
-      stroke-width: 4;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      fill: none;
-      stroke-dasharray: 100;
-      stroke-dashoffset: 100;
-      animation: fuzzCheckDraw 400ms 300ms ease-out forwards;
-    }
-    .fuzz-qr-success-text {
-      margin-top: 1rem;
-      color: #f5eeee;
-      font-size: 0.95rem;
-      font-weight: 600;
-      letter-spacing: 0.3px;
-    }
-    .fuzz-qr-success-sub {
-      margin-top: 0.25rem;
-      color: #b9a6a2;
-      font-size: 0.8rem;
-    }
+    .fuzz-qr-success-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(16, 11, 10, 0.92); border-radius: 8px; animation: fuzzFadeIn 200ms ease-out; z-index: 10; }
+    .fuzz-qr-spinner { width: 64px; height: 64px; border-radius: 50%; border: 4px solid rgba(138, 18, 0, 0.2); border-top-color: #8a1200; animation: fuzzSpinIn 700ms ease-out, spin 900ms linear infinite; }
+    .fuzz-qr-check-circle { width: 72px; height: 72px; border-radius: 50%; background: #4caf50; display: flex; align-items: center; justify-content: center; animation: fuzzSpinIn 500ms ease-out, fuzzRingPulse 1200ms ease-out; }
+    .fuzz-qr-check-circle svg { width: 40px; height: 40px; }
+    .fuzz-qr-check-circle path { stroke: #fff; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; fill: none; stroke-dasharray: 100; stroke-dashoffset: 100; animation: fuzzCheckDraw 400ms 300ms ease-out forwards; }
+    .fuzz-qr-success-text { margin-top: 1rem; color: #f5eeee; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.3px; }
+    .fuzz-qr-success-sub { margin-top: 0.25rem; color: #b9a6a2; font-size: 0.8rem; }
   `;
   document.head.appendChild(style);
 }
 
-// Success overlay komponenti
 function QrSuccessOverlay({ phase, username }) {
   return (
     <div className="fuzz-qr-success-overlay">
@@ -157,7 +93,7 @@ export default function LoginPage() {
   const [qrError, setQrError] = useState('');
   const [qrStatus, setQrStatus] = useState('initializing');
   const [qrUser, setQrUser] = useState(null);
-  const [successPhase, setSuccessPhase] = useState(null); // null | 'verifying' | 'success'
+  const [successPhase, setSuccessPhase] = useState(null);
   const pollRef = useRef(null);
   const isMountedRef = useRef(true);
   const navigatedRef = useRef(false);
@@ -202,9 +138,27 @@ export default function LoginPage() {
         setQrUser(res.user);
         setSuccessPhase('verifying');
 
-        // 1) Verifying (200ms) → 2) Success checkmark (1.5s) → 3) navigate
+        // Mode: my_device | fuzz_client | guest | single_use
+        const mode = res.mode || 'my_device';
+
         setTimeout(() => {
           if (!isMountedRef.current) return;
+
+          // ==========================================
+          // ASOSIY LOGIKA: Fuzz Client → sessionStorage
+          // ==========================================
+          if (mode === 'fuzz_client') {
+            // sessionStorage — brauzer yopilganda avtomatik o'chadi
+            storage.clearAuth();
+            storage.setAuthSession({ user: res.user, token: res.token });
+            console.log('🔵 [QR] Fuzz Client — sessionStorage');
+          } else {
+            // localStorage — doimiy (sign out qilmaguncha)
+            storage.clearAuthSession();
+            storage.setAuth({ user: res.user, token: res.token });
+            console.log(`🔵 [QR] ${mode} — localStorage`);
+          }
+
           setSession(res.user, res.token);
           setSuccessPhase('success');
           success(`Tizimga kirdingiz: ${res.user.username}`);

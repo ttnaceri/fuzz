@@ -13,9 +13,9 @@ export const authService = {
   async qrStatus(token) {
     return api.get('/api/auth/qr/status', { params: { token } });
   },
-  async qrApprove(token) {
-    return api.post('/api/auth/qr/approve', { token });
-  },
+  async qrApprove(token, expiresIn = '30d') {
+  return api.post('/api/auth/qr/approve', { token, expiresIn });
+},
   async qrReject(token) {
     return api.post('/api/auth/qr/reject', { token });
   },

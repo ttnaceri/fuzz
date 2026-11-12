@@ -6,6 +6,9 @@ import { getAuthUser } from './middleware/auth.js';
 const QR_TTL_MS = 2 * 60 * 1000;
 const TOKEN_RE = /^[a-f0-9]{64}$/;
 
+const VALID_EXPIRES = ['30d', '24h', '1h', '5m'];
+const DEFAULT_EXPIRES = '30d';
+
 const round2 = (num) => Math.round(Number(num) * 100) / 100;
 const publicUser = (u) => ({ id: u.id, username: u.username, role: u.role, balance: round2(u.balance || 0) });
 
@@ -21,10 +24,13 @@ export async function ensureQrTable(db) {
       status TEXT NOT NULL DEFAULT 'pending',
       user_id TEXT,
       user_agent TEXT,
+      expires_in TEXT DEFAULT '30d',
       created_at INTEGER NOT NULL,
       expires_at INTEGER NOT NULL
     );
   `).run();
+  // Eski jadval uchun ustun qo'shish
+  try { await db.prepare("ALTER TABLE qr_sessions ADD COLUMN expires_in TEXT DEFAULT '30d'").run(); } catch {}
 }
 
 const qrApp = new Hono();
@@ -46,9 +52,7 @@ qrApp.post('/auth/qr/create', async (c) => {
     const now = Date.now();
     try {
       await c.env.DB.prepare('DELETE FROM qr_sessions WHERE expires_at < ?').bind(now - QR_TTL_MS).run();
-    } catch (e) {
-      // tozalash xatosi — davom etamiz
-    }
+    } catch (e) { /* tozalash xatosi */ }
 
     const token = randomToken();
     const expiresAt = now + QR_TTL_MS;
@@ -71,14 +75,22 @@ qrApp.get('/auth/qr/status', async (c) => {
 
     const now = Date.now();
     const consumed = await c.env.DB.prepare(
-      "UPDATE qr_sessions SET status = 'consumed' WHERE token = ? AND status = 'approved' AND expires_at > ? RETURNING user_id"
+      "UPDATE qr_sessions SET status = 'consumed' WHERE token = ? AND status = 'approved' AND expires_at > ? RETURNING user_id, expires_in"
     ).bind(token, now).first();
 
     if (consumed?.user_id) {
       const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(consumed.user_id).first();
       if (!user || user.role === 'banned') return c.json({ status: 'expired' });
-      const jwt = await createToken({ sub: user.id }, c.env);
-      return c.json({ status: 'approved', user: publicUser(user), token: jwt });
+
+      const expiresIn = VALID_EXPIRES.includes(consumed.expires_in) ? consumed.expires_in : DEFAULT_EXPIRES;
+      const jwt = await createToken({ sub: user.id }, c.env, expiresIn);
+
+      return c.json({
+        status: 'approved',
+        user: publicUser(user),
+        token: jwt,
+        expiresIn,
+      });
     }
 
     const row = await c.env.DB.prepare('SELECT status, expires_at FROM qr_sessions WHERE token = ?').bind(token).first();
@@ -94,17 +106,21 @@ async function decide(c, newStatus) {
     const user = await getAuthUser(c);
     if (!user) return c.json({ error: 'Tizimga kiring', code: 'AUTH_REQUIRED' }, 401);
 
-    const { token } = await c.req.json().catch(() => ({}));
+    const body = await c.req.json().catch(() => ({}));
+    const { token, expiresIn } = body;
+
     if (!TOKEN_RE.test(token || '')) return c.json({ error: "Noto'g'ri QR kod" }, 400);
 
+    const safeExpires = VALID_EXPIRES.includes(expiresIn) ? expiresIn : DEFAULT_EXPIRES;
+
     const res = await c.env.DB.prepare(
-      "UPDATE qr_sessions SET status = ?, user_id = ? WHERE token = ? AND status = 'pending' AND expires_at > ?"
-    ).bind(newStatus, user.id, token, Date.now()).run();
+      "UPDATE qr_sessions SET status = ?, user_id = ?, expires_in = ? WHERE token = ? AND status = 'pending' AND expires_at > ?"
+    ).bind(newStatus, user.id, safeExpires, token, Date.now()).run();
 
     if (!res.meta?.changes) {
       return c.json({ error: 'QR eskirgan', code: 'QR_EXPIRED' }, 410);
     }
-    return c.json({ ok: true, status: newStatus });
+    return c.json({ ok: true, status: newStatus, expiresIn: safeExpires });
   } catch (err) {
     return c.json({ error: 'Tasdiqlash xatosi', detail: String(err?.message || err) }, 500);
   }

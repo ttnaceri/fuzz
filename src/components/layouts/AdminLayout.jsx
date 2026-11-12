@@ -1,77 +1,97 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { useLanguage } from '../context/useLanguage.js';
-import useAuth from '../hooks/useAuth.js';
+import { useState, useEffect } from 'react';
+import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
+import AdminConsole from '../admin/AdminConsole.jsx';
 
-const NAV_ITEMS = [
-  { to: '/admin', label: 'admin.dashboard', icon: 'fa-gauge' },
-  { to: '/admin/users', label: 'admin.users', icon: 'fa-users' },
-  { to: '/admin/edit-user', label: 'admin.editUser', icon: 'fa-user-pen' },
-  { to: '/admin/new-game', label: 'admin.addGame', icon: 'fa-plus' },
-  { to: '/admin/all-games', label: 'admin.allGames', icon: 'fa-gamepad' },
-  { to: '/admin/companies', label: 'admin.companies', icon: 'fa-building' },
-  { to: '/admin/new-company', label: 'admin.addCompany', icon: 'fa-plus' },
-  { to: '/admin/events', label: 'admin.events', icon: 'fa-calendar' },
-  { to: '/admin/bundles', label: 'admin.bundles', icon: 'fa-box-open' },
-  { to: '/admin/new-bundle', label: 'admin.addBundle', icon: 'fa-plus' },
-  { to: '/admin/platform', label: 'admin.platformFinance', icon: 'fa-chart-line' },
-  { to: '/admin/rate', label: 'admin.rates', icon: 'fa-dollar-sign' },
-  { to: '/admin/stars-rate', label: 'admin.starsRate', icon: 'fa-star' },
-  { to: '/admin/payments', label: 'admin.paymentMethods', icon: 'fa-credit-card' },
-  { to: '/admin/payment-requests', label: 'admin.paymentRequests', icon: 'fa-list-check' },
-  { to: '/admin/server', label: 'admin.serverStatus', icon: 'fa-server' },
-  { to: '/admin/telegram', label: 'admin.telegramSupport', icon: 'fa-paper-plane' },
-  { to: '/admin/api', label: 'admin.apiKeys', icon: 'fa-key' },
-  { to: '/admin/webhooks', label: 'admin.webhooks', icon: 'fa-link' },
-  { to: '/admin/backend', label: 'admin.backendServices', icon: 'fa-database' },
-  { to: '/admin/roles', label: 'admin.roles', icon: 'fa-shield-halved' },
-  { to: '/admin/permissions', label: 'admin.permissions', icon: 'fa-lock' },
-  { to: '/admin/logs', label: 'admin.logs', icon: 'fa-scroll' },
-  { to: '/admin/user-logs', label: 'admin.userLogs', icon: 'fa-history' },
-  { to: '/admin/settings', label: 'admin.settings', icon: 'fa-gear' },
+const ADMIN_LINKS = [
+  { to: '/admin', label: 'Dashboard', icon: 'fa-gauge', end: true },
+  { to: '/admin/users', label: 'Users', icon: 'fa-users' },
+  { to: '/admin/edit-user', label: 'Edit User', icon: 'fa-user-pen' },
+  { to: '/admin/new-game', label: 'Add Game', icon: 'fa-plus' },
+  { to: '/admin/all-games', label: 'All Games', icon: 'fa-gamepad' },
+  { to: '/admin/companies', label: 'Companies', icon: 'fa-building' },
+  { to: '/admin/new-company', label: 'Add Company', icon: 'fa-plus-square' },
+  { to: '/admin/events', label: 'Events', icon: 'fa-calendar' },
+  { to: '/admin/bundles', label: 'Bundles', icon: 'fa-box-open' },
+  { to: '/admin/platform', label: 'Platform Finance', icon: 'fa-chart-line' },
+  { to: '/admin/rate', label: 'Rates', icon: 'fa-money-bill-transfer' },
+  { to: '/admin/stars-rate', label: 'Stars Rate', icon: 'fa-star' },
+  { to: '/admin/payments', label: 'Payment Methods', icon: 'fa-credit-card' },
+  { to: '/admin/payment-requests', label: 'Payment Requests', icon: 'fa-money-check' },
+  { to: '/admin/server', label: 'Server Status', icon: 'fa-server' },
+  { to: '/admin/telegram', label: 'Telegram & Support', icon: 'fa-paper-plane' },
+  { to: '/admin/api', label: 'API Keys', icon: 'fa-key' },
+  { to: '/admin/webhooks', label: 'Webhooks', icon: 'fa-link' }, // Icon qo'shildi
+  { to: '/admin/backend', label: 'Backend Services', icon: 'fa-database' },
+  { to: '/admin/logs', label: 'Admin Logs', icon: 'fa-list' },
+  { to: '/admin/user-logs', label: 'User Logs', icon: 'fa-history' },
+  { to: '/admin/roles', label: 'Roles', icon: 'fa-user-shield' },
+  { to: '/admin/permissions', label: 'Permissions', icon: 'fa-lock' },
 ];
 
 export default function AdminLayout() {
-  const { t } = useLanguage();
-  const { logout } = useAuth();
   const navigate = useNavigate();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#100b0a' }}>
-      <aside style={{ width: '260px', backgroundColor: '#19100e', borderRight: '1px solid #48201a', padding: '1.5rem 0', overflowY: 'auto' }}>
-        <div style={{ padding: '0 1.5rem', marginBottom: '1.5rem' }}>
-          <h2 style={{ color: '#8a1200', margin: 0 }}>{t('admin.adminPanel')}</h2>
+    <div className="admin-layout" style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#100b0a', flexDirection: isMobile ? 'column' : 'row' }}>
+      
+      {/* Mobil burger tugmasi */}
+      {isMobile && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', backgroundColor: '#19100e', borderBottom: '1px solid #48201a' }}>
+          <Link to="/" style={{ color: '#8a1200', fontSize: '1.2rem', fontWeight: 'bold', textDecoration: 'none' }}>Fuzz Admin</Link>
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} style={{ background: 'none', border: 'none', color: '#f5eeee', fontSize: '1.5rem' }}>
+            <i className={`fa-solid ${isMobileMenuOpen ? 'fa-xmark' : 'fa-bars'}`}></i>
+          </button>
         </div>
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-          {NAV_ITEMS.map(item => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/admin'}
-              style={({ isActive }) => ({
-                display: 'flex', alignItems: 'center', gap: '0.75rem',
-                padding: '0.6rem 1.5rem', color: isActive ? '#f5eeee' : '#b9a6a2',
-                textDecoration: 'none', backgroundColor: isActive ? '#241411' : 'transparent',
-                borderLeft: isActive ? '3px solid #8a1200' : '3px solid transparent',
-                fontSize: '0.9rem',
-              })}
-            >
-              <i className={`fa-solid ${item.icon}`} style={{ width: 16 }}></i>
-              {t(item.label)}
-            </NavLink>
-          ))}
-        </nav>
-        <div style={{ padding: '1.5rem', marginTop: '1rem', borderTop: '1px solid #48201a' }}>
-          <button onClick={handleLogout} className="btn btn-secondary" style={{ width: '100%' }}>{t('auth.logout')}</button>
-        </div>
-      </aside>
+      )}
+
+      {/* Sidebar */}
+      {(!isMobile || isMobileMenuOpen) && (
+        <aside style={{ width: isMobile ? '100%' : '260px', backgroundColor: '#19100e', borderRight: isMobile ? 'none' : '1px solid #48201a', padding: '1rem', display: 'flex', flexDirection: 'column', overflowY: 'auto', maxHeight: isMobile ? '50vh' : '100vh' }}>
+          {!isMobile && (
+            <Link to="/" style={{ color: '#8a1200', fontSize: '1.4rem', fontWeight: 'bold', marginBottom: '2rem', textDecoration: 'none' }}>
+              Fuzz Admin
+            </Link>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+            {ADMIN_LINKS.map((link) => (
+              <NavLink 
+                key={link.to} 
+                to={link.to} 
+                end={link.end}
+                onClick={() => isMobile && setIsMobileMenuOpen(false)}
+                style={({ isActive }) => ({
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.6rem 0.8rem',
+                  borderRadius: '6px',
+                  color: isActive ? '#f5eeee' : '#b9a6a2',
+                  backgroundColor: isActive ? '#241411' : 'transparent',
+                  textDecoration: 'none',
+                  fontSize: '0.9rem',
+                  fontWeight: '500'
+                })}
+              >
+                <i className={`fa-solid ${link.icon}`} style={{ width: '20px' }}></i>
+                {link.label}
+              </NavLink>
+            ))}
+          </div>
+        </aside>
+      )}
+
       <main style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
         <Outlet />
       </main>
+      <AdminConsole />
     </div>
   );
 }

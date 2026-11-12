@@ -1,25 +1,42 @@
-// src/components/context/LanguageContext.jsx
-import { createContext, useEffect, useState } from 'react';
-import i18n from '../../i18n.js';
+import { createContext, useState, useEffect } from 'react';
+import { translations } from '../locales/translations.js';
 
 export const LanguageContext = createContext(null);
 
 export function LanguageProvider({ children }) {
-  const [lang, setLangState] = useState(i18n.language || 'uz');
+  const [lang, setLangState] = useState(() => {
+    // localStorage dan tilni o'qish
+    return localStorage.getItem('fuzz_lang') || 'uz';
+  });
 
   useEffect(() => {
-    const handler = (lng) => setLangState(lng);
-    i18n.on('languageChanged', handler);
-    return () => i18n.off('languageChanged', handler);
-  }, []);
+    // Har safar til o'zgarganda localStorage ga saqlash
+    localStorage.setItem('fuzz_lang', lang);
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   const setLang = (newLang) => {
     if (['en', 'uz', 'ru'].includes(newLang)) {
-      i18n.changeLanguage(newLang);
+      setLangState(newLang);
     }
   };
 
-  const t = (key) => i18n.t(key);
+  const t = (key) => {
+    const keys = key.split('.');
+    let value = translations[lang];
+    for (const k of keys) {
+      if (value && value[k]) value = value[k];
+      else {
+        let fallback = translations['en'];
+        for (const fk of keys) {
+          if (fallback && fallback[fk]) fallback = fallback[fk];
+          else return key;
+        }
+        return fallback;
+      }
+    }
+    return value;
+  };
 
   return (
     <LanguageContext.Provider value={{ lang, setLang, t }}>

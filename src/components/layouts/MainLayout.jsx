@@ -7,32 +7,40 @@ import ContextMenu from '../common/ContextMenu/ContextMenu.jsx';
 
 export default function MainLayout() {
   const [contextMenu, setContextMenu] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
 
   useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 1024);
+    window.addEventListener('resize', handleResize);
+
     const handleContextMenu = (e) => {
-      // Faqatgina input va textarea ichida standart menyu ishlashiga ruxsat beramiz
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-      
       e.preventDefault(); 
       setContextMenu({ x: e.clientX, y: e.clientY }); 
     };
     
     document.addEventListener('contextmenu', handleContextMenu);
-    return () => document.removeEventListener('contextmenu', handleContextMenu);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      document.removeEventListener('contextmenu', handleContextMenu);
+    };
   }, []);
 
   return (
     <div className="layout">
       <Header />
-      <main className="layout__main">
+      {/* Mobil qurilmada pastki menyu uchun joy qoldiramiz (paddingBottom) */}
+      <main className="layout__main" style={{ paddingBottom: isMobile ? '70px' : '0' }}>
         <div className="container">
           <Outlet />
         </div>
       </main>
       <Footer />
+      
+      {/* BottomNav faqat mobil qurilmalarda ko'rinadi */}
       <BottomNav />
 
-      {/* Context Menu Router ichida joylashgani uchun useNavigate xatosiz ishlaydi */}
       {contextMenu && (
         <ContextMenu 
           x={contextMenu.x} 

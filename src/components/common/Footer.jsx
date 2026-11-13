@@ -44,7 +44,7 @@ export default function Footer() {
   ];
 
   return (
-    <footer style={{ backgroundColor: '#19100e', borderTop: '1px solid #48201a', padding: '4rem 0 2rem 0', color: '#b9a6a2' }}>
+    <footer style={{ backgroundColor: '#19100e', borderTop: '1px solid #48201a', padding: '4rem 0 2rem 0', color: '#b9a6a2', paddingBottom: '80px' /* Mobil menyu uchun joy */ }}>
       <div className="container">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3rem', justifyContent: 'space-between', marginBottom: '3rem' }}>
           <div style={{ flex: '1 1 300px' }}>
@@ -72,7 +72,8 @@ export default function Footer() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3rem', flex: '2 1 600px' }}>
             {footerLinks.map((col, idx) => (
               <div key={idx} style={{ minWidth: '150px' }}>
-                <h3 style={{ color: '#8a1200', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '1rem', fontWeight: 'bold' }}>
+                {/* Sarlavha rangi yorqinroq qilindi (#ed5555) */}
+                <h3 style={{ color: '#ed5555', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '1rem', fontWeight: 'bold' }}>
                   {col.title}
                 </h3>
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>

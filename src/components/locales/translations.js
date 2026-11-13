@@ -1,58 +1,8 @@
-// src/components/locales/translations.js
 export const translations = {
   // ==========================================
   // UZBEK
   // ==========================================
   uz: {
-    game: {
-  // ... mavjud
-  notFound: "O'yin topilmadi",
-  notFoundSub: "Bu o'yin mavjud emas",
-  addedToCart: "savatga qo'shildi",
-  backToStore: "Do'konga qaytish",
-  officialStore: "Rasmiy do'kon",
-  inBundles: "Ushbu o'yin kiritilgan Bundle'lar",
-},
-wishlist: {
-  // ... mavjud
-  loginRequired: "Wishlistga qo'shish uchun tizimga kiring",
-},
-    wallet: {
-  // ... mavjud
-  cardNumber: "Karta raqami",
-  copy: "Nusxalash",
-  copied: "Nusxalandi",
-  requestSent: "So'rov yuborildi",
-  uzumCardNumber: "UZUM Card raqami",
-  commission: "Komissiya",
-},
-purchases: {
-  title: "Xaridlar Tarixi",
-  date: "Sana",
-  amount: "Miqdor",
-  stars: "Stars",
-  exportExcel: "Excel'ga yuklash",
-  empty: "Hali xaridlar yo'q",
-  emptySub: "Siz hali hech qanday to'lov qilmadingiz",
-},
-    common: {
-  // ... mavjud
-  downloads: "Yuklab olishlar",
-  purchases: "Xaridlar",
-},
-    // Nav
-admin: {
-  // ... mavjud
-  recentActivity1: "Yangi foydalanuvchi ro'yxatdan o'tdi",
-  recentActivity2: "O'yin sotib olindi",
-  recentActivity3: "Yangi event rejalashtirildi",
-},
-
-    cart: {
-  bundleGames: "Ichidagi o'yinlar",
-  checkoutSuccess: "Barcha o'yinlar muvaffaqiyatli sotib olindi!",
-},
-
     nav: {
       home: "Bosh sahifa",
       store: "Do'kon",
@@ -64,25 +14,9 @@ admin: {
       profile: "Profil",
       editProfile: "Profilni tahrirlash",
       security: "Xavfsizlik",
+      menu: "Menyu",
+      qrLogin: "QR Login",
     },
-
-    footer: {
-  // ... mavjud
-  legalPage: "Huquqiy ma'lumotlar",
-  more: "Ko'proq",
-  allGames: "Barcha o'yinlar",
-},
-common: {
-  // ... mavjud
-  downloads: "Yuklab olishlar",
-  purchases: "Xaridlar",
-},
-header: {
-  download: "Fuzz'ni yuklab olish",
-  installHint: "Ilovani o'rnatish uchun brauzer menyusidan foydalaning.",
-},
-
-    // Auth
     auth: {
       login: "Kirish",
       register: "Ro'yxatdan o'tish",
@@ -90,8 +24,6 @@ header: {
       admin: "Admin Panel",
       account: "Profil",
     },
-
-    // Home
     home: {
       welcome: "Fuzz'ga xush kelibsiz",
       subtitle: "Kompyuter o'yinlarini kashf eting, kutubxonangizni boshqaring va hamjamiyatga qo'shiling.",
@@ -107,15 +39,11 @@ header: {
       categories: "Kategoriyalar",
       community: "Hamjamiyat",
     },
-
-    // Store
     store: {
       title: "Do'kon",
       filter: "Nom bo'yicha qidirish...",
       allGenres: "Barcha janrlar",
     },
-
-    // Wallet
     wallet: {
       history: "Mening tarixim",
       topUp: "Balansni to'ldirish",
@@ -133,9 +61,13 @@ header: {
       starsTopUp: "Telegram Stars orqali to'ldirish",
       cardTopUp: "Karta orqali to'ldirish",
       soon: "Tez kunda",
+      cardNumber: "Karta raqami",
+      copy: "Nusxalash",
+      copied: "Nusxalandi",
+      requestSent: "So'rov yuborildi",
+      uzumCardNumber: "UZUM Card raqami",
+      commission: "Komissiya",
     },
-
-    // Register
     register: {
       step1: "Telegram ID ingizni kiriting",
       step2: "Akkauntingizni yakunlang",
@@ -146,8 +78,6 @@ header: {
       confirmPassword: "Parolni tasdiqlang",
       submit: "Ro'yxatdan o'tishni yakunlash",
     },
-
-    // Reset
     reset: {
       title: "Parolni tiklash",
       subtitle: "Kod olish uchun Telegram ID kiriting",
@@ -156,10 +86,6 @@ header: {
       newPassword: "Yangi parol yarating",
       backToLogin: "Kirish sahifasiga qaytish",
     },
-
-    // ==========================================
-    // YANGI: Common
-    // ==========================================
     common: {
       save: "Saqlash",
       cancel: "Bekor qilish",
@@ -179,11 +105,9 @@ header: {
       all: "Barchasi",
       next: "Keyingi",
       previous: "Oldingi",
+      downloads: "Yuklab olishlar",
+      purchases: "Xaridlar",
     },
-
-    // ==========================================
-    // YANGI: Footer
-    // ==========================================
     footer: {
       about: "Fuzz",
       aboutFuzz: "Fuzz haqida",
@@ -193,17 +117,16 @@ header: {
       support: "Yordam",
       legal: "Huquqiy",
       privacy: "Maxfiylik siyosati",
-      terms: "Xizmat ko'rsatish shartlari",
+      legalPage: "Huquqiy ma'lumotlar",
       subscriberAgreement: "Obunachilar shartnomasi",
       refunds: "Pulni qaytarish",
+      terms: "Xizmat ko'rsatish shartlari",
       cookies: "Cookie sozlamalari",
+      more: "Ko'proq",
+      allGames: "Barcha o'yinlar",
       copyright: "© 2026 Fuzz Inc. Barcha huquqlar himoyalangan.",
       followUs: "Bizni kuzatib boring",
     },
-
-    // ==========================================
-    // YANGI: Game Card
-    // ==========================================
     game: {
       free: "Bepul",
       addToCart: "Savatga",
@@ -218,11 +141,14 @@ header: {
       developer: "Dasturchi",
       publisher: "Nashriyotchi",
       genre: "Janr",
+      notFound: "O'yin topilmadi",
+      notFoundSub: "Bu o'yin mavjud emas",
+      addedToCart: "savatga qo'shildi",
+      backToStore: "Do'konga qaytish",
+      officialStore: "Rasmiy do'kon",
+      inBundles: "Ushbu o'yin kiritilgan Bundle'lar",
+      releaseDate: "Chiqarilgan sana",
     },
-
-    // ==========================================
-    // YANGI: Library
-    // ==========================================
     library: {
       title: "Kutubxona",
       empty: "Siz hali o'yin sotib olmadingiz",
@@ -237,10 +163,6 @@ header: {
       installed: "O'rnatilgan",
       notInstalled: "O'rnatilmagan",
     },
-
-    // ==========================================
-    // YANGI: Account
-    // ==========================================
     account: {
       title: "Akkaunt",
       balance: "Balans",
@@ -254,10 +176,6 @@ header: {
       totalSpent: "Jami sarflangan",
       gamesOwned: "Sotib olingan o'yinlar",
     },
-
-    // ==========================================
-    // YANGI: Profile
-    // ==========================================
     profile: {
       title: "Profil",
       username: "Foydalanuvchi nomi",
@@ -272,10 +190,6 @@ header: {
       minLength: "Username kamida 3 belgi bo'lishi kerak",
       accountInfo: "Hisob ma'lumotlari",
     },
-
-    // ==========================================
-    // YANGI: Wishlist
-    // ==========================================
     wishlist: {
       title: "Wishlist",
       empty: "Wishlist bo'sh",
@@ -286,11 +200,8 @@ header: {
       remove: "Wishlistdan o'chirish",
       priceDrop: "Narx tushdi",
       inCart: "Savatda",
+      loginRequired: "Wishlistga qo'shish uchun tizimga kiring",
     },
-
-    // ==========================================
-    // YANGI: Cart
-    // ==========================================
     cart: {
       title: "Savat",
       empty: "Savat bo'sh",
@@ -305,11 +216,9 @@ header: {
       buyAll: "Barchasini sotib olish",
       item: "ta o'yin",
       items: "ta o'yin",
+      bundleGames: "Ichidagi o'yinlar",
+      checkoutSuccess: "Barcha o'yinlar muvaffaqiyatli sotib olindi!",
     },
-
-    // ==========================================
-    // YANGI: Settings
-    // ==========================================
     settings: {
       title: "Sozlamalar",
       theme: "Mavzu",
@@ -332,10 +241,6 @@ header: {
       deleteConfirm: "O'chirish",
       deleteCancel: "Bekor qilish",
     },
-
-    // ==========================================
-    // YANGI: Refund
-    // ==========================================
     refund: {
       title: "Pulni qaytarish",
       amount: "Miqdor",
@@ -348,10 +253,15 @@ header: {
       approved: "Tasdiqlangan",
       rejected: "Rad etilgan",
     },
-
-    // ==========================================
-    // YANGI: Admin
-    // ==========================================
+    purchases: {
+      title: "Xaridlar Tarixi",
+      date: "Sana",
+      amount: "Miqdor",
+      stars: "Stars",
+      exportExcel: "Excel'ga yuklash",
+      empty: "Hali xaridlar yo'q",
+      emptySub: "Siz hali hech qanday to'lov qilmadingiz",
+    },
     admin: {
       dashboard: "Boshqaruv paneli",
       users: "Foydalanuvchilar",
@@ -389,11 +299,18 @@ header: {
       totalStars: "Jami Stars",
       starsInDollars: "Stars ($ da)",
       recentActivity: "So'nggi harakatlar",
+      recentActivity1: "Yangi foydalanuvchi ro'yxatdan o'tdi",
+      recentActivity2: "O'yin sotib olindi",
+      recentActivity3: "Yangi event rejalashtirildi",
       quickLinks: "Tezkor havolalar",
       manageUsers: "Foydalanuvchilarni boshqarish",
       manageGames: "O'yinlarni boshqarish",
       manageCompanies: "Kompaniyalarni boshqarish",
       manageBundles: "Bundle'larni boshqarish",
+    },
+    header: {
+      download: "Fuzz'ni yuklab olish",
+      installHint: "Ilovani o'rnatish uchun brauzer menyusidan foydalaning.",
     },
   },
 
@@ -401,50 +318,6 @@ header: {
   // RUSSIAN
   // ==========================================
   ru: {
-    game: {
-  notFound: "Игра не найдена",
-  notFoundSub: "Эта игра не существует",
-  addedToCart: "добавлена в корзину",
-  backToStore: "Вернуться в магазин",
-  officialStore: "Официальный магазин",
-  inBundles: "Наборы с этой игрой",
-},
-wishlist: {
-  loginRequired: "Войдите, чтобы добавить в список желаемого",
-},
-    wallet: {
-  cardNumber: "Номер карты",
-  copy: "Копировать",
-  copied: "Скопировано",
-  requestSent: "Запрос отправлен",
-  uzumCardNumber: "Номер карты UZUM",
-  commission: "Комиссия",
-},
-purchases: {
-  title: "История покупок",
-  date: "Дата",
-  amount: "Сумма",
-  stars: "Звёзды",
-  exportExcel: "Экспорт в Excel",
-  empty: "Покупок пока нет",
-  emptySub: "Вы ещё не совершали платежей",
-},
-    common: {
-  downloads: "Загрузки",
-  purchases: "Покупки",
-},
-
-    admin: {
-  recentActivity1: "Новый пользователь зарегистрирован",
-  recentActivity2: "Куплена игра",
-  recentActivity3: "Запланировано новое событие",
-},
-
-    cart: {
-  bundleGames: "Игры в наборе",
-  checkoutSuccess: "Все игры успешно куплены!",
-},
-
     nav: {
       home: "Главная",
       store: "Магазин",
@@ -456,22 +329,9 @@ purchases: {
       profile: "Профиль",
       editProfile: "Редактировать профиль",
       security: "Безопасность",
+      menu: "Меню",
+      qrLogin: "QR Вход",
     },
-
-    footer: {
-  legalPage: "Юридическая информация",
-  more: "Ещё",
-  allGames: "Все игры",
-},
-common: {
-  downloads: "Загрузки",
-  purchases: "Покупки",
-},
-header: {
-  download: "Скачать Fuzz",
-  installHint: "Установите приложение через меню браузера.",
-},
-
     auth: {
       login: "Войти",
       register: "Регистрация",
@@ -479,7 +339,6 @@ header: {
       admin: "Админ Панель",
       account: "Аккаунт",
     },
-
     home: {
       welcome: "Добро пожаловать в Fuzz",
       subtitle: "Открывайте игры для ПК, управляйте библиотекой и присоединяйтесь к сообществу.",
@@ -495,13 +354,11 @@ header: {
       categories: "Категории",
       community: "Сообщество",
     },
-
     store: {
       title: "Магазин",
       filter: "Фильтр по названию...",
       allGenres: "Все жанры",
     },
-
     wallet: {
       history: "Моя история",
       topUp: "Пополнить баланс",
@@ -519,8 +376,13 @@ header: {
       starsTopUp: "Пополнить через Telegram Stars",
       cardTopUp: "Пополнить картой",
       soon: "Скоро",
+      cardNumber: "Номер карты",
+      copy: "Копировать",
+      copied: "Скопировано",
+      requestSent: "Запрос отправлен",
+      uzumCardNumber: "Номер карты UZUM",
+      commission: "Комиссия",
     },
-
     register: {
       step1: "Введите ваш Telegram ID",
       step2: "Завершите настройку аккаунта",
@@ -531,7 +393,6 @@ header: {
       confirmPassword: "Подтвердите пароль",
       submit: "Завершить регистрацию",
     },
-
     reset: {
       title: "Сброс пароля",
       subtitle: "Введите Telegram ID для получения кода",
@@ -540,7 +401,6 @@ header: {
       newPassword: "Создайте новый пароль",
       backToLogin: "Вернуться ко входу",
     },
-
     common: {
       save: "Сохранить",
       cancel: "Отмена",
@@ -560,8 +420,9 @@ header: {
       all: "Все",
       next: "Следующая",
       previous: "Предыдущая",
+      downloads: "Загрузки",
+      purchases: "Покупки",
     },
-
     footer: {
       about: "Fuzz",
       aboutFuzz: "О Fuzz",
@@ -571,14 +432,16 @@ header: {
       support: "Поддержка",
       legal: "Юридическая информация",
       privacy: "Политика конфиденциальности",
-      terms: "Условия использования",
+      legalPage: "Юридическая информация",
       subscriberAgreement: "Соглашение подписчика",
       refunds: "Возвраты",
+      terms: "Условия использования",
       cookies: "Настройки Cookie",
+      more: "Ещё",
+      allGames: "Все игры",
       copyright: "© 2026 Fuzz Inc. Все права защищены.",
       followUs: "Подписывайтесь",
     },
-
     game: {
       free: "Бесплатно",
       addToCart: "В корзину",
@@ -593,8 +456,14 @@ header: {
       developer: "Разработчик",
       publisher: "Издатель",
       genre: "Жанр",
+      notFound: "Игра не найдена",
+      notFoundSub: "Эта игра не существует",
+      addedToCart: "добавлена в корзину",
+      backToStore: "Вернуться в магазин",
+      officialStore: "Официальный магазин",
+      inBundles: "Наборы с этой игрой",
+      releaseDate: "Дата выхода",
     },
-
     library: {
       title: "Библиотека",
       empty: "Вы ещё не купили ни одной игры",
@@ -609,7 +478,6 @@ header: {
       installed: "Установлены",
       notInstalled: "Не установлены",
     },
-
     account: {
       title: "Аккаунт",
       balance: "Баланс",
@@ -623,7 +491,6 @@ header: {
       totalSpent: "Всего потрачено",
       gamesOwned: "Куплено игр",
     },
-
     profile: {
       title: "Профиль",
       username: "Имя пользователя",
@@ -638,7 +505,6 @@ header: {
       minLength: "Имя должно содержать минимум 3 символа",
       accountInfo: "Информация об аккаунте",
     },
-
     wishlist: {
       title: "Список желаемого",
       empty: "Список пуст",
@@ -649,8 +515,8 @@ header: {
       remove: "Удалить из списка",
       priceDrop: "Цена снижена",
       inCart: "В корзине",
+      loginRequired: "Войдите, чтобы добавить в список желаемого",
     },
-
     cart: {
       title: "Корзина",
       empty: "Корзина пуста",
@@ -665,8 +531,9 @@ header: {
       buyAll: "Купить все",
       item: "игра",
       items: "игр",
+      bundleGames: "Игры в наборе",
+      checkoutSuccess: "Все игры успешно куплены!",
     },
-
     settings: {
       title: "Настройки",
       theme: "Тема",
@@ -689,7 +556,6 @@ header: {
       deleteConfirm: "Удалить",
       deleteCancel: "Отмена",
     },
-
     refund: {
       title: "Возврат",
       amount: "Сумма",
@@ -702,7 +568,15 @@ header: {
       approved: "Одобрено",
       rejected: "Отклонено",
     },
-
+    purchases: {
+      title: "История покупок",
+      date: "Дата",
+      amount: "Сумма",
+      stars: "Звёзды",
+      exportExcel: "Экспорт в Excel",
+      empty: "Покупок пока нет",
+      emptySub: "Вы ещё не совершали платежей",
+    },
     admin: {
       dashboard: "Панель управления",
       users: "Пользователи",
@@ -740,11 +614,18 @@ header: {
       totalStars: "Всего Stars",
       starsInDollars: "Stars ($)",
       recentActivity: "Последние действия",
+      recentActivity1: "Новый пользователь зарегистрирован",
+      recentActivity2: "Куплена игра",
+      recentActivity3: "Запланировано новое событие",
       quickLinks: "Быстрые ссылки",
       manageUsers: "Управление пользователями",
       manageGames: "Управление играми",
       manageCompanies: "Управление компаниями",
       manageBundles: "Управление наборами",
+    },
+    header: {
+      download: "Скачать Fuzz",
+      installHint: "Установите приложение через меню браузера.",
     },
   },
 
@@ -752,62 +633,6 @@ header: {
   // ENGLISH
   // ==========================================
   en: {
-    game: {
-  notFound: "Game not found",
-  notFoundSub: "This game does not exist",
-  addedToCart: "added to cart",
-  backToStore: "Back to store",
-  officialStore: "Official store",
-  inBundles: "Bundles containing this game",
-},
-wishlist: {
-  loginRequired: "Sign in to add to wishlist",
-},
-    wallet: {
-  cardNumber: "Card number",
-  copy: "Copy",
-  copied: "Copied",
-  requestSent: "Request sent",
-  uzumCardNumber: "UZUM Card number",
-  commission: "Commission",
-},
-purchases: {
-  title: "Purchase History",
-  date: "Date",
-  amount: "Amount",
-  stars: "Stars",
-  exportExcel: "Export to Excel",
-  empty: "No purchases yet",
-  emptySub: "You haven't made any payments yet",
-},
-    common: {
-  downloads: "Downloads",
-  purchases: "Purchases",
-},
-    admin: {
-  recentActivity1: "New user registered",
-  recentActivity2: "Game purchased",
-  recentActivity3: "New event scheduled",
-},
-    cart: {
-  bundleGames: "Included games",
-  checkoutSuccess: "All games purchased successfully!",
-},
-
-    footer: {
-  legalPage: "Legal Information",
-  more: "More",
-  allGames: "All Games",
-},
-common: {
-  downloads: "Downloads",
-  purchases: "Purchases",
-},
-header: {
-  download: "Download Fuzz",
-  installHint: "Use the browser menu to install the app.",
-},
-
     nav: {
       home: "Home",
       store: "Store",
@@ -819,8 +644,9 @@ header: {
       profile: "Profile",
       editProfile: "Edit Profile",
       security: "Security",
+      menu: "Menu",
+      qrLogin: "QR Login",
     },
-
     auth: {
       login: "Login",
       register: "Register",
@@ -828,7 +654,6 @@ header: {
       admin: "Admin Panel",
       account: "Account",
     },
-
     home: {
       welcome: "Welcome to Fuzz",
       subtitle: "Discover PC games, manage your library, and join the community.",
@@ -844,13 +669,11 @@ header: {
       categories: "Categories",
       community: "Community",
     },
-
     store: {
       title: "Store",
       filter: "Filter by title...",
       allGenres: "All genres",
     },
-
     wallet: {
       history: "My History",
       topUp: "Top Up Balance",
@@ -868,8 +691,13 @@ header: {
       starsTopUp: "Top Up with Telegram Stars",
       cardTopUp: "Top Up with Card",
       soon: "Soon",
+      cardNumber: "Card number",
+      copy: "Copy",
+      copied: "Copied",
+      requestSent: "Request sent",
+      uzumCardNumber: "UZUM Card number",
+      commission: "Commission",
     },
-
     register: {
       step1: "Enter your Telegram ID",
       step2: "Complete your account",
@@ -880,7 +708,6 @@ header: {
       confirmPassword: "Confirm Password",
       submit: "Finish Registration",
     },
-
     reset: {
       title: "Reset Password",
       subtitle: "Enter your Telegram ID to receive a verification code",
@@ -889,7 +716,6 @@ header: {
       newPassword: "Create New Password",
       backToLogin: "Back to Login",
     },
-
     common: {
       save: "Save",
       cancel: "Cancel",
@@ -909,8 +735,9 @@ header: {
       all: "All",
       next: "Next",
       previous: "Previous",
+      downloads: "Downloads",
+      purchases: "Purchases",
     },
-
     footer: {
       about: "Fuzz",
       aboutFuzz: "About Fuzz",
@@ -920,14 +747,16 @@ header: {
       support: "Support",
       legal: "Legal",
       privacy: "Privacy Policy",
-      terms: "Terms of Service",
+      legalPage: "Legal Information",
       subscriberAgreement: "Subscriber Agreement",
       refunds: "Refunds",
+      terms: "Terms of Service",
       cookies: "Cookie Preferences",
+      more: "More",
+      allGames: "All Games",
       copyright: "© 2026 Fuzz Inc. All rights reserved.",
       followUs: "Follow Us",
     },
-
     game: {
       free: "Free",
       addToCart: "Add to Cart",
@@ -942,8 +771,14 @@ header: {
       developer: "Developer",
       publisher: "Publisher",
       genre: "Genre",
+      notFound: "Game not found",
+      notFoundSub: "This game does not exist",
+      addedToCart: "added to cart",
+      backToStore: "Back to store",
+      officialStore: "Official store",
+      inBundles: "Bundles containing this game",
+      releaseDate: "Release Date",
     },
-
     library: {
       title: "Library",
       empty: "You haven't purchased any games yet",
@@ -958,7 +793,6 @@ header: {
       installed: "Installed",
       notInstalled: "Not installed",
     },
-
     account: {
       title: "Account",
       balance: "Balance",
@@ -972,7 +806,6 @@ header: {
       totalSpent: "Total Spent",
       gamesOwned: "Games Owned",
     },
-
     profile: {
       title: "Profile",
       username: "Username",
@@ -987,7 +820,6 @@ header: {
       minLength: "Username must be at least 3 characters",
       accountInfo: "Account Information",
     },
-
     wishlist: {
       title: "Wishlist",
       empty: "Your wishlist is empty",
@@ -998,8 +830,8 @@ header: {
       remove: "Remove from Wishlist",
       priceDrop: "Price drop",
       inCart: "In Cart",
+      loginRequired: "Sign in to add to wishlist",
     },
-
     cart: {
       title: "Shopping Cart",
       empty: "Your cart is empty",
@@ -1014,8 +846,9 @@ header: {
       buyAll: "Buy All",
       item: "item",
       items: "items",
+      bundleGames: "Included games",
+      checkoutSuccess: "All games purchased successfully!",
     },
-
     settings: {
       title: "Settings",
       theme: "Theme",
@@ -1038,7 +871,6 @@ header: {
       deleteConfirm: "Delete",
       deleteCancel: "Cancel",
     },
-
     refund: {
       title: "Refund",
       amount: "Amount",
@@ -1051,7 +883,15 @@ header: {
       approved: "Approved",
       rejected: "Rejected",
     },
-
+    purchases: {
+      title: "Purchase History",
+      date: "Date",
+      amount: "Amount",
+      stars: "Stars",
+      exportExcel: "Export to Excel",
+      empty: "No purchases yet",
+      emptySub: "You haven't made any payments yet",
+    },
     admin: {
       dashboard: "Dashboard",
       users: "Users",
@@ -1089,11 +929,18 @@ header: {
       totalStars: "Total Stars",
       starsInDollars: "Stars in Dollars",
       recentActivity: "Recent Activity",
+      recentActivity1: "New user registered",
+      recentActivity2: "Game purchased",
+      recentActivity3: "New event scheduled",
       quickLinks: "Quick Links",
       manageUsers: "Manage Users",
       manageGames: "Manage Games",
       manageCompanies: "Manage Companies",
       manageBundles: "Manage Bundles",
+    },
+    header: {
+      download: "Download Fuzz",
+      installHint: "Use the browser menu to install the app.",
     },
   },
 };

@@ -4,11 +4,6 @@ export const translations = {
   // ==========================================
   uz: {
         nav: {
-          nav: {
-  home: "Bosh sahifa",
-  store: "Do'kon",
-  news: "Yangiliklar",
-  wishlist: "Wishlist",
       home: "Bosh sahifa",
       store: "Do'kon",
       news: "Yangiliklar", // <-- QO'SHILDI
@@ -22,6 +17,7 @@ export const translations = {
       security: "Xavfsizlik",
       menu: "Menyu",
       qrLogin: "QR Login",
+      wishlist: "Wishlist",
     },
     nav: {
       home: "Bosh sahifa",
@@ -339,11 +335,6 @@ export const translations = {
   // ==========================================
   ru: {
     nav: {
-  home: "Главная",
-  store: "Магазин",
-  news: "Новости",
-  wishlist: "Список желаемого", // <-- QO'SHILDI
-    nav: {
       home: "Главная",
       store: "Магазин",
       news: "Новинки",
@@ -356,6 +347,7 @@ export const translations = {
       security: "Безопасность",
       menu: "Меню",
       qrLogin: "QR Вход",
+      wishlist: "Wishlist",
     },
     auth: {
       login: "Войти",
@@ -659,14 +651,9 @@ export const translations = {
   // ==========================================
   en: {
     nav: {
-  home: "Home",
-  store: "Store",
-  news: "News",
-  wishlist: "Wishlist", // <-- QO'SHILDI
-    nav: {
       home: "Home",
       store: "Store",
-      news: "New",
+      new: "New",
       offers: "Offers",
       free: "Free",
       library: "Library",
@@ -676,6 +663,7 @@ export const translations = {
       security: "Security",
       menu: "Menu",
       qrLogin: "QR Login",
+      wishlist: "Wishlist",
     },
     auth: {
       login: "Login",

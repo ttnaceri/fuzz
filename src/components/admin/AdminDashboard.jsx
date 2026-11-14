@@ -10,41 +10,49 @@ export default function AdminDashboard() {
     games: 0,
     bundles: 0,
     events: 0,
-    revenue: 0,
-    totalStars: 0,
-    totalStarsUsd: 0,
+    revenue: 0,        // Bu endi umumiy balans bo'ladi
+    totalStars: 0,     // Jami olingan Stars miqdori
+    totalStarsUsd: 0,  // Stars orqali kelgan pul ($ da)
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // 1. Asosiy statistikani olish (userlar, o'yinlar, umumiy balans)
     api.get('/api/admin/stats')
       .then(data => { setStats(prev => ({ ...prev, ...data })); setLoading(false); })
       .catch(() => setLoading(false));
 
+    // 2. Stars to'lovlarini ajratib olish
     api.get('/api/admin/payments')
       .then(data => {
-        const totalStars = data.payments?.reduce((sum, p) => sum + (p.stars_paid || 0), 0) || 0;
-        const totalStarsUsd = data.payments?.reduce((sum, p) => sum + (p.amount_usd || 0), 0) || 0;
+        const payments = data.payments || [];
+        
+        // Faqat Stars orqali qilingan to'lovlarni filtrlaymiz (stars_paid > 0)
+        const starsPayments = payments.filter(p => Number(p.stars_paid) > 0);
+        
+        const totalStars = starsPayments.reduce((sum, p) => sum + (Number(p.stars_paid) || 0), 0);
+        const totalStarsUsd = starsPayments.reduce((sum, p) => sum + (Number(p.amount_usd) || 0), 0);
+        
         setStats(prev => ({ ...prev, totalStars, totalStarsUsd }));
       })
       .catch(() => {});
   }, []);
 
+  // Kartochkalar ro'yxati
   const cards = [
     { label: t('admin.totalUsers'), value: stats.users, icon: 'fa-users', color: '#43b581' },
     { label: t('admin.totalGames'), value: stats.games, icon: 'fa-gamepad', color: '#f0b44d' },
     { label: t('admin.totalBundles'), value: stats.bundles, icon: 'fa-box-open', color: '#8a1200' },
     { label: t('admin.totalEvents'), value: stats.events, icon: 'fa-calendar', color: '#43b581' },
+    
+    // 1. DAROMAD (Umumiy balans)
     { label: t('admin.revenue'), value: `$${Number(stats.revenue || 0).toFixed(2)}`, icon: 'fa-dollar-sign', color: '#43b581' },
+    
+    // 2. UMUMIY STARS
     { label: t('admin.totalStars'), value: `${stats.totalStars} ⭐`, icon: 'fa-star', color: '#f0b44d' },
+    
+    // 3. STARS DAROMADI (Faqat Stars orqali kelgan pul)
     { label: t('admin.starsInDollars'), value: `$${Number(stats.totalStarsUsd || 0).toFixed(2)}`, icon: 'fa-money-bill', color: '#43b581' },
-  ];
-
-  const quickLinks = [
-    { to: '/admin/users', label: t('admin.manageUsers') },
-    { to: '/admin/all-games', label: t('admin.manageGames') },
-    { to: '/admin/companies', label: t('admin.manageCompanies') },
-    { to: '/admin/bundles', label: t('admin.manageBundles') },
   ];
 
   return (
@@ -77,11 +85,18 @@ export default function AdminDashboard() {
         <div style={{ backgroundColor: '#241411', padding: '1.5rem', borderRadius: '8px', border: '1px solid #48201a' }}>
           <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>{t('admin.quickLinks')}</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {quickLinks.map((l, idx) => (
-              <Link key={idx} to={l.to} style={{ color: '#43b581', textDecoration: 'none' }}>
-                {l.label} →
-              </Link>
-            ))}
+            <Link to="/admin/users" style={{ color: '#43b581', textDecoration: 'none' }}>
+              {t('admin.manageUsers')} →
+            </Link>
+            <Link to="/admin/all-games" style={{ color: '#43b581', textDecoration: 'none' }}>
+              {t('admin.manageGames')} →
+            </Link>
+            <Link to="/admin/companies" style={{ color: '#43b581', textDecoration: 'none' }}>
+              {t('admin.manageCompanies')} →
+            </Link>
+            <Link to="/admin/bundles" style={{ color: '#43b581', textDecoration: 'none' }}>
+              {t('admin.manageBundles')} →
+            </Link>
           </div>
         </div>
       </div>

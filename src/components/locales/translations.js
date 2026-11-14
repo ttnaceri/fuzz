@@ -665,7 +665,7 @@ export const translations = {
     nav: {
       home: "Home",
       store: "Store",
-      new: "New",
+      news: "News",
       offers: "Offers",
       free: "Free",
       library: "Library",

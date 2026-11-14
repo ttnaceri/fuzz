@@ -11,23 +11,17 @@ export default function BottomNav() {
   useEffect(() => {
     const checkApp = () => {
       if (typeof window === 'undefined') return false;
-      
-      // 1. Ekran telefonda ekanligini tekshirish (Kompyuterda 1024px dan katta)
       const isMobileScreen = window.innerWidth <= 1024;
       if (!isMobileScreen) return false; 
 
-      // 2. Telegram yoki PWA ekanligini tekshirish
       const isTelegram = !!window.Telegram?.WebApp;
       const isFullscreen = window.matchMedia('(display-mode: fullscreen)').matches;
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
       const isMinimalUI = window.matchMedia('(display-mode: minimal-ui)').matches;
-      
       return isTelegram || isFullscreen || isStandalone || isMinimalUI;
     };
 
     setIsApp(checkApp());
-
-    // Ekran o'lchami o'zgarsa, holatni yangilash
     const handleResize = () => setIsApp(checkApp());
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -35,7 +29,6 @@ export default function BottomNav() {
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
-  // Agar App bo'lmasa (Kompyuter yoki oddiy brauzer) - KO'RINMAYDI
   if (!isApp) return null;
 
   const handleNewsClick = () => {
@@ -43,12 +36,17 @@ export default function BottomNav() {
     toggleMenu();
   };
 
+  // Yangilangan menyu ro'yxati
   const menuItems = [
     { name: t('nav.store'), icon: 'fa-gamepad', path: '/store' },
     { name: t('nav.news'), icon: 'fa-newspaper', action: handleNewsClick },
     { name: t('settings.title'), icon: 'fa-gear', path: '/settings' },
     { name: t('nav.library'), icon: 'fa-book', path: '/library' },
-    { name: t('nav.wallet'), icon: 'fa-wallet', path: '/wallet/history' },
+    // Hamyon o'rniga 3 ta yangi tugma:
+    { name: t('wallet.topUp'), icon: 'fa-plus-circle', path: '/wallet/topup' },
+    { name: t('wallet.history'), icon: 'fa-list', path: '/wallet/history' },
+    { name: t('wallet.refund'), icon: 'fa-rotate-left', path: '/wallet/refund' },
+    
     { name: t('wishlist.title'), icon: 'fa-heart', path: '/wishlist' },
   ];
 
@@ -75,7 +73,8 @@ export default function BottomNav() {
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          {/* 1 USTUNLI GRID (Har bir tugma 1 qator) */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.8rem' }}>
             {menuItems.map((item, idx) => (
               <button
                 key={idx}
@@ -93,17 +92,16 @@ export default function BottomNav() {
                   borderRadius: '8px',
                   padding: '1rem',
                   display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
+                  alignItems: 'center', // Matn va ikonka yonma-yon
+                  gap: '1rem',
                   color: '#f5eeee',
                   textDecoration: 'none',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  width: '100%',
                 }}
               >
-                <i className={`fa-solid ${item.icon}`} style={{ fontSize: '1.5rem', color: '#8a1200' }}></i>
-                <span style={{ fontSize: '0.9rem' }}>{item.name}</span>
+                <i className={`fa-solid ${item.icon}`} style={{ fontSize: '1.5rem', color: '#8a1200', width: '30px', textAlign: 'center' }}></i>
+                <span style={{ fontSize: '1rem' }}>{item.name}</span>
               </button>
             ))}
           </div>

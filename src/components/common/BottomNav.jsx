@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/useLanguage.js';
 
@@ -6,75 +6,163 @@ export default function BottomNav() {
   const navigate = useNavigate();
   const { lang, setLang, t } = useLanguage();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
+
+  // Ekran o'lchamini kuzatish
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+
+  // Agar Web (Desktop) bo'lsa, BottomNav ni umuman ko'rsatmaymiz
+  if (!isMobile) return null;
+
+  // Menyu ichidagi sahifalar
+  const menuItems = [
+    { name: t('nav.store'), icon: 'fa-gamepad', path: '/store' },
+    { name: t('nav.news') || 'News', icon: 'fa-newspaper', path: '/news' },
+    { name: t('settings.title'), icon: 'fa-gear', path: '/settings' },
+    { name: t('nav.library'), icon: 'fa-book', path: '/library' },
+    { name: t('nav.wallet'), icon: 'fa-wallet', path: '/wallet/history' },
+    { name: t('nav.wishlist') || 'Wishlist', icon: 'fa-heart', path: '/wishlist' },
+  ];
 
   return (
     <>
       {/* Burger Menu (Ochilganda) */}
       {isMenuOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: '#100b0a', zIndex: 9999, display: 'flex', flexDirection: 'column', padding: '2rem' }}>
+        <div style={{ 
+          position: 'fixed', 
+          inset: 0, 
+          backgroundColor: '#100b0a', 
+          zIndex: 9999, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          padding: '2rem' 
+        }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-            <span style={{ color: '#f5eeee', fontSize: '1.5rem', fontWeight: 'bold' }}>Menyu</span>
+            <span style={{ color: '#f5eeee', fontSize: '1.5rem', fontWeight: 'bold' }}>{t('nav.menu')}</span>
             <button onClick={toggleMenu} style={{ background: 'none', border: 'none', color: '#ed5555', fontSize: '2rem' }}>
               <i className="fa-solid fa-xmark"></i>
             </button>
           </div>
           
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <NavLink to="/" onClick={toggleMenu} style={{ color: '#f5eeee', fontSize: '1.2rem', textDecoration: 'none' }}>
-              <i className="fa-solid fa-house" style={{ width: '30px', color: '#8a1200' }}></i> {t('nav.home')}
-            </NavLink>
-            <NavLink to="/store" onClick={toggleMenu} style={{ color: '#f5eeee', fontSize: '1.2rem', textDecoration: 'none' }}>
-              <i className="fa-solid fa-store" style={{ width: '30px', color: '#8a1200' }}></i> {t('nav.store')}
-            </NavLink>
-            <NavLink to="/library" onClick={toggleMenu} style={{ color: '#f5eeee', fontSize: '1.2rem', textDecoration: 'none' }}>
-              <i className="fa-solid fa-book" style={{ width: '30px', color: '#8a1200' }}></i> {t('nav.library')}
-            </NavLink>
-            <NavLink to="/wallet/history" onClick={toggleMenu} style={{ color: '#f5eeee', fontSize: '1.2rem', textDecoration: 'none' }}>
-              <i className="fa-solid fa-wallet" style={{ width: '30px', color: '#8a1200' }}></i> {t('nav.wallet')}
-            </NavLink>
-            
-            <hr style={{ borderColor: '#48201a', width: '100%', margin: '1rem 0' }} />
-            
-            {/* Til tanlash */}
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button onClick={() => { setLang('uz'); toggleMenu(); }} style={{ background: lang === 'uz' ? '#8a1200' : '#241411', border: '1px solid #48201a', color: '#fff', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer' }}>UZ</button>
-              <button onClick={() => { setLang('ru'); toggleMenu(); }} style={{ background: lang === 'ru' ? '#8a1200' : '#241411', border: '1px solid #48201a', color: '#fff', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer' }}>RU</button>
-              <button onClick={() => { setLang('en'); toggleMenu(); }} style={{ background: lang === 'en' ? '#8a1200' : '#241411', border: '1px solid #48201a', color: '#fff', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer' }}>EN</button>
-            </div>
+          {/* Menyu elementlari (Grid ko'rinishida) */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            {menuItems.map((item, idx) => (
+              <button
+                key={idx}
+                onClick={() => { navigate(item.path); toggleMenu(); }}
+                style={{
+                  backgroundColor: '#241411',
+                  border: '1px solid #48201a',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  color: '#f5eeee',
+                  textDecoration: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <i className={`fa-solid ${item.icon}`} style={{ fontSize: '1.5rem', color: '#8a1200' }}></i>
+                <span style={{ fontSize: '0.9rem' }}>{item.name}</span>
+              </button>
+            ))}
+          </div>
+          
+          <hr style={{ borderColor: '#48201a', width: '100%', margin: '2rem 0' }} />
+          
+          {/* Til tanlash */}
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <button onClick={() => setLang('uz')} style={{ flex: 1, background: lang === 'uz' ? '#8a1200' : '#241411', border: '1px solid #48201a', color: '#fff', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer' }}>UZ</button>
+            <button onClick={() => setLang('ru')} style={{ flex: 1, background: lang === 'ru' ? '#8a1200' : '#241411', border: '1px solid #48201a', color: '#fff', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer' }}>RU</button>
+            <button onClick={() => setLang('en')} style={{ flex: 1, background: lang === 'en' ? '#8a1200' : '#241411', border: '1px solid #48201a', color: '#fff', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer' }}>EN</button>
           </div>
         </div>
       )}
 
-      {/* Pastki Navigatsiya Panelи */}
-      <nav className="bottom-nav">
-        <NavLink to="/" className={({ isActive }) => `bottom-nav__item ${isActive ? 'active' : ''}`}>
-          <i className="fa-solid fa-gamepad"></i>
-          <span>Games</span>
+      {/* Pastki Navigatsiya Paneli */}
+      <nav style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        width: '100%',
+        backgroundColor: '#19100e',
+        borderTop: '1px solid #48201a',
+        display: 'flex',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        zIndex: 9000,
+        height: '64px',
+      }}>
+        
+        {/* 1. HOME */}
+        <NavLink to="/" style={({ isActive }) => ({ 
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+          color: isActive ? '#f5eeee' : '#b9a6a2', textDecoration: 'none', fontSize: '0.75rem', flex: 1, height: '100%' 
+        })}>
+          <i className="fa-solid fa-house" style={{ fontSize: '1.2rem', marginBottom: '4px' }}></i>
+          <span>{t('nav.home')}</span>
         </NavLink>
 
-        <NavLink to="/library" className={({ isActive }) => `bottom-nav__item ${isActive ? 'active' : ''}`}>
-          <i className="fa-solid fa-book"></i>
-          <span>Library</span>
+        {/* 2. GAMES (STORE) */}
+        <NavLink to="/store" style={({ isActive }) => ({ 
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+          color: isActive ? '#f5eeee' : '#b9a6a2', textDecoration: 'none', fontSize: '0.75rem', flex: 1, height: '100%' 
+        })}>
+          <i className="fa-solid fa-gamepad" style={{ fontSize: '1.2rem', marginBottom: '4px' }}></i>
+          <span>{t('nav.store')}</span>
         </NavLink>
 
-        {/* Markaziy QR Skaner tugmasi */}
-        <div className="bottom-nav__center">
-          <button onClick={() => navigate('/qr-scan')} className="bottom-nav__qr-btn" aria-label="QR Login">
-            <i className="fa-solid fa-qrcode"></i>
+        {/* 3. QR SCANNER (Markazda) */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', position: 'relative' }}>
+          <button
+            onClick={() => navigate('/qr-scan')}
+            style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              backgroundColor: '#8a1200',
+              color: '#fff',
+              border: '4px solid #19100e',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'absolute',
+              top: '-20px', // Tepaga chiqib turishi uchun
+              boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
+              cursor: 'pointer',
+            }}
+            aria-label={t('nav.qrLogin')}
+          >
+            <i className="fa-solid fa-qrcode" style={{ fontSize: '1.5rem' }}></i>
           </button>
         </div>
 
-        <NavLink to="/account" className={({ isActive }) => `bottom-nav__item ${isActive ? 'active' : ''}`}>
-          <i className="fa-solid fa-user"></i>
-          <span>Profil</span>
+        {/* 4. PROFILE */}
+        <NavLink to="/account" style={({ isActive }) => ({ 
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+          color: isActive ? '#f5eeee' : '#b9a6a2', textDecoration: 'none', fontSize: '0.75rem', flex: 1, height: '100%' 
+        })}>
+          <i className="fa-solid fa-user" style={{ fontSize: '1.2rem', marginBottom: '4px' }}></i>
+          <span>{t('nav.profile')}</span>
         </NavLink>
 
-        {/* Burger tugmasi */}
-        <button onClick={toggleMenu} className="bottom-nav__item" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-          <i className="fa-solid fa-bars"></i>
-          <span>Menyu</span>
+        {/* 5. MENU (Burger) */}
+        <button onClick={toggleMenu} style={{ 
+          background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', 
+          alignItems: 'center', justifyContent: 'center', color: '#b9a6a2', fontSize: '0.75rem', flex: 1, height: '100%' 
+        }}>
+          <i className="fa-solid fa-bars" style={{ fontSize: '1.2rem', marginBottom: '4px' }}></i>
+          <span>{t('nav.menu')}</span>
         </button>
       </nav>
     </>

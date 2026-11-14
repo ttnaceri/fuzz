@@ -12,13 +12,16 @@ adminApp.get('/admin/stats', async (c) => {
     const gamesCount = await c.env.DB.prepare('SELECT COUNT(*) as c FROM games').first();
     const bundlesCount = await c.env.DB.prepare('SELECT COUNT(*) as c FROM bundles').first();
     const eventsCount = await c.env.DB.prepare('SELECT COUNT(*) as c FROM events').first();
-    const totalPayments = await c.env.DB.prepare("SELECT SUM(amount_usd) as sum FROM payments").first();
+    
+    // ✅ YANGILANDI: Endi to'lovlar emas, userlarning umumiy balansi olinadi
+    const totalBalance = await c.env.DB.prepare("SELECT SUM(balance) as sum FROM users").first();
+    
     return c.json({
       users: usersCount?.c || 0,
       games: gamesCount?.c || 0,
       bundles: bundlesCount?.c || 0,
       events: eventsCount?.c || 0,
-      revenue: round2(totalPayments?.sum || 0),
+      totalBalance: round2(totalBalance?.sum || 0), // Nomini totalBalance ga o'zgartirdik
     });
   } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });

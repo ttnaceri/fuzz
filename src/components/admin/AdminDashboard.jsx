@@ -10,24 +10,22 @@ export default function AdminDashboard() {
     games: 0,
     bundles: 0,
     events: 0,
-    revenue: 0,        // Bu endi umumiy balans bo'ladi
-    totalStars: 0,     // Jami olingan Stars miqdori
+    totalBalance: 0,   // Userlarning umumiy balansi
+    totalStars: 0,     // Jami olingan Stars
     totalStarsUsd: 0,  // Stars orqali kelgan pul ($ da)
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Asosiy statistikani olish (userlar, o'yinlar, umumiy balans)
+    // 1. Asosiy statistikani olish (userlar, o'yinlar, UMUMIY BALANS)
     api.get('/api/admin/stats')
       .then(data => { setStats(prev => ({ ...prev, ...data })); setLoading(false); })
       .catch(() => setLoading(false));
 
-    // 2. Stars to'lovlarini ajratib olish
+    // 2. Stars to'lovlarini ajratib olish (faqat stars_paid > 0)
     api.get('/api/admin/payments')
       .then(data => {
         const payments = data.payments || [];
-        
-        // Faqat Stars orqali qilingan to'lovlarni filtrlaymiz (stars_paid > 0)
         const starsPayments = payments.filter(p => Number(p.stars_paid) > 0);
         
         const totalStars = starsPayments.reduce((sum, p) => sum + (Number(p.stars_paid) || 0), 0);
@@ -38,26 +36,26 @@ export default function AdminDashboard() {
       .catch(() => {});
   }, []);
 
-  // Kartochkalar ro'yxati
+  // Kartochkalar
   const cards = [
-    { label: t('admin.totalUsers'), value: stats.users, icon: 'fa-users', color: '#43b581' },
-    { label: t('admin.totalGames'), value: stats.games, icon: 'fa-gamepad', color: '#f0b44d' },
-    { label: t('admin.totalBundles'), value: stats.bundles, icon: 'fa-box-open', color: '#8a1200' },
-    { label: t('admin.totalEvents'), value: stats.events, icon: 'fa-calendar', color: '#43b581' },
+    { label: t('admin.totalUsers') || 'Foydalanuvchilar', value: stats.users, icon: 'fa-users', color: '#43b581' },
+    { label: t('admin.totalGames') || "O'yinlar", value: stats.games, icon: 'fa-gamepad', color: '#f0b44d' },
+    { label: t('admin.totalBundles') || "Bundle'lar", value: stats.bundles, icon: 'fa-box-open', color: '#8a1200' },
+    { label: t('admin.totalEvents') || "Eventlar", value: stats.events, icon: 'fa-calendar', color: '#43b581' },
     
-    // 1. DAROMAD (Umumiy balans)
-    { label: t('admin.revenue'), value: `$${Number(stats.revenue || 0).toFixed(2)}`, icon: 'fa-dollar-sign', color: '#43b581' },
+    // 1. USERLARNING UMUMIY BALANSI
+    { label: 'Umumiy Balans', value: `$${Number(stats.totalBalance || 0).toFixed(2)}`, icon: 'fa-dollar-sign', color: '#43b581' },
     
-    // 2. UMUMIY STARS
-    { label: t('admin.totalStars'), value: `${stats.totalStars} ⭐`, icon: 'fa-star', color: '#f0b44d' },
+    // 2. JAMI STARS
+    { label: t('admin.totalStars') || 'Jami Stars', value: `${stats.totalStars} ⭐`, icon: 'fa-star', color: '#f0b44d' },
     
-    // 3. STARS DAROMADI (Faqat Stars orqali kelgan pul)
-    { label: t('admin.starsInDollars'), value: `$${Number(stats.totalStarsUsd || 0).toFixed(2)}`, icon: 'fa-money-bill', color: '#43b581' },
+    // 3. STARS DAROMADI
+    { label: t('admin.starsInDollars') || 'Stars ($ da)', value: `$${Number(stats.totalStarsUsd || 0).toFixed(2)}`, icon: 'fa-money-bill', color: '#43b581' },
   ];
 
   return (
     <div>
-      <h1 style={{ color: '#f5eeee', marginBottom: '1.5rem' }}>{t('admin.dashboard')}</h1>
+      <h1 style={{ color: '#f5eeee', marginBottom: '1.5rem' }}>{t('admin.dashboard') || 'Boshqaruv paneli'}</h1>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         {cards.map((card, idx) => (
@@ -75,27 +73,27 @@ export default function AdminDashboard() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
         <div style={{ backgroundColor: '#241411', padding: '1.5rem', borderRadius: '8px', border: '1px solid #48201a' }}>
-          <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>{t('admin.recentActivity')}</h3>
+          <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>{t('admin.recentActivity') || "So'nggi harakatlar"}</h3>
           <div style={{ color: '#b9a6a2', fontSize: '0.9rem' }}>
-            <p>• {t('admin.recentActivity1') || 'Yangi foydalanuvchi ro\'yxatdan o\'tdi'}</p>
-            <p>• {t('admin.recentActivity2') || 'O\'yin sotib olindi'}</p>
-            <p>• {t('admin.recentActivity3') || 'Yangi event rejalashtirildi'}</p>
+            <p>• Yangi foydalanuvchi ro'yxatdan o'tdi</p>
+            <p>• O'yin sotib olindi</p>
+            <p>• Yangi event rejalashtirildi</p>
           </div>
         </div>
         <div style={{ backgroundColor: '#241411', padding: '1.5rem', borderRadius: '8px', border: '1px solid #48201a' }}>
-          <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>{t('admin.quickLinks')}</h3>
+          <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>{t('admin.quickLinks') || 'Tezkor havolalar'}</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <Link to="/admin/users" style={{ color: '#43b581', textDecoration: 'none' }}>
-              {t('admin.manageUsers')} →
+              {t('admin.manageUsers') || 'Foydalanuvchilarni boshqarish'} →
             </Link>
             <Link to="/admin/all-games" style={{ color: '#43b581', textDecoration: 'none' }}>
-              {t('admin.manageGames')} →
+              {t('admin.manageGames') || "O'yinlarni boshqarish"} →
             </Link>
             <Link to="/admin/companies" style={{ color: '#43b581', textDecoration: 'none' }}>
-              {t('admin.manageCompanies')} →
+              {t('admin.manageCompanies') || 'Kompaniyalarni boshqarish'} →
             </Link>
             <Link to="/admin/bundles" style={{ color: '#43b581', textDecoration: 'none' }}>
-              {t('admin.manageBundles')} →
+              {t('admin.manageBundles') || "Bundle'larni boshqarish"} →
             </Link>
           </div>
         </div>

@@ -8,22 +8,34 @@ export default function BottomNav() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isApp, setIsApp] = useState(false);
 
-  // Faqat App (Telegram WebApp / PWA) ichida ko'rinishini aniqlash
   useEffect(() => {
     const checkApp = () => {
       if (typeof window === 'undefined') return false;
+      
+      // 1. Ekran telefonda ekanligini tekshirish (Kompyuterda 1024px dan katta)
+      const isMobileScreen = window.innerWidth <= 1024;
+      if (!isMobileScreen) return false; 
+
+      // 2. Telegram yoki PWA ekanligini tekshirish
       const isTelegram = !!window.Telegram?.WebApp;
       const isFullscreen = window.matchMedia('(display-mode: fullscreen)').matches;
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
       const isMinimalUI = window.matchMedia('(display-mode: minimal-ui)').matches;
+      
       return isTelegram || isFullscreen || isStandalone || isMinimalUI;
     };
+
     setIsApp(checkApp());
+
+    // Ekran o'lchami o'zgarsa, holatni yangilash
+    const handleResize = () => setIsApp(checkApp());
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
-  // Agar App bo'lmasa (Web sayt yoki oddiy brauzer) - ko'rinmaydi
+  // Agar App bo'lmasa (Kompyuter yoki oddiy brauzer) - KO'RINMAYDI
   if (!isApp) return null;
 
   const handleNewsClick = () => {
@@ -42,14 +54,13 @@ export default function BottomNav() {
 
   return (
     <>
-      {/* Menyu (Ochilganda) */}
       {isMenuOpen && (
         <div style={{
           position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
-          bottom: '64px', // Pastdagi NavBar uchun joy qoldiriladi
+          bottom: '64px',
           backgroundColor: '#100b0a',
           zIndex: 9990,
           display: 'flex',
@@ -99,7 +110,6 @@ export default function BottomNav() {
 
           <hr style={{ borderColor: '#48201a', width: '100%', margin: '2rem 0' }} />
 
-          {/* Til tanlash */}
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
             <button onClick={() => setLang('uz')} style={{ flex: 1, background: lang === 'uz' ? '#8a1200' : '#241411', border: '1px solid #48201a', color: '#fff', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer' }}>UZ</button>
             <button onClick={() => setLang('ru')} style={{ flex: 1, background: lang === 'ru' ? '#8a1200' : '#241411', border: '1px solid #48201a', color: '#fff', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer' }}>RU</button>
@@ -108,7 +118,6 @@ export default function BottomNav() {
         </div>
       )}
 
-      {/* Pastki Navigatsiya Paneli */}
       <nav style={{
         position: 'fixed',
         bottom: 0,
@@ -123,8 +132,6 @@ export default function BottomNav() {
         zIndex: 9999,
         height: '64px',
       }}>
-
-        {/* 1. HOME */}
         <NavLink to="/" style={({ isActive }) => ({
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           color: isActive ? '#f5eeee' : '#b9a6a2', textDecoration: 'none', fontSize: '0.75rem', flex: 1, height: '100%'
@@ -133,7 +140,6 @@ export default function BottomNav() {
           <span>{t('nav.home')}</span>
         </NavLink>
 
-        {/* 2. GAMES */}
         <NavLink to="/store" style={({ isActive }) => ({
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           color: isActive ? '#f5eeee' : '#b9a6a2', textDecoration: 'none', fontSize: '0.75rem', flex: 1, height: '100%'
@@ -142,7 +148,6 @@ export default function BottomNav() {
           <span>{t('nav.store')}</span>
         </NavLink>
 
-        {/* 3. QR SCANNER (Markazda, boshqalar bilan bir xil chiziqda) */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <button
             onClick={() => navigate('/qr-scan')}
@@ -165,7 +170,6 @@ export default function BottomNav() {
           </button>
         </div>
 
-        {/* 4. PROFILE */}
         <NavLink to="/account" style={({ isActive }) => ({
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           color: isActive ? '#f5eeee' : '#b9a6a2', textDecoration: 'none', fontSize: '0.75rem', flex: 1, height: '100%'
@@ -174,15 +178,10 @@ export default function BottomNav() {
           <span>{t('nav.profile')}</span>
         </NavLink>
 
-        {/* 5. MENU (Tepadagi MENU tugmasi ham shu tugmani bosadi) */}
-        <button
-          onClick={toggleMenu}
-          className="bottom-nav__menu-trigger"
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center', color: isMenuOpen ? '#f5eeee' : '#b9a6a2', fontSize: '0.75rem', flex: 1, height: '100%'
-          }}
-        >
+        <button onClick={toggleMenu} style={{
+          background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', color: isMenuOpen ? '#f5eeee' : '#b9a6a2', fontSize: '0.75rem', flex: 1, height: '100%'
+        }}>
           <i className={`fa-solid ${isMenuOpen ? 'fa-xmark' : 'fa-bars'}`} style={{ fontSize: '1.2rem', marginBottom: '4px' }}></i>
           <span>{t('nav.menu')}</span>
         </button>

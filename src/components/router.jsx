@@ -67,6 +67,7 @@ import LanguagePage from './pages/LanguagePage.jsx';
 // --- ADMIN PAGES ---
 import AdminDashboard from './admin/AdminDashboard.jsx';
 import AdminGames from './admin/AdminGames.jsx';
+import AdminNewUser from './admin/AdminNewUser.jsx'; // ✅ YANGI IMPORT
 import AdminUsers from './admin/AdminUsers.jsx';
 import AdminEditUser from './admin/AdminEditUser.jsx';
 import AdminOrders from './admin/AdminOrders.jsx';
@@ -199,6 +200,8 @@ export const router = createBrowserRouter([
       { index: true, element: <AdminDashboard /> },
       { path: 'games', element: <AdminGames /> },
       { path: 'users', element: <AdminUsers /> },
+      // ✅ YANGI ROUTE: Yangi foydalanuvchi qo'shish
+      { path: 'new-user', element: <AdminNewUser /> },
       { path: 'edit-user', element: <AdminEditUser /> },
       { path: 'orders', element: <AdminOrders /> },
       { path: 'reports', element: <AdminReports /> },

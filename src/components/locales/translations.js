@@ -279,6 +279,8 @@ export const translations = {
       emptySub: "Siz hali hech qanday to'lov qilmadingiz",
     },
     admin: {
+      addUser: "Yangi foydalanuvchi",
+      createUser: "Foydalanuvchini yaratish",
       dashboard: "Boshqaruv paneli",
       users: "Foydalanuvchilar",
       editUser: "Foydalanuvchini tahrirlash",
@@ -595,6 +597,8 @@ export const translations = {
       emptySub: "Вы ещё не совершали платежей",
     },
     admin: {
+      addUser: "Добавить пользователя",
+      createUser: "Создать пользователя",
       dashboard: "Панель управления",
       users: "Пользователи",
       editUser: "Редактировать пользователя",
@@ -911,6 +915,8 @@ export const translations = {
       emptySub: "You haven't made any payments yet",
     },
     admin: {
+      addUser: "Add User",
+      createUser: "Create User",
       dashboard: "Dashboard",
       users: "Users",
       editUser: "Edit User",

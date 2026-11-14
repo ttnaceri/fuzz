@@ -4,6 +4,11 @@ export const translations = {
   // ==========================================
   uz: {
         nav: {
+          nav: {
+  home: "Bosh sahifa",
+  store: "Do'kon",
+  news: "Yangiliklar",
+  wishlist: "Wishlist",
       home: "Bosh sahifa",
       store: "Do'kon",
       news: "Yangiliklar", // <-- QO'SHILDI
@@ -334,6 +339,11 @@ export const translations = {
   // ==========================================
   ru: {
     nav: {
+  home: "Главная",
+  store: "Магазин",
+  news: "Новости",
+  wishlist: "Список желаемого", // <-- QO'SHILDI
+    nav: {
       home: "Главная",
       store: "Магазин",
       news: "Новинки",
@@ -648,6 +658,11 @@ export const translations = {
   // ENGLISH
   // ==========================================
   en: {
+    nav: {
+  home: "Home",
+  store: "Store",
+  news: "News",
+  wishlist: "Wishlist", // <-- QO'SHILDI
     nav: {
       home: "Home",
       store: "Store",

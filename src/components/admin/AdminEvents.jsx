@@ -14,12 +14,28 @@ export default function AdminEvents() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validatsiya: Vaqtlar kiritilganmi?
+    if (!form.start_date || !form.end_date) {
+      return toastError("Iltimos, boshlanish va tugash vaqtini to'liq kiriting!");
+    }
+
     try {
-      await api.post('/api/admin/events', form);
+      // Brauzer ba'zan "2026-11-14T19:50:00" kabi sekundlarni qo'shib yuboradi.
+      // Bazaga toza formatda yuborish uchun ularni kesib tashlaymiz.
+      const payload = {
+        ...form,
+        start_date: form.start_date.replace(':00', '').slice(0, 16), // YYYY-MM-DDThh:mm
+        end_date: form.end_date.replace(':00', '').slice(0, 16)
+      };
+
+      await api.post('/api/admin/events', payload);
       success("Event qo'shildi!"); 
       load(); 
       setForm({ title: '', image: '', link_url: '', start_date: '', end_date: '' });
-    } catch { toastError("Xato"); }
+    } catch (err) { 
+      toastError(err.message || "Xato yuz berdi"); 
+    }
   };
 
   return (
@@ -40,25 +56,39 @@ export default function AdminEvents() {
 
         <input type="text" placeholder="Havola (Link URL)" value={form.link_url} onChange={e => setForm({...form, link_url: e.target.value})} style={{ padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
         
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <div style={{ flex: 1 }}>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '200px' }}>
             <label style={{ color: '#b9a6a2', fontSize: '0.8rem', marginBottom: '0.3rem', display: 'block' }}>Boshlanish vaqti</label>
-            <input type="datetime-local" value={form.start_date} onChange={e => setForm({...form, start_date: e.target.value})} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#b9a6a2', borderRadius: '4px' }} required />
+            <input 
+              type="datetime-local" 
+              value={form.start_date} 
+              onChange={e => setForm({...form, start_date: e.target.value})} 
+              style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#b9a6a2', borderRadius: '4px' }} 
+              required 
+            />
           </div>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: '200px' }}>
             <label style={{ color: '#b9a6a2', fontSize: '0.8rem', marginBottom: '0.3rem', display: 'block' }}>Tugash vaqti</label>
-            <input type="datetime-local" value={form.end_date} onChange={e => setForm({...form, end_date: e.target.value})} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#b9a6a2', borderRadius: '4px' }} required />
+            <input 
+              type="datetime-local" 
+              value={form.end_date} 
+              onChange={e => setForm({...form, end_date: e.target.value})} 
+              style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#b9a6a2', borderRadius: '4px' }} 
+              required 
+            />
           </div>
         </div>
         
-        <button type="submit" style={{ padding: '0.8rem', backgroundColor: '#8a1200', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Event Rejalashtirish</button>
+        <button type="submit" style={{ padding: '0.8rem', backgroundColor: '#8a1200', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', marginTop: '0.5rem' }}>
+          Event Rejalashtirish
+        </button>
       </form>
 
       <h3 style={{ color: '#f5eeee', marginBottom: '1rem' }}>Aktiv Eventlar</h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
         {events.map(ev => (
           <div key={ev.id} style={{ backgroundColor: '#241411', borderRadius: '8px', border: '1px solid #48201a', overflow: 'hidden' }}>
-            {ev.image && <img src={ev.image} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />}
+            {ev.image && <img src={ev.image} style={{ width: '100%', height: '120px', objectFit: 'cover' }} alt={ev.title} />}
             <div style={{ padding: '1rem' }}>
               <h3 style={{ color: '#f5eeee', margin: '0 0 0.5rem 0' }}>{ev.title}</h3>
               <p style={{ color: '#b9a6a2', fontSize: '0.8rem' }}>Tugaydi: {new Date(ev.end_date).toLocaleString()}</p>

@@ -392,6 +392,27 @@ app.post('/fuzz/api/auth/change-password', requireAuth, async (c) => {
 });
 
 // ==========================================
+// YANGI: ADMIN TOMONIDAN USER QO'SHISH UCHUN REGISTER
+// ==========================================
+app.post('/fuzz/api/auth/register', async (c) => {
+  try {
+    const { username, email, password, telegramId } = await c.req.json();
+    if (!username || !password || !email) return c.json({ error: 'Barcha maydonlarni to\'ldiring!' }, 400);
+    if (password.length < MIN_PASSWORD) return c.json({ error: `Parol kamida ${MIN_PASSWORD} belgi bo'lishi kerak` }, 400);
+
+    const existing = await c.env.DB.prepare('SELECT * FROM users WHERE username = ? OR email = ?').bind(username, email).first();
+    if (existing) return c.json({ error: 'Bu username yoki email band!' }, 409);
+
+    const id = crypto.randomUUID();
+    await c.env.DB.prepare('INSERT INTO users (id, username, email, password, role, telegram_id) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(id, username, email, await hashPassword(password), 'user', telegramId || null).run();
+
+    const token = await createToken({ sub: id }, c.env);
+    return c.json({ token, user: { id, username, role: 'user', balance: 0 } }, 201);
+  } catch (err) { return c.json({ error: 'Server xatosi: ' + err.message }, 500); }
+});
+
+// ==========================================
 // CONSOLE COMMANDS (TUZATILGAN KILL)
 // ==========================================
 app.post('/fuzz/api/admin/console', async (c) => {

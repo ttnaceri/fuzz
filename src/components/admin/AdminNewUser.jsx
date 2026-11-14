@@ -6,7 +6,14 @@ import useToast from '../hooks/useToast.js';
 export default function AdminNewUser() {
   const { t } = useLanguage();
   const { success, error: toastError } = useToast();
-  const [form, setForm] = useState({ username: '', email: '', password: '', balance: '0' });
+
+  const [form, setForm] = useState({
+    username: '',
+    email: '',
+    password: '',
+    telegramId: '',
+    balance: '0',
+  });
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -17,20 +24,40 @@ export default function AdminNewUser() {
 
     setLoading(true);
     try {
-      // Backendda admin uchun alohida endpoint bo'lmasa, oddiy register ishlatamiz
+      // Backendning mavjud /auth/register endpointini ishlatamiz
       await api.post('/api/auth/register', {
         username: form.username,
         email: form.email,
         password: form.password,
-        // telegramId ni bo'sh qoldiramiz, chunki bu admin yaratayotgan user
+        telegramId: form.telegramId.trim() || null, // Telegram ID ni ham yuboramiz
       });
+
       success(t('common.success') || 'Foydalanuvchi yaratildi!');
-      setForm({ username: '', email: '', password: '', balance: '0' });
+      setForm({ username: '', email: '', password: '', telegramId: '', balance: '0' });
     } catch (err) {
       toastError(err.message || t('common.error'));
     } finally {
       setLoading(false);
     }
+  };
+
+  const inputStyle = {
+    width: '100%',
+    padding: '0.8rem',
+    backgroundColor: '#100b0a',
+    border: '1px solid #48201a',
+    borderRadius: '4px',
+    color: '#f5eeee',
+    outline: 'none',
+    fontSize: '1rem',
+    boxSizing: 'border-box',
+  };
+
+  const labelStyle = {
+    display: 'block',
+    color: '#b9a6a2',
+    fontSize: '0.85rem',
+    marginBottom: '0.4rem',
   };
 
   return (
@@ -41,11 +68,12 @@ export default function AdminNewUser() {
 
       <div style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', border: '1px solid #48201a', maxWidth: '600px' }}>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          
           <div>
-            <label style={{ display: 'block', color: '#b9a6a2', fontSize: '0.85rem', marginBottom: '0.4rem' }}>{t('profile.username') || 'Username'}</label>
+            <label style={labelStyle}>{t('profile.username') || 'Username'}</label>
             <input
               type="text"
-              className="form-input"
+              style={inputStyle}
               value={form.username}
               onChange={(e) => setForm({ ...form, username: e.target.value })}
               required
@@ -53,21 +81,36 @@ export default function AdminNewUser() {
           </div>
 
           <div>
-            <label style={{ display: 'block', color: '#b9a6a2', fontSize: '0.85rem', marginBottom: '0.4rem' }}>{t('profile.email') || 'Email'}</label>
+            <label style={labelStyle}>{t('profile.email') || 'Email'}</label>
             <input
               type="email"
-              className="form-input"
+              style={inputStyle}
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               required
             />
           </div>
 
+          {/* YANGI: Telegram ID */}
           <div>
-            <label style={{ display: 'block', color: '#b9a6a2', fontSize: '0.85rem', marginBottom: '0.4rem' }}>{t('profile.password') || 'Parol'}</label>
+            <label style={labelStyle}>{t('admin.telegramId') || 'Telegram ID'}</label>
+            <input
+              type="text"
+              style={inputStyle}
+              value={form.telegramId}
+              onChange={(e) => setForm({ ...form, telegramId: e.target.value.replace(/\D/g, '').slice(0, 15) })}
+              placeholder={t('admin.telegramIdHint') || '5801429782'}
+            />
+            <small style={{ color: '#6b524e', fontSize: '0.75rem', marginTop: '0.2rem', display: 'block' }}>
+              {t('admin.telegramIdHint') || 'Faqat raqamlar (masalan: 5801429782)'}
+            </small>
+          </div>
+
+          <div>
+            <label style={labelStyle}>{t('profile.password') || 'Parol'}</label>
             <input
               type="password"
-              className="form-input"
+              style={inputStyle}
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               required
@@ -75,10 +118,10 @@ export default function AdminNewUser() {
           </div>
 
           <div>
-            <label style={{ display: 'block', color: '#b9a6a2', fontSize: '0.85rem', marginBottom: '0.4rem' }}>{t('wallet.balance') || 'Balans ($)'}</label>
+            <label style={labelStyle}>{t('wallet.balance') || 'Balans ($)'}</label>
             <input
               type="number"
-              className="form-input"
+              style={inputStyle}
               value={form.balance}
               onChange={(e) => setForm({ ...form, balance: e.target.value })}
             />

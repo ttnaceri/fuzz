@@ -194,6 +194,7 @@ export const translations = {
     },
     profile: {
       title: "Profil",
+      password: "Parol",
       username: "Foydalanuvchi nomi",
       email: "Email",
       role: "Rol",
@@ -279,6 +280,9 @@ export const translations = {
       emptySub: "Siz hali hech qanday to'lov qilmadingiz",
     },
     admin: {
+      telegramId: "Telegram ID",
+      telegramIdHint: "Telegram Id Faqat Raqamlar",
+      balanceHint: "Bosh",
       addUser: "Yangi foydalanuvchi",
       createUser: "Foydalanuvchini yaratish",
       dashboard: "Boshqaruv paneli",
@@ -512,6 +516,7 @@ export const translations = {
     },
     profile: {
       title: "Профиль",
+      password: "Пароль",
       username: "Имя пользователя",
       email: "Email",
       role: "Роль",
@@ -597,6 +602,9 @@ export const translations = {
       emptySub: "Вы ещё не совершали платежей",
     },
     admin: {
+      telegramId: "Telegram ID",
+      telegramIdHint: "Только цифры (например: 1234567890)",
+      balanceHint: "Начальный баланс ($)",
       addUser: "Добавить пользователя",
       createUser: "Создать пользователя",
       dashboard: "Панель управления",
@@ -830,6 +838,7 @@ export const translations = {
     },
     profile: {
       title: "Profile",
+      password: "Password",
       username: "Username",
       email: "Email",
       role: "Role",
@@ -915,6 +924,9 @@ export const translations = {
       emptySub: "You haven't made any payments yet",
     },
     admin: {
+      telegramId: "Telegram ID",
+      telegramIdHint: "Numbers only (e.g. 1234567890)",
+      balanceHint: "Starting balance ($)",
       addUser: "Add User",
       createUser: "Create User",
       dashboard: "Dashboard",

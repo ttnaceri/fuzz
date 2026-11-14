@@ -10,10 +10,11 @@ export default function Navigation() {
   const balance = (balanceNum != null && !isNaN(balanceNum)) ? `$${balanceNum.toFixed(2)}` : null;
 
   return (
-    <nav className="header__nav" style={{ display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', gap: '0.2rem' }}>
+    <nav className="header__nav" style={{ display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', gap: '0.1rem' }}>
+      
       {/* HOME + DROPDOWN MENU */}
-      <div className="nav-dropdown">
-        <NavLink to="/" end className="nav-dropdown-btn" style={{ whiteSpace: 'nowrap' }}>
+      <div className="nav-dropdown" style={{ padding: '0 0.5rem' }}>
+        <NavLink to="/" end className="nav-dropdown-btn" style={{ whiteSpace: 'nowrap', padding: '0.5rem 0' }}>
           {t('nav.home')}
         </NavLink>
 
@@ -52,16 +53,8 @@ export default function Navigation() {
       <div className="nav-dropdown">
         <div
           className="nav-dropdown-btn"
-          style={{
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}
-          onClick={() => {
-            if (isAuthenticated) refreshUser();
-          }}
+          style={{ cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          onClick={() => { if (isAuthenticated) refreshUser(); }}
         >
           <i className="fa-solid fa-wallet" style={{ fontSize: '0.9rem' }}></i>
           <span>

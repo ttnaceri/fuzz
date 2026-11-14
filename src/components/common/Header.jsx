@@ -40,17 +40,22 @@ export default function Header() {
 
   return (
     <header className="header">
-      <div className="container header__inner">
-        <Link to="/" className="header__brand">
+      <div className="container header__inner" style={{ gap: '1rem' }}> {/* GAP qo'shildi */}
+        
+        {/* Logotip qismi - siqilib qolmasligi uchun flexShrink: 0 */}
+        <Link to="/" className="header__brand" style={{ flexShrink: 0 }}>
           <img src="/image/logo.png" alt="Fuzz logo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           <span>Fuzz</span>
         </Link>
 
+        {/* Navigatsiya menyulari */}
         {!isMobile && <Navigation />}
-        <div style={{ flex: 1 }}></div>
+        
+        <div style={{ flex: 1 }}></div> {/* Bo'sh joy (oraliqni ochish uchun) */}
+        
         {!isMobile && <SearchBar />}
 
-        <div className="header__actions" style={{ marginLeft: '1rem' }}>
+        <div className="header__actions" style={{ marginLeft: '1rem', flexShrink: 0 }}>
           {!isMobile && (
             <button
               onClick={() => setLang(lang === 'uz' ? 'ru' : lang === 'ru' ? 'en' : 'uz')}

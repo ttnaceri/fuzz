@@ -38,20 +38,26 @@ export default function Header() {
     navigate('/login');
   };
 
+  // Mobil menyuni ochish uchun (Steam'dagi kabi)
+  const handleOpenMobileMenu = () => {
+    // Pastdagi BottomNav dagi Burger tugmasini bosish effektini berish
+    const menuBtn = document.querySelector('.bottom-nav__menu-trigger');
+    if (menuBtn) menuBtn.click();
+  };
+
   return (
     <header className="header">
-      <div className="container header__inner" style={{ gap: '1rem' }}> {/* GAP qo'shildi */}
+      <div className="container header__inner" style={{ gap: '1rem' }}>
         
-        {/* Logotip qismi - siqilib qolmasligi uchun flexShrink: 0 */}
+        {/* Logo */}
         <Link to="/" className="header__brand" style={{ flexShrink: 0 }}>
           <img src="/image/logo.png" alt="Fuzz logo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           <span>Fuzz</span>
         </Link>
 
-        {/* Navigatsiya menyulari */}
         {!isMobile && <Navigation />}
         
-        <div style={{ flex: 1 }}></div> {/* Bo'sh joy (oraliqni ochish uchun) */}
+        <div style={{ flex: 1 }}></div>
         
         {!isMobile && <SearchBar />}
 
@@ -63,17 +69,6 @@ export default function Header() {
               style={{ fontWeight: 'bold' }}
             >
               {lang.toUpperCase()}
-            </button>
-          )}
-
-          {!isMobile && !isApp && (
-            <button
-              onClick={() => info(t('header.installHint'))}
-              className="btn btn-secondary btn-sm"
-              style={{ borderColor: '#8a1200', color: '#f5eeee', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              <i className="fa-solid fa-download" style={{ color: '#8a1200' }} />
-              <span>{t('header.download')}</span>
             </button>
           )}
 
@@ -99,6 +94,34 @@ export default function Header() {
           )}
         </div>
       </div>
+
+      {/* Steam uslubidagi Mobil gorizontal menyu */}
+      {isMobile && isAuthenticated && (
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          gap: '2rem', 
+          padding: '0.5rem 1rem', 
+          borderTop: '1px solid #48201a',
+          backgroundColor: '#19100e'
+        }}>
+          <button 
+            onClick={handleOpenMobileMenu} 
+            style={{ background: 'none', border: 'none', color: '#f5eeee', fontSize: '0.9rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer' }}
+          >
+            {t('nav.menu')} <i className="fa-solid fa-chevron-down" style={{ fontSize: '0.7rem' }}></i>
+          </button>
+          
+          <Link to="/wishlist" style={{ color: '#f5eeee', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 'bold' }}>
+            {t('wishlist.title') || 'WISHLIST'}
+          </Link>
+          
+          <Link to="/wallet/history" style={{ color: '#f5eeee', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 'bold' }}>
+            {t('nav.wallet') || 'WALLET'}
+          </Link>
+        </div>
+      )}
     </header>
   );
 }

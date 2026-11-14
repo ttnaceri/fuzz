@@ -8,6 +8,7 @@ export default function BottomNav() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isApp, setIsApp] = useState(false);
 
+  // Faqat App (Telegram WebApp / PWA) ichida ko'rinishini aniqlash
   useEffect(() => {
     const checkApp = () => {
       if (typeof window === 'undefined') return false;
@@ -22,6 +23,7 @@ export default function BottomNav() {
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
+  // Agar App bo'lmasa (Web sayt yoki oddiy brauzer) - ko'rinmaydi
   if (!isApp) return null;
 
   const handleNewsClick = () => {
@@ -40,28 +42,28 @@ export default function BottomNav() {
 
   return (
     <>
-      {/* Burger Menu (Ochilganda) */}
+      {/* Menyu (Ochilganda) */}
       {isMenuOpen && (
-        <div style={{ 
-          position: 'fixed', 
+        <div style={{
+          position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
-          bottom: '64px', // Pastdagi NavBar uchun joy qoldiramiz, shunda u ko'rinib turadi
-          backgroundColor: '#100b0a', 
-          zIndex: 9990, // NavBar dan pastroqda turadi
-          display: 'flex', 
-          flexDirection: 'column', 
+          bottom: '64px', // Pastdagi NavBar uchun joy qoldiriladi
+          backgroundColor: '#100b0a',
+          zIndex: 9990,
+          display: 'flex',
+          flexDirection: 'column',
           padding: '2rem',
           overflowY: 'auto'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
             <span style={{ color: '#f5eeee', fontSize: '1.5rem', fontWeight: 'bold' }}>{t('nav.menu')}</span>
-            <button onClick={toggleMenu} style={{ background: 'none', border: 'none', color: '#ed5555', fontSize: '2rem' }}>
+            <button onClick={toggleMenu} style={{ background: 'none', border: 'none', color: '#ed5555', fontSize: '2rem', cursor: 'pointer' }}>
               <i className="fa-solid fa-xmark"></i>
             </button>
           </div>
-          
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             {menuItems.map((item, idx) => (
               <button
@@ -94,9 +96,10 @@ export default function BottomNav() {
               </button>
             ))}
           </div>
-          
+
           <hr style={{ borderColor: '#48201a', width: '100%', margin: '2rem 0' }} />
-          
+
+          {/* Til tanlash */}
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
             <button onClick={() => setLang('uz')} style={{ flex: 1, background: lang === 'uz' ? '#8a1200' : '#241411', border: '1px solid #48201a', color: '#fff', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer' }}>UZ</button>
             <button onClick={() => setLang('ru')} style={{ flex: 1, background: lang === 'ru' ? '#8a1200' : '#241411', border: '1px solid #48201a', color: '#fff', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer' }}>RU</button>
@@ -117,27 +120,29 @@ export default function BottomNav() {
         justifyContent: 'space-around',
         alignItems: 'center',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        zIndex: 9999, // Eng tepada turadi, menyu uni yopa olmaydi
+        zIndex: 9999,
         height: '64px',
       }}>
-        
-        <NavLink to="/" style={({ isActive }) => ({ 
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-          color: isActive ? '#f5eeee' : '#b9a6a2', textDecoration: 'none', fontSize: '0.75rem', flex: 1, height: '100%' 
+
+        {/* 1. HOME */}
+        <NavLink to="/" style={({ isActive }) => ({
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          color: isActive ? '#f5eeee' : '#b9a6a2', textDecoration: 'none', fontSize: '0.75rem', flex: 1, height: '100%'
         })}>
           <i className="fa-solid fa-house" style={{ fontSize: '1.2rem', marginBottom: '4px' }}></i>
           <span>{t('nav.home')}</span>
         </NavLink>
 
-        <NavLink to="/store" style={({ isActive }) => ({ 
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-          color: isActive ? '#f5eeee' : '#b9a6a2', textDecoration: 'none', fontSize: '0.75rem', flex: 1, height: '100%' 
+        {/* 2. GAMES */}
+        <NavLink to="/store" style={({ isActive }) => ({
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          color: isActive ? '#f5eeee' : '#b9a6a2', textDecoration: 'none', fontSize: '0.75rem', flex: 1, height: '100%'
         })}>
           <i className="fa-solid fa-gamepad" style={{ fontSize: '1.2rem', marginBottom: '4px' }}></i>
           <span>{t('nav.store')}</span>
         </NavLink>
 
-        {/* QR SCANNER (Endi boshqalar bilan bir xil chiziqda) */}
+        {/* 3. QR SCANNER (Markazda, boshqalar bilan bir xil chiziqda) */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <button
             onClick={() => navigate('/qr-scan')}
@@ -160,18 +165,24 @@ export default function BottomNav() {
           </button>
         </div>
 
-        <NavLink to="/account" style={({ isActive }) => ({ 
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-          color: isActive ? '#f5eeee' : '#b9a6a2', textDecoration: 'none', fontSize: '0.75rem', flex: 1, height: '100%' 
+        {/* 4. PROFILE */}
+        <NavLink to="/account" style={({ isActive }) => ({
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          color: isActive ? '#f5eeee' : '#b9a6a2', textDecoration: 'none', fontSize: '0.75rem', flex: 1, height: '100%'
         })}>
           <i className="fa-solid fa-user" style={{ fontSize: '1.2rem', marginBottom: '4px' }}></i>
           <span>{t('nav.profile')}</span>
         </NavLink>
 
-        <button onClick={toggleMenu} style={{ 
-          background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', 
-          alignItems: 'center', justifyContent: 'center', color: isMenuOpen ? '#f5eeee' : '#b9a6a2', fontSize: '0.75rem', flex: 1, height: '100%' 
-        }}>
+        {/* 5. MENU (Tepadagi MENU tugmasi ham shu tugmani bosadi) */}
+        <button
+          onClick={toggleMenu}
+          className="bottom-nav__menu-trigger"
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', color: isMenuOpen ? '#f5eeee' : '#b9a6a2', fontSize: '0.75rem', flex: 1, height: '100%'
+          }}
+        >
           <i className={`fa-solid ${isMenuOpen ? 'fa-xmark' : 'fa-bars'}`} style={{ fontSize: '1.2rem', marginBottom: '4px' }}></i>
           <span>{t('nav.menu')}</span>
         </button>

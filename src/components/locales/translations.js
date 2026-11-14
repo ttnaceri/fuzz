@@ -3,6 +3,21 @@ export const translations = {
   // UZBEK
   // ==========================================
   uz: {
+        nav: {
+      home: "Bosh sahifa",
+      store: "Do'kon",
+      news: "Yangiliklar", // <-- QO'SHILDI
+      new: "Yangi",
+      offers: "Takliflar",
+      free: "Bepul",
+      library: "Kutubxona",
+      wallet: "Hamyon",
+      profile: "Profil",
+      editProfile: "Profilni tahrirlash",
+      security: "Xavfsizlik",
+      menu: "Menyu",
+      qrLogin: "QR Login",
+    },
     nav: {
       home: "Bosh sahifa",
       store: "Do'kon",
@@ -321,7 +336,7 @@ export const translations = {
     nav: {
       home: "Главная",
       store: "Магазин",
-      new: "Новинки",
+      news: "Новинки",
       offers: "Скидки",
       free: "Бесплатно",
       library: "Библиотека",
@@ -636,7 +651,7 @@ export const translations = {
     nav: {
       home: "Home",
       store: "Store",
-      new: "New",
+      news: "New",
       offers: "Offers",
       free: "Free",
       library: "Library",

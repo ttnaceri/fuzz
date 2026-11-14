@@ -6,24 +6,37 @@ export default function BottomNav() {
   const navigate = useNavigate();
   const { lang, setLang, t } = useLanguage();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
+  
+  // Dastlabki holat: Faqat App ichida bo'lsa ko'rinadi
+  const [isApp, setIsApp] = useState(false);
 
-  // Ekran o'lchamini kuzatish
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 1024);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const checkApp = () => {
+      if (typeof window === 'undefined') return false;
+      const isTelegram = !!window.Telegram?.WebApp;
+      const isFullscreen = window.matchMedia('(display-mode: fullscreen)').matches;
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      const isMinimalUI = window.matchMedia('(display-mode: minimal-ui)').matches;
+      return isTelegram || isFullscreen || isStandalone || isMinimalUI;
+    };
+
+    setIsApp(checkApp());
   }, []);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
-  // Agar Web (Desktop) bo'lsa, BottomNav ni umuman ko'rsatmaymiz
-  if (!isMobile) return null;
+  // AGAR APP BO'LMASA (Web sayt yoki oddiy brauzer) - HECH NARSA KO'RSATMAYMIZ
+  if (!isApp) return null;
+
+  const handleNewsClick = () => {
+    window.open('https://t.me/updateDevNews', '_blank', 'noopener,noreferrer');
+    toggleMenu();
+  };
 
   // Menyu ichidagi sahifalar
   const menuItems = [
     { name: t('nav.store'), icon: 'fa-gamepad', path: '/store' },
-    { name: t('nav.news') || 'News', icon: 'fa-newspaper', path: '/news' },
+    { name: t('nav.news'), icon: 'fa-newspaper', action: handleNewsClick }, // Telegram havolasi
     { name: t('settings.title'), icon: 'fa-gear', path: '/settings' },
     { name: t('nav.library'), icon: 'fa-book', path: '/library' },
     { name: t('nav.wallet'), icon: 'fa-wallet', path: '/wallet/history' },
@@ -55,7 +68,14 @@ export default function BottomNav() {
             {menuItems.map((item, idx) => (
               <button
                 key={idx}
-                onClick={() => { navigate(item.path); toggleMenu(); }}
+                onClick={() => {
+                  if (item.action) {
+                    item.action();
+                  } else {
+                    navigate(item.path);
+                    toggleMenu();
+                  }
+                }}
                 style={{
                   backgroundColor: '#241411',
                   border: '1px solid #48201a',
@@ -83,7 +103,7 @@ export default function BottomNav() {
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
             <button onClick={() => setLang('uz')} style={{ flex: 1, background: lang === 'uz' ? '#8a1200' : '#241411', border: '1px solid #48201a', color: '#fff', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer' }}>UZ</button>
             <button onClick={() => setLang('ru')} style={{ flex: 1, background: lang === 'ru' ? '#8a1200' : '#241411', border: '1px solid #48201a', color: '#fff', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer' }}>RU</button>
-            <button onClick={() => setLang('en')} style={{ flex: 1, background: lang === 'en' ? '#8a1200' : '#241411', border: '1px solid #48201a', color: '#fff', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer' }}>EN</button>
+            <button onClick={() => setLang('en')} flex={1} style={{ flex: 1, background: lang === 'en' ? '#8a1200' : '#241411', border: '1px solid #48201a', color: '#fff', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer' }}>EN</button>
           </div>
         </div>
       )}
@@ -113,7 +133,7 @@ export default function BottomNav() {
           <span>{t('nav.home')}</span>
         </NavLink>
 
-        {/* 2. GAMES (STORE) */}
+        {/* 2. GAMES */}
         <NavLink to="/store" style={({ isActive }) => ({ 
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
           color: isActive ? '#f5eeee' : '#b9a6a2', textDecoration: 'none', fontSize: '0.75rem', flex: 1, height: '100%' 
@@ -137,7 +157,7 @@ export default function BottomNav() {
               alignItems: 'center',
               justifyContent: 'center',
               position: 'absolute',
-              top: '-20px', // Tepaga chiqib turishi uchun
+              top: '-20px',
               boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
               cursor: 'pointer',
             }}
@@ -156,7 +176,7 @@ export default function BottomNav() {
           <span>{t('nav.profile')}</span>
         </NavLink>
 
-        {/* 5. MENU (Burger) */}
+        {/* 5. MENU */}
         <button onClick={toggleMenu} style={{ 
           background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', 
           alignItems: 'center', justifyContent: 'center', color: '#b9a6a2', fontSize: '0.75rem', flex: 1, height: '100%' 

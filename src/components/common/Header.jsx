@@ -35,7 +35,6 @@ export default function Header() {
     };
   }, []);
 
-  // Menyu ochilganda akkauntlarni yuklash
   useEffect(() => {
     if (isMenuOpen) {
       const accounts = getSavedAccounts() || [];
@@ -61,7 +60,6 @@ export default function Header() {
     navigate('/login');
   };
 
-  // Boshqa akkauntlar ro'yxati (joriydan tashqari)
   const otherAccounts = savedAccounts.filter(a => a.user.id !== user?.id);
 
   return (
@@ -91,20 +89,28 @@ export default function Header() {
 
           {isAuthenticated ? (
             <div style={{ position: 'relative' }} ref={menuRef}>
+              {/* Har doim userning ismi ko'rinadi (Agar admin bo'lsa ham) */}
               <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="btn btn-ghost btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <i className={isAdmin ? 'fa-solid fa-shield' : 'fa-solid fa-user'} />
-                <span className="d-none d-md-inline">{isAdmin ? t('auth.admin') : (user?.username || t('auth.account'))}</span>
+                <span className="d-none d-md-inline">{user?.username || t('auth.account')}</span>
                 <i className="fa-solid fa-caret-down" style={{ fontSize: '0.7rem' }}></i>
               </button>
 
               {isMenuOpen && (
                 <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '0.5rem', backgroundColor: '#241411', border: '1px solid #48201a', borderRadius: '6px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', minWidth: '240px', zIndex: 1000, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                   
+                  {/* Admin bo'lsa, menyuning eng tepasida Admin Panel chiqadi */}
+                  {isAdmin && (
+                    <Link to="/admin" onClick={() => setIsMenuOpen(false)} style={{ padding: '0.8rem 1rem', color: '#43b581', textDecoration: 'none', borderBottom: '1px solid #48201a', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold' }}>
+                      <i className="fa-solid fa-shield-halved" style={{ width: '16px' }}></i> Admin Panel
+                    </Link>
+                  )}
+
                   <Link to={isAdmin ? '/admin' : '/account'} onClick={() => setIsMenuOpen(false)} style={{ padding: '0.8rem 1rem', color: '#f5eeee', textDecoration: 'none', borderBottom: '1px solid #48201a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <i className="fa-solid fa-id-card" style={{ width: '16px' }}></i> Profile
                   </Link>
 
-                  {/* Agar boshqa akkauntlar bo'lsa, ularni ko'rsatamiz va pastda + qo'shamiz */}
+                  {/* Agar boshqa akkauntlar bo'lsa, ularni ko'rsatamiz */}
                   {otherAccounts.length > 0 && (
                     <div style={{ borderBottom: '1px solid #48201a', padding: '0.5rem 0' }}>
                       <div style={{ padding: '0 1rem 0.5rem', fontSize: '0.75rem', color: '#6b524e' }}>Boshqa akkauntlar</div>
@@ -117,7 +123,6 @@ export default function Header() {
                     </div>
                   )}
 
-                  {/* Change Account / Add Account (Agar 1 ta akkaunt bo'lsa ham, bu tugma orqali yangi qo'shiladi) */}
                   <button onClick={handleAddAccount} style={{ padding: '0.8rem 1rem', background: 'transparent', border: 'none', borderBottom: '1px solid #48201a', color: '#43b581', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <i className="fa-solid fa-plus" style={{ width: '16px' }}></i> {otherAccounts.length > 0 ? 'Add Account' : 'Change Account'}
                   </button>

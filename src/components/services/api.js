@@ -15,17 +15,18 @@ function buildUrl(path, params) {
   const base = config.apiBaseUrl ? config.apiBaseUrl.replace(/\/+$/, '') : '';
   const prefix = config.apiPrefix || '';
   let cleanPath = path.startsWith('/') ? path : `/${path}`;
-
+  
+  // Agar path allaqachon /api bilan boshlanmasa, qo'shamiz
   if (!cleanPath.startsWith('/api') && !cleanPath.startsWith(prefix)) {
     cleanPath = `/api${cleanPath}`;
   }
-
+  
   let url = `${base}${cleanPath}`;
-
+  
   if (!base) {
     throw new ApiError('Backend URL manzili sozlanmagan!', { code: 'NO_BACKEND' });
   }
-
+  
   if (params && typeof params === 'object') {
     const usp = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => {
@@ -37,29 +38,16 @@ function buildUrl(path, params) {
   return url;
 }
 
-// MUHIM: Ikkala storage'dan JWT olish
-function getAuthToken() {
-  const local = storage.getAuth();
-  if (local?.token) return local.token;
-
-  const session = storage.getAuthSession();
-  if (session?.token) return session.token;
-
-  return null;
-}
-
 async function request(method, path, { params, body, headers = {} } = {}) {
   const url = buildUrl(path, params);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), config.requestTimeout || 15000);
 
   const finalHeaders = { 'Accept': 'application/json', ...headers };
-  const authToken = getAuthToken();
-  if (authToken && !finalHeaders.Authorization) {
-    finalHeaders.Authorization = `Bearer ${authToken}`;
-  }
-  
+  const authToken = storage.getAuth()?.token;
+  if (authToken && !finalHeaders.Authorization) finalHeaders.Authorization = `Bearer ${authToken}`;
   let finalBody;
+  
   if (body !== undefined) {
     finalHeaders['Content-Type'] = 'application/json';
     finalBody = JSON.stringify(body);

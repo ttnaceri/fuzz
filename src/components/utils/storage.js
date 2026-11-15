@@ -8,7 +8,7 @@ const hasLocal = isBrowser && !!window.localStorage;
 const hasSession = isBrowser && !!window.sessionStorage;
 
 // ==========================================
-// localStorage (doimiy)
+// localStorage (doimiy — brauzer yopilsa ham qoladi)
 // ==========================================
 export function getItem(key, fallback = null) {
   if (!hasLocal) return fallback;
@@ -24,7 +24,7 @@ export function setItem(key, value) {
   if (!hasLocal) return;
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
-  } catch { /* ignore quota errors */ }
+  } catch { /* ignore */ }
 }
 
 export function removeItem(key) {
@@ -35,7 +35,7 @@ export function removeItem(key) {
 }
 
 // ==========================================
-// sessionStorage (vaqtinchalik)
+// sessionStorage (vaqtinchalik — brauzer yopilganda o'chadi)
 // ==========================================
 export function getSessionItem(key, fallback = null) {
   if (!hasSession) return fallback;
@@ -90,10 +90,11 @@ export const storage = {
 };
 
 // ==========================================
-// Ko'p akkauntlarni boshqarish
+// YANGI: Ko'p akkauntlarni boshqarish
 // ==========================================
 const ACCOUNTS_KEY = 'fuzz_accounts';
 
+// Barcha saqlangan akkauntlarni olish
 export function getSavedAccounts() {
   try {
     const data = localStorage.getItem(ACCOUNTS_KEY);
@@ -103,6 +104,7 @@ export function getSavedAccounts() {
   }
 }
 
+// Yangi akkauntni ro'yxatga qo'shish (yoki yangilash)
 export function saveAccount(user, token) {
   if (!user || !token) return;
   try {
@@ -116,11 +118,13 @@ export function saveAccount(user, token) {
       accounts.push(newAccount);
     }
     
+    // Eng oxirgi ishlatilganini birinchi qilib saqlaymiz (maksimal 5 ta)
     accounts.sort((a, b) => b.lastUsed - a.lastUsed);
     localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts.slice(0, 5)));
   } catch { /* ignore */ }
 }
 
+// Akkauntni ro'yxatdan o'chirish
 export function removeAccount(userId) {
   try {
     const accounts = getSavedAccounts().filter(a => a.user.id !== userId);
@@ -128,6 +132,7 @@ export function removeAccount(userId) {
   } catch { /* ignore */ }
 }
 
+// Barcha akkauntlarni tozalash
 export function clearAllAccounts() {
   localStorage.removeItem(ACCOUNTS_KEY);
 }

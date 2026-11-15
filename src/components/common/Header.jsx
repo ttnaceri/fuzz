@@ -89,19 +89,13 @@ export default function Header() {
 
           {isAuthenticated ? (
             <div style={{ position: 'relative' }} ref={menuRef}>
+              {/* Har doim userning ismi ko'rinadi (Agar admin bo'lsa ham) */}
               <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="btn btn-ghost btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                
-                {/* QALQON O'RNIGA RASM */}
-                {user?.avatar_url ? (
-                  <img src={user.avatar_url} alt="Avatar" style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }} />
-                ) : (
-                  <i className={isAdmin ? 'fa-solid fa-shield' : 'fa-solid fa-user'} />
-                )}
-                
+                <i className={isAdmin ? 'fa-solid fa-shield' : 'fa-solid fa-user'} />
                 <span className="d-none d-md-inline">{user?.username || t('auth.account')}</span>
                 <i className="fa-solid fa-caret-down" style={{ fontSize: '0.7rem' }}></i>
               </button>
-              
+
               {isMenuOpen && (
                 <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '0.5rem', backgroundColor: '#241411', border: '1px solid #48201a', borderRadius: '6px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', minWidth: '240px', zIndex: 1000, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                   

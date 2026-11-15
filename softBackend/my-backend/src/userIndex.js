@@ -33,27 +33,6 @@ userApp.get('/users/:userId/owns/:gameId', async (c) => {
   } catch (err) { return c.json({ owned: false }); }
 });
 
-// ==========================================
-// YANGI: USER AVATARINI YANGILASH
-// ==========================================
-userApp.put('/users/:userId/avatar', async (c) => {
-  try {
-    const userId = c.req.param('userId');
-    const me = await getAuthUser(c);
-    if (me.id !== userId && !isAdminRole(me.role)) return c.json({ error: 'Ruxsat yo\'q' }, 403);
-
-    const { avatarUrl } = await c.req.json();
-    if (!avatarUrl) return c.json({ error: 'Rasm URL kerak' }, 400);
-
-    await c.env.DB.prepare('UPDATE users SET avatar_url = ? WHERE id = ?')
-      .bind(avatarUrl, userId).run();
-
-    return c.json({ success: true, avatarUrl });
-  } catch (err) {
-    return c.json({ error: 'Xato: ' + err.message }, 500);
-  }
-});
-
 // FAQAT USERNAME'NI YANGILASH
 userApp.put('/users/:userId/username', async (c) => {
   try {

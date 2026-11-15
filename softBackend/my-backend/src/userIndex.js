@@ -291,6 +291,48 @@ userApp.post('/games/track-time', async (c) => {
   } catch (err) { return c.json({ error: 'Xato' }, 500); }
 });
 
+// Public Games (Filterlar bilan)
+userApp.get('/games', async (c) => {
+  try {
+    const companyId = c.req.query('companyId');
+    const filter = c.req.query('filter'); // 'new', 'discount', 'free', 'popular'
+    const genre = c.req.query('genre');
+    
+    let query = 'SELECT * FROM games WHERE available = 1';
+    let params = [];
+
+    if (companyId) { query += ' AND company_id = ?'; params.push(companyId); }
+    
+    if (genre) { query += ' AND genre LIKE ?'; params.push(`%${genre}%`); }
+
+    // Filtrlar
+    if (filter === 'new') {
+      query += ' ORDER BY created_at DESC LIMIT 20';
+    } else if (filter === 'discount') {
+      query += ' AND discount > 0 ORDER BY discount DESC';
+    } else if (filter === 'free') {
+      query += ' AND (price = 0 OR discount = 100) ORDER BY created_at DESC';
+    } else if (filter === 'popular') {
+      // Eng ko'p o'ynalgan (game_stats dan)
+      query = `
+        SELECT g.* FROM games g
+        LEFT JOIN (
+          SELECT game_id, SUM(total_seconds) as total_time 
+          FROM game_stats 
+          GROUP BY game_id
+        ) stats ON g.id = stats.game_id
+        WHERE g.available = 1
+        ORDER BY stats.total_time DESC LIMIT 20
+      `;
+    } else {
+      query += ' ORDER BY created_at DESC';
+    }
+
+    const games = await c.env.DB.prepare(query).bind(...params).all();
+    return c.json({ games: (games.results || []).map(stripUrl) });
+  } catch (err) { return c.json({ games: [] }); }
+});
+
 // Public Games, Companies, Events
 userApp.get('/games', async (c) => {
   try {

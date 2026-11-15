@@ -30,8 +30,8 @@ export async function getAuthUser(c) {
     if (!payload?.sub) return null;
 
     const user = await c.env.DB.prepare(
-      'SELECT id, username, email, role, balance, telegram_id, language, created_at FROM users WHERE id = ?'
-    ).bind(payload.sub).first();
+  'SELECT id, username, email, role, balance, telegram_id, language, avatar_url, created_at FROM users WHERE id = ?'
+).bind(payload.sub).first();
 
     if (!user) return null;
     if (user.role === 'banned') return null;

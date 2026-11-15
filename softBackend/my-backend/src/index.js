@@ -36,7 +36,7 @@ app.use('/fuzz/api/init-db', async (c, next) => {
 
 const MIN_PASSWORD = 6;
 // YANGILANDI: email qo'shildi
-const publicUser = (u) => ({ id: u.id, username: u.username, email: u.email, role: u.role, balance: round2(u.balance || 0) });
+const publicUser = (u) => ({ id: u.id, username: u.username, email: u.email, role: u.role, balance: round2(u.balance || 0), avatar_url: u.avatar_url });
 
 const BANNED_WORDS = ['fuck', 'xxx', 'porn', 'sex', 'shit', 'bitch'];
 const isNameValid = (name) => {
@@ -152,11 +152,11 @@ app.get('/fuzz/api/telegram/status', async (c) => {
 // ==========================================
 app.get('/fuzz/api/init-db', async (c) => {
   try {
-    await c.env.DB.prepare(`
+        await c.env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY, username TEXT NOT NULL, email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL, role TEXT DEFAULT 'user', balance REAL DEFAULT 0,
-        telegram_id TEXT, language TEXT DEFAULT 'uz', created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        telegram_id TEXT, language TEXT DEFAULT 'uz', avatar_url TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `).run();
 

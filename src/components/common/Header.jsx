@@ -8,28 +8,18 @@ import SearchBar from './SearchBar.jsx';
 import useToast from '../hooks/useToast.js';
 
 export default function Header() {
-  const { user, isAuthenticated, isAdmin, logout, signOut, switchAccount, getSavedAccounts } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout, switchAccount, getSavedAccounts } = useAuth();
   const { count } = useCart();
   const { lang, setLang, t } = useLanguage();
   const { info } = useToast();
   const navigate = useNavigate();
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
-  const [isApp, setIsApp] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [savedAccounts, setSavedAccounts] = useState([]);
   const menuRef = useRef(null);
 
   useEffect(() => {
-    const checkApp = () => {
-      const isTelegram = !!window.Telegram?.WebApp;
-      const isFullscreen = window.matchMedia('(display-mode: fullscreen)').matches;
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-      const isMinimalUI = window.matchMedia('(display-mode: minimal-ui)').matches;
-      return isTelegram || isFullscreen || isStandalone || isMinimalUI;
-    };
-    setIsApp(checkApp());
-
     const handleResize = () => setIsMobile(window.innerWidth <= 1024);
     window.addEventListener('resize', handleResize);
 
@@ -45,31 +35,34 @@ export default function Header() {
     };
   }, []);
 
-  // Menyu ochilganda saqlangan akkauntlarni yuklash
+  // Menyu ochilganda akkauntlarni yuklash
   useEffect(() => {
     if (isMenuOpen) {
-      setSavedAccounts(getSavedAccounts() || []);
+      const accounts = getSavedAccounts() || [];
+      setSavedAccounts(accounts);
     }
   }, [isMenuOpen, getSavedAccounts]);
 
   const handleSwitchAccount = (account) => {
     switchAccount(account.user, account.token);
     setIsMenuOpen(false);
-    // Agar admin bo'lsa adminga, user bo'lsa accountga
     navigate(account.user.role === 'admin' || account.user.role === 'super_admin' ? '/admin' : '/account');
   };
 
   const handleAddAccount = () => {
-    logout(); // Hozirgi sessiyani yopamiz, lekin localStorage da qoladi
+    logout(); // Hozirgi sessiyani yopamiz
     setIsMenuOpen(false);
     navigate('/login');
   };
 
-  const handleSignOutAll = async () => {
-    await signOut(); // Barcha akkauntlarni o'chiradi
+  const handleSignOut = () => {
+    logout();
     setIsMenuOpen(false);
     navigate('/login');
   };
+
+  // Boshqa akkauntlar ro'yxati (joriydan tashqari)
+  const otherAccounts = savedAccounts.filter(a => a.user.id !== user?.id);
 
   return (
     <header className="header">
@@ -111,11 +104,11 @@ export default function Header() {
                     <i className="fa-solid fa-id-card" style={{ width: '16px' }}></i> Profile
                   </Link>
 
-                  {/* Saqlangan boshqa akkauntlar ro'yxati */}
-                  {savedAccounts.filter(a => a.user.id !== user?.id).length > 0 && (
+                  {/* Agar boshqa akkauntlar bo'lsa, ularni ko'rsatamiz va pastda + qo'shamiz */}
+                  {otherAccounts.length > 0 && (
                     <div style={{ borderBottom: '1px solid #48201a', padding: '0.5rem 0' }}>
                       <div style={{ padding: '0 1rem 0.5rem', fontSize: '0.75rem', color: '#6b524e' }}>Boshqa akkauntlar</div>
-                      {savedAccounts.filter(a => a.user.id !== user?.id).map(acc => (
+                      {otherAccounts.map(acc => (
                         <button key={acc.user.id} onClick={() => handleSwitchAccount(acc)} style={{ padding: '0.6rem 1rem', background: 'transparent', border: 'none', color: '#b9a6a2', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
                           <i className="fa-solid fa-user-circle" style={{ width: '16px' }}></i>
                           {acc.user.username}
@@ -124,12 +117,13 @@ export default function Header() {
                     </div>
                   )}
 
+                  {/* Change Account / Add Account (Agar 1 ta akkaunt bo'lsa ham, bu tugma orqali yangi qo'shiladi) */}
                   <button onClick={handleAddAccount} style={{ padding: '0.8rem 1rem', background: 'transparent', border: 'none', borderBottom: '1px solid #48201a', color: '#43b581', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <i className="fa-solid fa-plus" style={{ width: '16px' }}></i> Change Account (Add)
+                    <i className="fa-solid fa-plus" style={{ width: '16px' }}></i> {otherAccounts.length > 0 ? 'Add Account' : 'Change Account'}
                   </button>
 
-                  <button onClick={handleSignOutAll} style={{ padding: '0.8rem 1rem', background: 'transparent', border: 'none', color: '#ed5555', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <i className="fa-solid fa-right-from-bracket" style={{ width: '16px' }}></i> Sign Out (All)
+                  <button onClick={handleSignOut} style={{ padding: '0.8rem 1rem', background: 'transparent', border: 'none', color: '#ed5555', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <i className="fa-solid fa-right-from-bracket" style={{ width: '16px' }}></i> Sign Out
                   </button>
                 </div>
               )}

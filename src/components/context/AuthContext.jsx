@@ -125,7 +125,7 @@ export function AuthProvider({ children }) {
     return normalized;
   }, []);
 
-  // Akkauntdan chiqish (barcha akkauntlarni o'chirmasdan)
+  // Akkauntdan chiqish (barcha akkauntlarni o'chirmasdan, faqat sessiyani yopish)
   const logout = useCallback(async () => {
     try { await authService.logout(); } catch (e) {}
     setUser(null);
@@ -142,11 +142,10 @@ export function AuthProvider({ children }) {
     saveAccount(normalized, accountToken); // Oxirgi ishlatilganini yuqoriga chiqarish
   }, []);
 
-  // Butunlay chiqish (akkauntni ro'yxatdan o'chirish)
-  const signOut = useCallback(async () => {
-    if (user?.id) removeAccount(user.id);
-    await logout();
-  }, [user, logout]);
+  // Akkauntni butunlay o'chirish (agar kerak bo'lsa)
+  const removeSavedAccount = useCallback((userId) => {
+    removeAccount(userId);
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -157,13 +156,13 @@ export function AuthProvider({ children }) {
       isOffline,
       login,
       logout,
-      signOut,
       switchAccount,
+      removeSavedAccount,
       getSavedAccounts,
       refreshUser,
       setSession,
     }),
-    [user, loading, isOffline, login, logout, signOut, switchAccount, refreshUser, setSession]
+    [user, loading, isOffline, login, logout, switchAccount, removeSavedAccount, refreshUser, setSession]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

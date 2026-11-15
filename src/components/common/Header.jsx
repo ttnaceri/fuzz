@@ -87,7 +87,6 @@ export default function Header() {
             {count > 0 && <span className="header__badge">{count}</span>}
           </Link>
 
-          // ... (oldingi importlar va state lar)
           {isAuthenticated ? (
             <div style={{ position: 'relative' }} ref={menuRef}>
               <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="btn btn-ghost btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

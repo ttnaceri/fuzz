@@ -88,3 +88,51 @@ export const storage = {
   getPrefs: () => getItem(STORAGE_KEYS.preferences, {}),
   setPrefs: (v) => setItem(STORAGE_KEYS.preferences, v),
 };
+
+// ==========================================
+// YANGI: Ko'p akkauntlarni boshqarish
+// ==========================================
+const ACCOUNTS_KEY = 'fuzz_accounts';
+
+// Barcha saqlangan akkauntlarni olish
+export function getSavedAccounts() {
+  try {
+    const data = localStorage.getItem(ACCOUNTS_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Yangi akkauntni ro'yxatga qo'shish (yoki yangilash)
+export function saveAccount(user, token) {
+  if (!user || !token) return;
+  try {
+    const accounts = getSavedAccounts();
+    const existingIndex = accounts.findIndex(a => a.user.id === user.id);
+    const newAccount = { user, token, lastUsed: Date.now() };
+    
+    if (existingIndex >= 0) {
+      accounts[existingIndex] = newAccount;
+    } else {
+      accounts.push(newAccount);
+    }
+    
+    // Eng oxirgi ishlatilganini birinchi qilib saqlaymiz (maksimal 5 ta)
+    accounts.sort((a, b) => b.lastUsed - a.lastUsed);
+    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts.slice(0, 5)));
+  } catch { /* ignore */ }
+}
+
+// Akkauntni ro'yxatdan o'chirish
+export function removeAccount(userId) {
+  try {
+    const accounts = getSavedAccounts().filter(a => a.user.id !== userId);
+    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+  } catch { /* ignore */ }
+}
+
+// Barcha akkauntlarni tozalash
+export function clearAllAccounts() {
+  localStorage.removeItem(ACCOUNTS_KEY);
+}

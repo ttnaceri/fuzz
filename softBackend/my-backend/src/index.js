@@ -35,8 +35,14 @@ app.use('/fuzz/api/init-db', async (c, next) => {
 });
 
 const MIN_PASSWORD = 6;
-// YANGILANDI: email qo'shildi
-const publicUser = (u) => ({ id: u.id, username: u.username, email: u.email, role: u.role, balance: round2(u.balance || 0), avatar_url: u.avatar_url });
+const publicUser = (u) => ({ 
+  id: u.id, 
+  username: u.username, 
+  email: u.email, 
+  role: u.role, 
+  balance: round2(u.balance || 0),
+  avatar_url: u.avatar_url 
+});
 
 const BANNED_WORDS = ['fuck', 'xxx', 'porn', 'sex', 'shit', 'bitch'];
 const isNameValid = (name) => {
@@ -85,7 +91,7 @@ async function answerCallbackQuery(botToken, callbackQueryId, text = null) {
 app.get('/fuzz/api/health', (c) => c.json({ status: 'ok', time: new Date().toISOString() }));
 
 // ==========================================
-// USD/UZS KURSI (Backend orqali olish)
+// USD/UZS KURSI
 // ==========================================
 let __rateCache = { value: null, fetchedAt: 0 };
 const RATE_CACHE_TTL_MS = 60 * 60 * 1000;
@@ -97,7 +103,6 @@ app.get('/fuzz/api/rates/usd', async (c) => {
       return c.json({ usd_uzs: __rateCache.value, cached: true });
     }
 
-    // Vercel'dagi yoki Cloudflare'dagi API kalitni olamiz
     const apiKey = c.env.EXCHANGE_RATE_API_KEY;
     if (!apiKey) {
       return c.json({ error: "EXCHANGE_RATE_API_KEY sozlanmagan" }, 500);
@@ -119,7 +124,7 @@ app.get('/fuzz/api/rates/usd', async (c) => {
 });
 
 // ==========================================
-// PUBLIC STARS RATES (frontend uchun)
+// PUBLIC STARS RATES
 // ==========================================
 app.get('/fuzz/api/stars-rates', async (c) => {
   try {
@@ -152,7 +157,7 @@ app.get('/fuzz/api/telegram/status', async (c) => {
 // ==========================================
 app.get('/fuzz/api/init-db', async (c) => {
   try {
-        await c.env.DB.prepare(`
+    await c.env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY, username TEXT NOT NULL, email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL, role TEXT DEFAULT 'user', balance REAL DEFAULT 0,
@@ -176,16 +181,11 @@ app.get('/fuzz/api/init-db', async (c) => {
     `).run();
 
     await c.env.DB.prepare(`
-  CREATE TABLE IF NOT EXISTS events (
-    id TEXT PRIMARY KEY, 
-    title TEXT, 
-    title_en TEXT,
-    title_ru TEXT,
-    title_uz TEXT,
-    image TEXT, link_url TEXT,
-    start_date DATETIME, end_date DATETIME, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-`).run();
+      CREATE TABLE IF NOT EXISTS events (
+        id TEXT PRIMARY KEY, title TEXT, title_en TEXT, title_ru TEXT, title_uz TEXT,
+        image TEXT, link_url TEXT, start_date DATETIME, end_date DATETIME, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `).run();
 
     await c.env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS user_library (
@@ -418,7 +418,7 @@ app.post('/fuzz/api/auth/register', async (c) => {
 });
 
 // ==========================================
-// CONSOLE COMMANDS (TUZATILGAN KILL)
+// CONSOLE COMMANDS
 // ==========================================
 app.post('/fuzz/api/admin/console', async (c) => {
   try {
@@ -450,7 +450,6 @@ app.post('/fuzz/api/admin/console', async (c) => {
           if (user.role === 'admin' || user.role === 'super_admin') {
             return c.json({ error: 'Adminni o\'chirib bo\'lmaydi!' }, 403);
           }
-          // Avval unga tegishli barcha ma'lumotlarni o'chiramiz
           await c.env.DB.batch([
             c.env.DB.prepare('DELETE FROM user_library WHERE user_id = ?').bind(user.id),
             c.env.DB.prepare('DELETE FROM user_wishlist WHERE user_id = ?').bind(user.id),
@@ -535,7 +534,7 @@ app.get('/fuzz/api/payment-methods', async (c) => {
 });
 
 // ==========================================
-// UZUM CARD MA'LUMOTLARINI QAYTARISH
+// UZUM CARD
 // ==========================================
 app.get('/fuzz/api/payment/uzum-card', async (c) => {
   try {
@@ -556,7 +555,6 @@ app.get('/fuzz/api/payment/uzum-card', async (c) => {
     return c.json({ error: 'Server xatosi: ' + err.message }, 500);
   }
 });
-
 
 // ==========================================
 // PUBLIC BUNDLES
@@ -684,8 +682,6 @@ app.post('/fuzz/telegram/webhook', async (c) => {
           });
           return c.json({ ok: true });
         }
-
-        
 
         await sendTelegramMessage(
           BOT_TOKEN, chatId,
@@ -822,7 +818,7 @@ app.route('/fuzz/api', resetAuth);
 // ==========================================
 userApp.post('/payment-request', async (c) => {
   try {
-    const me = await getAuthUser(c); // JWT orqali userni olamiz
+    const me = await getAuthUser(c);
     const { amount_uzs } = await c.req.json();
 
     if (!amount_uzs || Number(amount_uzs) <= 0) {

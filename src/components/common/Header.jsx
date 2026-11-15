@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth.js';
 import { useCart } from '../context/useCart.js';
@@ -16,6 +16,8 @@ export default function Header() {
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
   const [isApp, setIsApp] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     const checkApp = () => {
@@ -30,35 +32,44 @@ export default function Header() {
 
     const handleResize = () => setIsMobile(window.innerWidth <= 1024);
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+
+    // Tashqariga bosilganda menyuni yopish
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   const handleLogout = () => {
     logout();
+    setIsMenuOpen(false);
     navigate('/login');
   };
 
-  // Mobil menyuni ochish uchun (Steam'dagi kabi)
-  const handleOpenMobileMenu = () => {
-    // Pastdagi BottomNav dagi Burger tugmasini bosish effektini berish
-    const menuBtn = document.querySelector('.bottom-nav__menu-trigger');
-    if (menuBtn) menuBtn.click();
+  const handleChangeAccount = () => {
+    logout(); // Hozircha chiqib, loginga o'tamiz
+    setIsMenuOpen(false);
+    navigate('/login');
   };
 
   return (
     <header className="header">
       <div className="container header__inner" style={{ gap: '1rem' }}>
         
-        {/* Logo */}
         <Link to="/" className="header__brand" style={{ flexShrink: 0 }}>
           <img src="/image/logo.png" alt="Fuzz logo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           <span>Fuzz</span>
         </Link>
 
         {!isMobile && <Navigation />}
-        
         <div style={{ flex: 1 }}></div>
-        
         {!isMobile && <SearchBar />}
 
         <div className="header__actions" style={{ marginLeft: '1rem', flexShrink: 0 }}>
@@ -72,56 +83,81 @@ export default function Header() {
             </button>
           )}
 
+          {!isMobile && !isApp && (
+            <button
+              onClick={() => info(t('header.installHint'))}
+              className="btn btn-secondary btn-sm"
+              style={{ borderColor: '#8a1200', color: '#f5eeee', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <i className="fa-solid fa-download" style={{ color: '#8a1200' }} />
+              <span>{t('header.download')}</span>
+            </button>
+          )}
+
           <Link to="/cart" className="header__icon-btn">
             <i className="fa-solid fa-cart-shopping" />
             {count > 0 && <span className="header__badge">{count}</span>}
           </Link>
 
           {isAuthenticated ? (
-            <>
-              <Link to={isAdmin ? '/admin' : '/account'} className="btn btn-ghost btn-sm">
+            <div style={{ position: 'relative' }} ref={menuRef}>
+              {/* User/Admin tugmasi - bosilganda menyu ochiladi */}
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="btn btn-ghost btn-sm"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
                 <i className={isAdmin ? 'fa-solid fa-shield' : 'fa-solid fa-user'} />
                 <span className="d-none d-md-inline">
                   {isAdmin ? t('auth.admin') : (user?.username || t('auth.account'))}
                 </span>
-              </Link>
-              <button className="btn btn-ghost btn-sm" onClick={handleLogout} title={t('auth.logout')}>
-                <i className="fa-solid fa-right-from-bracket" />
+                <i className="fa-solid fa-caret-down" style={{ fontSize: '0.7rem' }}></i>
               </button>
-            </>
+
+              {/* Dropdown menyu */}
+              {isMenuOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '0.5rem',
+                  backgroundColor: '#241411',
+                  border: '1px solid #48201a',
+                  borderRadius: '6px',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+                  minWidth: '200px',
+                  zIndex: 1000,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden'
+                }}>
+                  <Link 
+                    to={isAdmin ? '/admin' : '/account'} 
+                    onClick={() => setIsMenuOpen(false)}
+                    style={{ padding: '0.8rem 1rem', color: '#f5eeee', textDecoration: 'none', borderBottom: '1px solid #48201a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                  >
+                    <i className="fa-solid fa-id-card" style={{ width: '16px' }}></i> Profile
+                  </Link>
+                  <button 
+                    onClick={handleChangeAccount}
+                    style={{ padding: '0.8rem 1rem', background: 'transparent', border: 'none', borderBottom: '1px solid #48201a', color: '#f5eeee', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                  >
+                    <i className="fa-solid fa-users" style={{ width: '16px' }}></i> Change Account
+                  </button>
+                  <button 
+                    onClick={handleLogout}
+                    style={{ padding: '0.8rem 1rem', background: 'transparent', border: 'none', color: '#ed5555', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                  >
+                    <i className="fa-solid fa-right-from-bracket" style={{ width: '16px' }}></i> Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <Link to="/login" className="btn btn-ghost btn-sm">{t('auth.login')}</Link>
           )}
         </div>
       </div>
-
-      {/* Steam uslubidagi Mobil gorizontal menyu */}
-      {isMobile && isAuthenticated && (
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          gap: '2rem', 
-          padding: '0.5rem 1rem', 
-          borderTop: '1px solid #48201a',
-          backgroundColor: '#19100e'
-        }}>
-          <button 
-            onClick={handleOpenMobileMenu} 
-            style={{ background: 'none', border: 'none', color: '#f5eeee', fontSize: '0.9rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer' }}
-          >
-            {t('nav.menu')} <i className="fa-solid fa-chevron-down" style={{ fontSize: '0.7rem' }}></i>
-          </button>
-          
-          <Link to="/wishlist" style={{ color: '#f5eeee', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 'bold' }}>
-            {t('wishlist.title') || 'WISHLIST'}
-          </Link>
-          
-          <Link to="/wallet/history" style={{ color: '#f5eeee', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 'bold' }}>
-            {t('nav.wallet') || 'WALLET'}
-          </Link>
-        </div>
-      )}
     </header>
   );
 }

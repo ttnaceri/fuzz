@@ -54,12 +54,12 @@ export default function AdminEditUser() {
   return (
     <div>
       <h1 style={{ color: '#f5eeee', marginBottom: '1.5rem' }}>Foydalanuvchini Tahrirlash</h1>
-      
+
       <form onSubmit={handleSearch} style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-        <input 
-          type="text" 
-          value={query} 
-          onChange={(e) => setQuery(e.target.value)} 
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
           placeholder="Username, Email yoki Telegram ID orqali qidirish..."
           style={{ flex: 1, padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }}
         />
@@ -86,7 +86,7 @@ export default function AdminEditUser() {
       {selectedUser && (
         <div style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', border: '1px solid #48201a', maxWidth: '600px' }}>
           <h3 style={{ color: '#f5eeee', marginBottom: '1.5rem' }}>Tahrirlash: {selectedUser.username}</h3>
-          
+
           <div style={{ marginBottom: '1rem' }}>
             <label style={{ color: '#b9a6a2', fontSize: '0.8rem', marginBottom: '0.3rem', display: 'block' }}>Username</label>
             <input type="text" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />

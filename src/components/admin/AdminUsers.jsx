@@ -29,6 +29,7 @@ export default function AdminUsers() {
         </thead>
         <tbody>
           {users.map(u => (
+            // u.id faqat React key uchun ishlatiladi, foydalanuvchiga ko'rinmaydi
             <tr key={u.id} style={{ borderBottom: '1px solid #48201a', color: '#f5eeee' }}>
               <td style={{ padding: '1rem' }}>{u.username}</td>
               <td style={{ padding: '1rem' }}>{u.email}</td>

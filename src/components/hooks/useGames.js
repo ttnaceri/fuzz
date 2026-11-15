@@ -11,12 +11,8 @@ export default function useGames(options = {}) {
     setLoading(true);
     setError(null);
     try {
-      const params = {};
-      if (filter) params.filter = filter;
-      if (genre) params.genre = genre;
-      if (companyId) params.companyId = companyId;
-
-      const data = await gameService.getGames(params);
+      // gameService.getAllGames ga filterlarni uzatamiz
+      const data = await gameService.getAllGames({ filter, genre, companyId });
       setGames(data || []);
     } catch (err) {
       setError(err);
@@ -25,7 +21,9 @@ export default function useGames(options = {}) {
     }
   }, [filter, genre, companyId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   return { games, loading, error, reload: load };
 }

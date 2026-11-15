@@ -176,11 +176,16 @@ app.get('/fuzz/api/init-db', async (c) => {
     `).run();
 
     await c.env.DB.prepare(`
-      CREATE TABLE IF NOT EXISTS events (
-        id TEXT PRIMARY KEY, title TEXT NOT NULL, image TEXT, link_url TEXT,
-        start_date DATETIME, end_date DATETIME, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-    `).run();
+  CREATE TABLE IF NOT EXISTS events (
+    id TEXT PRIMARY KEY, 
+    title TEXT, 
+    title_en TEXT,
+    title_ru TEXT,
+    title_uz TEXT,
+    image TEXT, link_url TEXT,
+    start_date DATETIME, end_date DATETIME, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`).run();
 
     await c.env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS user_library (

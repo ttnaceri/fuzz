@@ -224,14 +224,42 @@ adminApp.get('/admin/events', async (c) => {
 
 adminApp.post('/admin/events', async (c) => {
   try {
-    const { title, image, link_url, start_date, end_date } = await c.req.json();
-    if (!title || !start_date || !end_date) return c.json({ error: 'Barcha maydonlarni to\'ldiring!' }, 400);
+    const { title, title_en, title_ru, title_uz, image, link_url, start_date, end_date } = await c.req.json();
+    if (!start_date || !end_date) return c.json({ error: 'Boshlanish va tugash vaqtini kiriting!' }, 400);
+    
     const id = crypto.randomUUID();
     const safeImage = (image && image.length > 2000) ? image.substring(0, 2000) : (image || '');
-    await c.env.DB.prepare('INSERT INTO events (id, title, image, link_url, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?)')
-      .bind(id, title, safeImage, link_url || '', start_date, end_date).run();
+    
+    await c.env.DB.prepare(`
+      INSERT INTO events (id, title, title_en, title_ru, title_uz, image, link_url, start_date, end_date) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(id, title || title_uz || title_en, title_en || '', title_ru || '', title_uz || '', safeImage, link_url || '', start_date, end_date).run();
+    
     return c.json({ message: "Event qo'shildi!", id }, 201);
-  } catch (err) { return c.json({ error: 'Server xatosi' }, 500); }
+  } catch (err) { return c.json({ error: 'Server xatosi: ' + err.message }, 500); }
+});
+
+adminApp.put('/admin/events/:id', async (c) => {
+  try {
+    const { title_en, title_ru, title_uz, image, link_url, start_date, end_date } = await c.req.json();
+    const id = c.req.param('id');
+    const safeImage = (image && image.length > 2000) ? image.substring(0, 2000) : (image || '');
+    
+    await c.env.DB.prepare(`
+      UPDATE events 
+      SET title_en = ?, title_ru = ?, title_uz = ?, title = ?, image = ?, link_url = ?, start_date = ?, end_date = ? 
+      WHERE id = ?
+    `).bind(title_en || '', title_ru || '', title_uz || '', title_uz || title_en || 'Event', safeImage, link_url || '', start_date, end_date, id).run();
+    
+    return c.json({ success: true });
+  } catch (err) { return c.json({ error: 'Server xatosi: ' + err.message }, 500); }
+});
+
+adminApp.delete('/admin/events/:id', async (c) => {
+  try {
+    await c.env.DB.prepare('DELETE FROM events WHERE id = ?').bind(c.req.param('id')).run();
+    return c.json({ success: true });
+  } catch (err) { return c.json({ error: 'Xato: ' + err.message }, 500); }
 });
 
 // ==========================================

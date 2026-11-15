@@ -11,7 +11,7 @@ import { api } from '../services/api.js';
 export default function HomePage() {
   const { games, loading, error, reload } = useGames();
   const { addItem } = useCart();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage(); // lang ni oldik
 
   // Eventlarni yuklash
   const [events, setEvents] = useState([]);
@@ -37,47 +37,59 @@ export default function HomePage() {
       {!loadingEvents && events.length > 0 && (
         <section className="section" style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {events.map((event) => (
-              <div
-                key={event.id}
-                style={{
-                  position: 'relative',
-                  width: '100%',
-                  height: 'auto',
-                  borderRadius: '8px',
-                  overflow: 'hidden',
-                  border: '1px solid #48201a',
-                  backgroundColor: '#241411',
-                }}
-              >
-                {/* Agar event havolasi bo'lsa, rasmni bosganda o'tadi */}
-                <Link to={event.link_url || '#'} target={event.link_url?.startsWith('http') ? '_blank' : '_self'} style={{ display: 'block' }}>
-                  <img
-                    src={event.image}
-                    alt={event.title}
-                    style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'cover' }}
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  />
-                  {/* Rasm ustidagi yozuv */}
-                  <div style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    padding: '2rem 1.5rem 1rem',
-                    background: 'linear-gradient(to top, rgba(16, 11, 10, 0.95) 0%, rgba(16, 11, 10, 0) 100%)',
-                    color: '#f5eeee',
-                  }}>
-                    <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold' }}>{event.title}</h3>
-                  </div>
-                </Link>
-              </div>
-            ))}
+            {events.map((event) => {
+              // Tanlangan tilga qarab event nomini aniqlash
+              const displayTitle = 
+                lang === 'ru' ? (event.title_ru || event.title || 'Событие') : 
+                lang === 'en' ? (event.title_en || event.title || 'Event') : 
+                (event.title_uz || event.title || 'Tadbir');
+
+              return (
+                <div
+                  key={event.id}
+                  style={{
+                    position: 'relative',
+                    width: '100%',
+                    height: 'auto',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    border: '1px solid #48201a',
+                    backgroundColor: '#241411',
+                  }}
+                >
+                  <Link 
+                    to={event.link_url || '#'} 
+                    target={event.link_url?.startsWith('http') ? '_blank' : '_self'} 
+                    style={{ display: 'block' }}
+                  >
+                    <img
+                      src={event.image}
+                      alt={displayTitle}
+                      style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'cover' }}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                    
+                    {/* Rasm ustidagi qoraygan fon va yozuv */}
+                    <div style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      padding: '2rem 1.5rem 1rem',
+                      background: 'linear-gradient(to top, rgba(16, 11, 10, 0.95) 0%, rgba(16, 11, 10, 0) 100%)',
+                      color: '#f5eeee',
+                    }}>
+                      <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold' }}>{displayTitle}</h3>
+                    </div>
+                  </Link>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
 
-      {/* Hero Section (Standart) */}
+      {/* Hero Section (Faqat eventlar bo'lmasa ko'rinadi) */}
       {events.length === 0 && (
         <section className="hero">
           <div className="hero__content">
@@ -113,7 +125,7 @@ export default function HomePage() {
           <div className="state" style={{ minHeight: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b9a6a2' }}>
             <div style={{ textAlign: 'center' }}>
               <i className="fa-solid fa-gamepad" style={{ fontSize: '2rem', marginBottom: '1rem', color: '#48201a' }}></i>
-              <p>Hozircha o'yinlar yo'q. Admin panel orqali o'yin qo'shing.</p>
+              <p>{t('home.noGames') || "Hozircha o'yinlar yo'q. Admin panel orqali o'yin qo'shing."}</p>
             </div>
           </div>
         )}

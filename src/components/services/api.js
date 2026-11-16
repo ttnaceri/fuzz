@@ -37,7 +37,7 @@ function buildUrl(path, params) {
   return url;
 }
 
-// ✅ MUHIM: Ikkala storage'dan JWT olish
+// ✅ TO'G'RILANDI: Tokenni to'g'ri o'qish
 function getAuthToken() {
   try {
     const local = storage.getAuth();

@@ -65,26 +65,21 @@ export function removeSessionItem(key) {
 // storage (asosiy API)
 // ==========================================
 export const storage = {
-  // Auth — doimiy (localStorage)
   getAuth: () => getItem(STORAGE_KEYS.auth, null),
-  setAuth: (v) => setItem(STORAGE_KEYS.auth, v),      // ✅ QO'SHILDI
+  setAuth: (v) => setItem(STORAGE_KEYS.auth, v),      // ✅ TO'G'RI
   clearAuth: () => removeItem(STORAGE_KEYS.auth),
 
-  // Auth — vaqtinchalik (sessionStorage) — Fuzz Client uchun
   getAuthSession: () => getSessionItem(STORAGE_KEYS.auth, null),
   setAuthSession: (v) => setSessionItem(STORAGE_KEYS.auth, v),
   clearAuthSession: () => removeSessionItem(STORAGE_KEYS.auth),
 
-  // Cart
   getCart: () => getItem(STORAGE_KEYS.cart, []),
   setCart: (v) => setItem(STORAGE_KEYS.cart, v),
   clearCart: () => removeItem(STORAGE_KEYS.cart),
 
-  // Theme
   getTheme: () => getItem(STORAGE_KEYS.theme, 'dark'),
   setTheme: (v) => setItem(STORAGE_KEYS.theme, v),
 
-  // Preferences
   getPrefs: () => getItem(STORAGE_KEYS.preferences, {}),
   setPrefs: (v) => setItem(STORAGE_KEYS.preferences, v),
 };

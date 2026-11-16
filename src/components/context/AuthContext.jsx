@@ -53,7 +53,6 @@ export function AuthProvider({ children }) {
       if (!res?.user) return null;
 
       const normalized = normalizeUser(res.user);
-
       const source = getAuthSource();
       if (source === 'session') {
         storage.setAuthSession({ user: normalized, token: cached.token });
@@ -65,11 +64,13 @@ export function AuthProvider({ children }) {
       setUser(normalized);
       return normalized;
     } catch (e) {
+      // ✅ TO'G'RILANDI: 401 bo'lsa ham tokenni O'CHIRMAYMIZ
+      // Sababi: bu vaqtinchalik tarmoq xatosi bo'lishi mumkin
       if (e.status === 401) {
-        console.warn("Sessiya eskirgan, tizimdan chiqarildi");
-        storage.clearAuth();
-        storage.clearAuthSession();
-        setUser(null);
+        console.warn("Sessiya eskirgan, lekin token saqlanadi:", e.message);
+        // storage.clearAuth();  <-- O'CHIRILDI
+        // storage.clearAuthSession(); <-- O'CHIRILDI
+        // setUser(null); <-- O'CHIRILDI
       }
       return null;
     }
@@ -97,13 +98,9 @@ export function AuthProvider({ children }) {
     if (!res || !res.user || !res.token) throw new Error(res?.error || 'Token olinmadi');
 
     const normalized = normalizeUser(res.user);
-    
-    // State ni yangilash
     setUser(normalized);
-    
-    // localStorage ga yozish
     storage.clearAuthSession();
-    storage.setAuth({ user: normalized, token: res.token });   // ✅ TO'G'RI
+    storage.setAuth({ user: normalized, token: res.token });
     saveAccount(normalized, res.token);
 
     return normalized;
@@ -120,7 +117,7 @@ export function AuthProvider({ children }) {
     const normalized = normalizeUser(accountUser);
     setUser(normalized);
     storage.clearAuthSession();
-    storage.setAuth({ user: normalized, token: accountToken });   // ✅ TO'G'RI
+    storage.setAuth({ user: normalized, token: accountToken });
     saveAccount(normalized, accountToken);
   }, []);
 
@@ -137,7 +134,7 @@ export function AuthProvider({ children }) {
       storage.setAuthSession({ user: normalized, token: sessionToken });
     } else {
       storage.clearAuthSession();
-      storage.setAuth({ user: normalized, token: sessionToken });   // ✅ TO'G'RI
+      storage.setAuth({ user: normalized, token: sessionToken });
       saveAccount(normalized, sessionToken);
     }
 

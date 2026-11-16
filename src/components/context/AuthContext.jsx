@@ -113,17 +113,23 @@ export function AuthProvider({ children }) {
 
   // Login
   const login = useCallback(async (credentials) => {
-    const res = await authService.login(credentials);
-    if (!res || !res.user || !res.token) throw new Error(res?.error || 'Token olinmadi');
+  const res = await authService.login(credentials);
+  if (!res || !res.user || !res.token) throw new Error(res?.error || 'Token olinmadi');
 
-    const normalized = normalizeUser(res.user);
-    setUser(normalized);
-    storage.clearAuthSession();
-    storage.setAuth({ user: normalized, token: res.token });
-    saveAccount(normalized, res.token); // Ko'p akkaunt uchun saqlash
+  const normalized = normalizeUser(res.user);
+  
+  // 1. State ni yangilash
+  setUser(normalized);
+  
+  // 2. LocalStorage ga yozish (api.js shu yerdan o'qiydi)
+  storage.clearAuthSession();
+  storage.setAuth({ user: normalized, token: res.token });
+  
+  // 3. Saqlangan akkauntlar ro'yxatiga qo'shish
+  saveAccount(normalized, res.token);
 
-    return normalized;
-  }, []);
+  return normalized;
+}, []);
 
   // Akkauntdan chiqish (barcha akkauntlarni o'chirmasdan, faqat sessiyani yopish)
   const logout = useCallback(async () => {

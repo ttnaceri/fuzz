@@ -1,5 +1,3 @@
-// src/utils/constants.js
-
 export const ROUTES = {
   home: '/',
   store: '/store',
@@ -35,12 +33,11 @@ export const ROUTES = {
   admin: '/admin',
 };
 
-// ✅ 'fuzz.auth' emas, 'fuzz_auth' bo'lishi SHART
 export const STORAGE_KEYS = {
-  auth: 'fuzz_auth',
-  cart: 'fuzz_cart',
-  theme: 'fuzz_theme',
-  preferences: 'fuzz_preferences',
+  auth: 'fuzz.auth',
+  cart: 'fuzz.cart',
+  theme: 'fuzz.theme',
+  preferences: 'fuzz.preferences',
 };
 
 export const GENRES = [

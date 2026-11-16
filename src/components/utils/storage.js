@@ -7,6 +7,9 @@ const isBrowser = typeof window !== 'undefined';
 const hasLocal = isBrowser && !!window.localStorage;
 const hasSession = isBrowser && !!window.sessionStorage;
 
+// ==========================================
+// localStorage
+// ==========================================
 export function getItem(key, fallback = null) {
   if (!hasLocal) return fallback;
   try {
@@ -21,7 +24,7 @@ export function setItem(key, value) {
   if (!hasLocal) return;
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
-  } catch { /* ignore quota errors */ }
+  } catch { /* ignore */ }
 }
 
 export function removeItem(key) {
@@ -31,7 +34,9 @@ export function removeItem(key) {
   } catch { /* ignore */ }
 }
 
-// sessionStorage (vaqtinchalik)
+// ==========================================
+// sessionStorage
+// ==========================================
 export function getSessionItem(key, fallback = null) {
   if (!hasSession) return fallback;
   try {
@@ -60,21 +65,26 @@ export function removeSessionItem(key) {
 // storage (asosiy API)
 // ==========================================
 export const storage = {
+  // Auth — doimiy (localStorage)
   getAuth: () => getItem(STORAGE_KEYS.auth, null),
-  setAuth: (v) => setItem(STORAGE_KEYS.auth, v),
+  setAuth: (v) => setItem(STORAGE_KEYS.auth, v),      // ✅ QO'SHILDI
   clearAuth: () => removeItem(STORAGE_KEYS.auth),
 
+  // Auth — vaqtinchalik (sessionStorage) — Fuzz Client uchun
   getAuthSession: () => getSessionItem(STORAGE_KEYS.auth, null),
   setAuthSession: (v) => setSessionItem(STORAGE_KEYS.auth, v),
   clearAuthSession: () => removeSessionItem(STORAGE_KEYS.auth),
 
+  // Cart
   getCart: () => getItem(STORAGE_KEYS.cart, []),
   setCart: (v) => setItem(STORAGE_KEYS.cart, v),
   clearCart: () => removeItem(STORAGE_KEYS.cart),
 
+  // Theme
   getTheme: () => getItem(STORAGE_KEYS.theme, 'dark'),
   setTheme: (v) => setItem(STORAGE_KEYS.theme, v),
 
+  // Preferences
   getPrefs: () => getItem(STORAGE_KEYS.preferences, {}),
   setPrefs: (v) => setItem(STORAGE_KEYS.preferences, v),
 };
@@ -88,7 +98,9 @@ export function getSavedAccounts() {
   try {
     const data = localStorage.getItem(ACCOUNTS_KEY);
     return data ? JSON.parse(data) : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 export function saveAccount(user, token) {

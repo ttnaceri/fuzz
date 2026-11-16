@@ -51,7 +51,8 @@ export function AuthProvider({ children }) {
   const refreshUser = useCallback(async () => {
     try {
       const cached = getStoredAuth();
-      if (!cached?.user?.id) return null;
+      // Agar token bo'lmasa, hech narsa qilmaymiz (401 xatosini oldini olish uchun)
+      if (!cached?.token) return null;
 
       const res = await authService.me();
       if (!res?.user) return null;
@@ -64,35 +65,24 @@ export function AuthProvider({ children }) {
         storage.setAuthSession({ user: normalized, token: cached.token });
       } else {
         storage.setAuth({ user: normalized, token: cached.token });
-        saveAccount(normalized, cached.token); // Akkauntni yangilash
+        saveAccount(normalized, cached.token);
       }
 
       setUser(normalized);
       return normalized;
     } catch (e) {
-      console.warn("refreshUser xato:", e.message);
+      // 401 bo'lsa, tokenni tozalash (sessiya eskirgan)
+      if (e.status === 401) {
+        console.warn("Sessiya eskirgan, tizimdan chiqarildi");
+        storage.clearAuth();
+        storage.clearAuthSession();
+        setUser(null);
+      }
       return null;
     }
   }, []);
 
-  // QR login yoki akkaunt almashganda sessiyani o'rnatish
-  const setSession = useCallback((sessionUser, sessionToken, mode = 'local') => {
-    if (!sessionUser || !sessionToken) return;
-    const normalized = normalizeUser(sessionUser);
-
-    if (mode === 'session') {
-      storage.clearAuth();
-      storage.setAuthSession({ user: normalized, token: sessionToken });
-    } else {
-      storage.clearAuthSession();
-      storage.setAuth({ user: normalized, token: sessionToken });
-      saveAccount(normalized, sessionToken); // Akkauntni saqlash
-    }
-
-    setUser(normalized);
-  }, []);
-
-  // Sahifa yuklanganda keshdan foydalanuvchini olish va backenddan yangilash
+  // Sahifa yuklanganda keshdan foydalanuvchini olish
   useEffect(() => {
     const cached = getStoredAuth();
     if (cached?.user) {
@@ -113,25 +103,25 @@ export function AuthProvider({ children }) {
 
   // Login
   const login = useCallback(async (credentials) => {
-  const res = await authService.login(credentials);
-  if (!res || !res.user || !res.token) throw new Error(res?.error || 'Token olinmadi');
+    const res = await authService.login(credentials);
+    if (!res || !res.user || !res.token) throw new Error(res?.error || 'Token olinmadi');
 
-  const normalized = normalizeUser(res.user);
-  
-  // 1. State ni yangilash
-  setUser(normalized);
-  
-  // 2. LocalStorage ga yozish (api.js shu yerdan o'qiydi)
-  storage.clearAuthSession();
-  storage.setAuth({ user: normalized, token: res.token });
-  
-  // 3. Saqlangan akkauntlar ro'yxatiga qo'shish
-  saveAccount(normalized, res.token);
+    const normalized = normalizeUser(res.user);
+    
+    // 1. State ni yangilash
+    setUser(normalized);
+    
+    // 2. LocalStorage ga yozish
+    storage.clearAuthSession();
+    storage.setAuth({ user: normalized, token: res.token });
+    
+    // 3. Saqlangan akkauntlar ro'yxatiga qo'shish
+    saveAccount(normalized, res.token);
 
-  return normalized;
-}, []);
+    return normalized;
+  }, []);
 
-  // Akkauntdan chiqish (barcha akkauntlarni o'chirmasdan, faqat sessiyani yopish)
+  // Akkauntdan chiqish
   const logout = useCallback(async () => {
     try { await authService.logout(); } catch (e) {}
     setUser(null);
@@ -145,12 +135,29 @@ export function AuthProvider({ children }) {
     setUser(normalized);
     storage.clearAuthSession();
     storage.setAuth({ user: normalized, token: accountToken });
-    saveAccount(normalized, accountToken); // Oxirgi ishlatilganini yuqoriga chiqarish
+    saveAccount(normalized, accountToken);
   }, []);
 
-  // Akkauntni butunlay o'chirish (agar kerak bo'lsa)
+  // Akkauntni butunlay o'chirish
   const removeSavedAccount = useCallback((userId) => {
     removeAccount(userId);
+  }, []);
+
+  // QR login natijasini o'rnatish
+  const setSession = useCallback((sessionUser, sessionToken, mode = 'local') => {
+    if (!sessionUser || !sessionToken) return;
+    const normalized = normalizeUser(sessionUser);
+
+    if (mode === 'session') {
+      storage.clearAuth();
+      storage.setAuthSession({ user: normalized, token: sessionToken });
+    } else {
+      storage.clearAuthSession();
+      storage.setAuth({ user: normalized, token: sessionToken });
+      saveAccount(normalized, sessionToken);
+    }
+
+    setUser(normalized);
   }, []);
 
   const value = useMemo(

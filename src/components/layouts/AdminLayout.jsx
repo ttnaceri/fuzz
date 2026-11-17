@@ -20,8 +20,6 @@ export default function AdminLayout() {
     { to: '/admin/users', labelKey: 'admin.users', icon: 'fa-users' },
     { to: '/admin/new-user', labelKey: 'admin.addUser', icon: 'fa-user-plus' },
     { to: '/admin/edit-user', labelKey: 'admin.editUser', icon: 'fa-user-pen' },
-    { to: '/admin/users', labelKey: 'admin.users', icon: 'fa-users' },
-    { to: '/admin/edit-user', labelKey: 'admin.editUser', icon: 'fa-user-pen' },
     { to: '/admin/new-game', labelKey: 'admin.addGame', icon: 'fa-plus' },
     { to: '/admin/all-games', labelKey: 'admin.allGames', icon: 'fa-gamepad' },
     { to: '/admin/companies', labelKey: 'admin.companies', icon: 'fa-building' },

@@ -75,6 +75,13 @@ export default function CartPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '800px', margin: '0 auto' }}>
         {items.map((item) => {
           const games = bundleGamesMap[item.id] || [];
+          
+          // Narxlarni hisoblash (savatda saqlangan finalPrice va price dan foydalanamiz)
+          const discount = Number(item.discount) || 0;
+          const originalPrice = Number(item.price) || 0;
+          const finalPrice = item.finalPrice != null ? Number(item.finalPrice) : (discount > 0 ? originalPrice - (originalPrice * discount / 100) : originalPrice);
+          const hasDiscount = discount > 0;
+
           return (
             <div key={item.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', backgroundColor: '#241411', padding: '1rem', borderRadius: '8px', border: '1px solid #48201a' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -88,7 +95,25 @@ export default function CartPage() {
 
                 <div style={{ flex: 1 }}>
                   <Link to={item.isBundle ? `/bundle/${item.id}` : `/game/${item.id}`} style={{ color: '#f5eeee', textDecoration: 'none', fontWeight: 'bold' }}>{item.title}</Link>
-                  <div style={{ color: '#43b581', fontWeight: 'bold' }}>{item.price === 0 ? t('game.free') : formatPrice(item.price)}</div>
+                  
+                  {/* Narx va chegirma */}
+                  {hasDiscount ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
+                      <span style={{ color: '#43b581', fontWeight: 'bold', fontSize: '0.95rem' }}>
+                        {formatPrice(finalPrice, item.currency)}
+                      </span>
+                      <span style={{ textDecoration: 'line-through', color: '#b9a6a2', fontSize: '0.8rem' }}>
+                        {formatPrice(originalPrice, item.currency)}
+                      </span>
+                      <span style={{ backgroundColor: '#f0b44d', color: '#000', padding: '0.1rem 0.3rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold' }}>
+                        -{discount}%
+                      </span>
+                    </div>
+                  ) : (
+                    <div style={{ color: '#43b581', fontWeight: 'bold', marginTop: '0.2rem' }}>
+                      {finalPrice === 0 ? t('game.free') : formatPrice(finalPrice, item.currency)}
+                    </div>
+                  )}
                 </div>
 
                 <button onClick={() => removeItem(item.id)} style={{ background: 'none', border: 'none', color: '#ed5555', cursor: 'pointer' }} title={t('cart.remove')}>

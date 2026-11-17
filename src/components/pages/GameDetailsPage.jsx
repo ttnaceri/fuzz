@@ -19,6 +19,7 @@ export default function GameDetailsPage() {
   const [game, setGame] = useState(null);
   const [bundles, setBundles] = useState([]);
   const [inWishlist, setInWishlist] = useState(false);
+  const [inLibrary, setInLibrary] = useState(false); // Sotib olinganmi?
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -36,6 +37,7 @@ export default function GameDetailsPage() {
       .then((g) => {
         setGame(g);
         if (g) {
+          // Bundle larni yuklash
           api.get('/api/bundles')
             .then(async (res) => {
               const allBundles = res.bundles || [];
@@ -51,6 +53,13 @@ export default function GameDetailsPage() {
               setBundles(relatedBundles);
             })
             .catch(() => {});
+
+          // Agar user login qilgan bo'lsa, u o'yinni sotib olganmi-yo'qmi tekshiramiz
+          if (user) {
+            api.get(`/api/users/${user.id}/owns/${g.id}`)
+              .then(res => setInLibrary(res.owned || false))
+              .catch(() => {});
+          }
         }
       })
       .catch((err) => {
@@ -59,7 +68,7 @@ export default function GameDetailsPage() {
       .finally(() => setLoading(false));
 
     return () => controller.abort();
-  }, [id]);
+  }, [id, user]);
 
   useEffect(() => {
     if (user && game) {
@@ -85,7 +94,8 @@ export default function GameDetailsPage() {
   const hasDiscount = discount > 0;
 
   const handleAdd = () => {
-    addItem(game);
+    if (inLibrary) return; // Sotib olingan bo'lsa savatga qo'shmaymiz
+    addItem({ ...game, finalPrice }); // finalPrice ni saqlaymiz (savatda to'g'ri ko'rsatish uchun)
     success(`"${game.title}" ${t('game.addedToCart')}`);
   };
 
@@ -145,7 +155,14 @@ export default function GameDetailsPage() {
         </div>
 
         <aside className="game-details__side">
-          {hasDiscount ? (
+          {/* Narx qismi */}
+          {inLibrary ? (
+            <div style={{ backgroundColor: '#19100e', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', border: '1px solid #43b581', textAlign: 'center' }}>
+              <p style={{ color: '#43b581', margin: 0, fontWeight: 'bold' }}>
+                <i className="fa-solid fa-check-circle"></i> Siz bu o'yinni sotib olgansiz
+              </p>
+            </div>
+          ) : hasDiscount ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
               <div className="game-details__price" style={{ color: '#43b581', margin: 0 }}>
                 {formatPrice(finalPrice, game.currency)}
@@ -179,9 +196,20 @@ export default function GameDetailsPage() {
           )}
 
           <div className="game-details__actions" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <button className="btn btn-primary btn-block" onClick={handleAdd}>
-              <i className="fa-solid fa-cart-plus" /> {t('game.addToCart')}
-            </button>
+            {inLibrary ? (
+              <Link to={`/game/${game.id}/play`} className="btn btn-primary btn-block">
+                <i className="fa-solid fa-play" /> {t('library.play') || "O'ynash"}
+              </Link>
+            ) : (
+              <button
+                className="btn btn-primary btn-block"
+                onClick={handleAdd}
+                disabled={unavailable}
+                style={{ opacity: unavailable ? 0.5 : 1 }}
+              >
+                <i className="fa-solid fa-cart-plus" /> {t('game.addToCart')}
+              </button>
+            )}
 
             <button
               className="btn btn-secondary btn-block"

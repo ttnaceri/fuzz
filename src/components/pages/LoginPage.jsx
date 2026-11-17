@@ -270,7 +270,7 @@ export default function LoginPage() {
               zIndex: 10
             }}
           >
-            <i className="fa-solid fa-arrow-left"></i> Ortga
+            <i className="fa-solid fa-arrow-left"></i>
           </button>
         )}
 

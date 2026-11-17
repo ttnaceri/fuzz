@@ -1,169 +1,138 @@
-// src/components/context/AuthContext.jsx
-import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
-import { authService } from '../services/authService.js';
-import { storage, saveAccount, removeAccount, getSavedAccounts } from '../utils/storage.js';
+/**
+ * Safe localStorage + sessionStorage wrapper.
+ */
+import { STORAGE_KEYS } from './constants.js';
 
-export const AuthContext = createContext(null);
+const isBrowser = typeof window !== 'undefined';
+const hasLocal = isBrowser && !!window.localStorage;
+const hasSession = isBrowser && !!window.sessionStorage;
 
-function normalizeUser(rawUser) {
-  if (!rawUser) return null;
-  const balanceNum = rawUser.balance != null ? Number(rawUser.balance) : 0;
-  return {
-    ...rawUser,
-    balance: isNaN(balanceNum) ? 0 : Math.round(balanceNum * 100) / 100,
-  };
+// ==========================================
+// localStorage (doimiy — brauzer yopilsa ham qoladi)
+// ==========================================
+export function getItem(key, fallback = null) {
+  if (!hasLocal) return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
-// Ikkala storage'dan auth olish
-function getStoredAuth() {
-  return storage.getAuth() || storage.getAuthSession();
+export function setItem(key, value) {
+  if (!hasLocal) return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch { /* ignore */ }
 }
 
-// Qaysi storage'da saqlanganini aniqlash
-function getAuthSource() {
-  if (storage.getAuth()?.token) return 'local';
-  if (storage.getAuthSession()?.token) return 'session';
-  return null;
+export function removeItem(key) {
+  if (!hasLocal) return;
+  try {
+    window.localStorage.removeItem(key);
+  } catch { /* ignore */ }
 }
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+// ==========================================
+// sessionStorage (vaqtinchalik — brauzer yopilganda o'chadi)
+// ==========================================
+export function getSessionItem(key, fallback = null) {
+  if (!hasSession) return fallback;
+  try {
+    const raw = window.sessionStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
-  // Online/Offline holatini kuzatish
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOffline(false);
-      refreshUser();
-    };
-    const handleOffline = () => setIsOffline(true);
+export function setSessionItem(key, value) {
+  if (!hasSession) return;
+  try {
+    window.sessionStorage.setItem(key, JSON.stringify(value));
+  } catch { /* ignore */ }
+}
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+export function removeSessionItem(key) {
+  if (!hasSession) return;
+  try {
+    window.sessionStorage.removeItem(key);
+  } catch { /* ignore */ }
+}
 
-  // Foydalanuvchini backenddan yangilash
-  const refreshUser = useCallback(async () => {
-    try {
-      const cached = getStoredAuth();
-      if (!cached?.user?.id) return null;
+// ==========================================
+// storage (asosiy API)
+// ==========================================
+export const storage = {
+  // Auth — doimiy (localStorage)
+  getAuth: () => getItem(STORAGE_KEYS.auth, null),
+  setAuth: (v) => setItem(STORAGE_KEYS.auth, v),
+  clearAuth: () => removeItem(STORAGE_KEYS.auth),
 
-      const res = await authService.me();
-      if (!res?.user) return null;
+  // Auth — vaqtinchalik (sessionStorage) — Fuzz Client uchun
+  getAuthSession: () => getSessionItem(STORAGE_KEYS.auth, null),
+  setAuthSession: (v) => setSessionItem(STORAGE_KEYS.auth, v),
+  clearAuthSession: () => removeSessionItem(STORAGE_KEYS.auth),
 
-      const normalized = normalizeUser(res.user);
+  // Cart
+  getCart: () => getItem(STORAGE_KEYS.cart, []),
+  setCart: (v) => setItem(STORAGE_KEYS.cart, v),
+  clearCart: () => removeItem(STORAGE_KEYS.cart),
 
-      // Qaysi storage'da saqlangan bo'lsa, o'shanga yozish
-      const source = getAuthSource();
-      if (source === 'session') {
-        storage.setAuthSession({ user: normalized, token: cached.token });
-      } else {
-        storage.setAuth({ user: normalized, token: cached.token });
-        saveAccount(normalized, cached.token); // Akkauntni yangilash
-      }
+  // Theme
+  getTheme: () => getItem(STORAGE_KEYS.theme, 'dark'),
+  setTheme: (v) => setItem(STORAGE_KEYS.theme, v),
 
-      setUser(normalized);
-      return normalized;
-    } catch (e) {
-      console.warn("refreshUser xato:", e.message);
-      return null;
-    }
-  }, []);
+  // Preferences
+  getPrefs: () => getItem(STORAGE_KEYS.preferences, {}),
+  setPrefs: (v) => setItem(STORAGE_KEYS.preferences, v),
+};
 
-  // QR login yoki akkaunt almashganda sessiyani o'rnatish
-  const setSession = useCallback((sessionUser, sessionToken, mode = 'local') => {
-    if (!sessionUser || !sessionToken) return;
-    const normalized = normalizeUser(sessionUser);
+// ==========================================
+// YANGI: Ko'p akkauntlarni boshqarish
+// ==========================================
+const ACCOUNTS_KEY = 'fuzz_accounts';
 
-    if (mode === 'session') {
-      storage.clearAuth();
-      storage.setAuthSession({ user: normalized, token: sessionToken });
+// Barcha saqlangan akkauntlarni olish
+export function getSavedAccounts() {
+  try {
+    const data = localStorage.getItem(ACCOUNTS_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Yangi akkauntni ro'yxatga qo'shish (yoki yangilash)
+export function saveAccount(user, token) {
+  if (!user || !token) return;
+  try {
+    const accounts = getSavedAccounts();
+    const existingIndex = accounts.findIndex(a => a.user.id === user.id);
+    const newAccount = { user, token, lastUsed: Date.now() };
+    
+    if (existingIndex >= 0) {
+      accounts[existingIndex] = newAccount;
     } else {
-      storage.clearAuthSession();
-      storage.setAuth({ user: normalized, token: sessionToken });
-      saveAccount(normalized, sessionToken); // Akkauntni saqlash
+      accounts.push(newAccount);
     }
+    
+    // Eng oxirgi ishlatilganini birinchi qilib saqlaymiz (maksimal 5 ta)
+    accounts.sort((a, b) => b.lastUsed - a.lastUsed);
+    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts.slice(0, 5)));
+  } catch { /* ignore */ }
+}
 
-    setUser(normalized);
-  }, []);
+// Akkauntni ro'yxatdan o'chirish
+export function removeAccount(userId) {
+  try {
+    const accounts = getSavedAccounts().filter(a => a.user.id !== userId);
+    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+  } catch { /* ignore */ }
+}
 
-  // Sahifa yuklanganda keshdan foydalanuvchini olish va backenddan yangilash
-  useEffect(() => {
-    const cached = getStoredAuth();
-    if (cached?.user) {
-      setUser(normalizeUser(cached.user));
-      refreshUser().catch(() => {});
-    }
-    setLoading(false);
-  }, [refreshUser]);
-
-  // Har 30 sekundda foydalanuvchini yangilash
-  useEffect(() => {
-    if (!user) return;
-    const interval = setInterval(() => {
-      refreshUser().catch(() => {});
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [user, refreshUser]);
-
-  // Login
-  const login = useCallback(async (credentials) => {
-    const res = await authService.login(credentials);
-    if (!res || !res.user || !res.token) throw new Error(res?.error || 'Token olinmadi');
-
-    const normalized = normalizeUser(res.user);
-    setUser(normalized);
-    storage.clearAuthSession();
-    storage.setAuth({ user: normalized, token: res.token });
-    saveAccount(normalized, res.token); // Ko'p akkaunt uchun saqlash
-
-    return normalized;
-  }, []);
-
-  // Akkauntdan chiqish (barcha akkauntlarni o'chirmasdan, faqat sessiyani yopish)
-  const logout = useCallback(async () => {
-    try { await authService.logout(); } catch (e) {}
-    setUser(null);
-    storage.clearAuth();
-    storage.clearAuthSession();
-  }, []);
-
-  // Boshqa saqlangan akkauntga o'tish
-  const switchAccount = useCallback((accountUser, accountToken) => {
-    const normalized = normalizeUser(accountUser);
-    setUser(normalized);
-    storage.clearAuthSession();
-    storage.setAuth({ user: normalized, token: accountToken });
-    saveAccount(normalized, accountToken); // Oxirgi ishlatilganini yuqoriga chiqarish
-  }, []);
-
-  // Akkauntni butunlay o'chirish (agar kerak bo'lsa)
-  const removeSavedAccount = useCallback((userId) => {
-    removeAccount(userId);
-  }, []);
-
-  const value = useMemo(
-    () => ({
-      user,
-      isAuthenticated: !!user,
-      isAdmin: !!user && (user.role === 'admin' || user.role === 'super_admin'),
-      loading,
-      isOffline,
-      login,
-      logout,
-      switchAccount,
-      removeSavedAccount,
-      getSavedAccounts,
-      refreshUser,
-      setSession,
-    }),
-    [user, loading, isOffline, login, logout, switchAccount, removeSavedAccount, refreshUser, setSession]
-  );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+// Barcha akkauntlarni tozalash
+export function clearAllAccounts() {
+  localStorage.removeItem(ACCOUNTS_KEY);
 }

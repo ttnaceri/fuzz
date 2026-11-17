@@ -14,12 +14,10 @@ function normalizeUser(rawUser) {
   };
 }
 
-// Ikkala storage'dan auth olish
 function getStoredAuth() {
   return storage.getAuth() || storage.getAuthSession();
 }
 
-// Qaysi storage'da saqlanganini aniqlash
 function getAuthSource() {
   if (storage.getAuth()?.token) return 'local';
   if (storage.getAuthSession()?.token) return 'session';
@@ -31,14 +29,30 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
-  // Online/Offline holatini kuzatish
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOffline(false);
-      refreshUser();
-    };
-    const handleOffline = () => setIsOffline(true);
+  const refreshUser = useCallback(async () => {
+    try {
+      const cached = getStoredAuth();
+      if (!cached?.user?.id) return null;
+      const res = await authService.me();
+      if (!res?.user) return null;
+      const normalized = normalizeUser(res.user);
+      const source = getAuthSource();
+      if (source === 'session') {
+        storage.setAuthSession({ user: normalized, token: cached.token });
+      } else {
+        storage.setAuth({ user: normalized, token: cached.token });
+        saveAccount(normalized, cached.token);
+      }
+      setUser(normalized);
+      return normalized;
+    } catch (e) {
+      return null;
+    }
+  }, []);
 
+  useEffect(() => {
+    const handleOnline = () => { setIsOffline(false); refreshUser(); };
+    const handleOffline = () => setIsOffline(true);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     return () => {
@@ -47,52 +61,20 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  // Foydalanuvchini backenddan yangilash
-  const refreshUser = useCallback(async () => {
-    try {
-      const cached = getStoredAuth();
-      if (!cached?.user?.id) return null;
-
-      const res = await authService.me();
-      if (!res?.user) return null;
-
-      const normalized = normalizeUser(res.user);
-
-      // Qaysi storage'da saqlangan bo'lsa, o'shanga yozish
-      const source = getAuthSource();
-      if (source === 'session') {
-        storage.setAuthSession({ user: normalized, token: cached.token });
-      } else {
-        storage.setAuth({ user: normalized, token: cached.token });
-        saveAccount(normalized, cached.token); // Akkauntni yangilash
-      }
-
-      setUser(normalized);
-      return normalized;
-    } catch (e) {
-      console.warn("refreshUser xato:", e.message);
-      return null;
-    }
-  }, []);
-
-  // QR login yoki akkaunt almashganda sessiyani o'rnatish
   const setSession = useCallback((sessionUser, sessionToken, mode = 'local') => {
     if (!sessionUser || !sessionToken) return;
     const normalized = normalizeUser(sessionUser);
-
     if (mode === 'session') {
       storage.clearAuth();
       storage.setAuthSession({ user: normalized, token: sessionToken });
     } else {
       storage.clearAuthSession();
       storage.setAuth({ user: normalized, token: sessionToken });
-      saveAccount(normalized, sessionToken); // Akkauntni saqlash
+      saveAccount(normalized, sessionToken);
     }
-
     setUser(normalized);
   }, []);
 
-  // Sahifa yuklanganda keshdan foydalanuvchini olish va backenddan yangilash
   useEffect(() => {
     const cached = getStoredAuth();
     if (cached?.user) {
@@ -102,30 +84,23 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, [refreshUser]);
 
-  // Har 30 sekundda foydalanuvchini yangilash
   useEffect(() => {
     if (!user) return;
-    const interval = setInterval(() => {
-      refreshUser().catch(() => {});
-    }, 30000);
+    const interval = setInterval(() => { refreshUser().catch(() => {}); }, 30000);
     return () => clearInterval(interval);
   }, [user, refreshUser]);
 
-  // Login
   const login = useCallback(async (credentials) => {
     const res = await authService.login(credentials);
     if (!res || !res.user || !res.token) throw new Error(res?.error || 'Token olinmadi');
-
     const normalized = normalizeUser(res.user);
     setUser(normalized);
     storage.clearAuthSession();
     storage.setAuth({ user: normalized, token: res.token });
-    saveAccount(normalized, res.token); // Ko'p akkaunt uchun saqlash
-
+    saveAccount(normalized, res.token);
     return normalized;
   }, []);
 
-  // Akkauntdan chiqish (barcha akkauntlarni o'chirmasdan, faqat sessiyani yopish)
   const logout = useCallback(async () => {
     try { await authService.logout(); } catch (e) {}
     setUser(null);
@@ -133,16 +108,40 @@ export function AuthProvider({ children }) {
     storage.clearAuthSession();
   }, []);
 
-  // Boshqa saqlangan akkauntga o'tish
   const switchAccount = useCallback((accountUser, accountToken) => {
     const normalized = normalizeUser(accountUser);
     setUser(normalized);
     storage.clearAuthSession();
     storage.setAuth({ user: normalized, token: accountToken });
-    saveAccount(normalized, accountToken); // Oxirgi ishlatilganini yuqoriga chiqarish
+    saveAccount(normalized, accountToken);
   }, []);
 
-  // Akkauntni butunlay o'chirish (agar kerak bo'lsa)
+  // YANGI: Sign Out — agar 2-akkaunt bo'lsa, o'shanga o'tadi
+  const signOut = useCallback(async () => {
+    const currentUserId = user?.id;
+    const allAccounts = getSavedAccounts() || [];
+    
+    // Joriy akkauntdan boshqa akkauntlarni topish
+    const otherAccounts = allAccounts.filter(a => a.user.id !== currentUserId);
+
+    try { await authService.logout(); } catch (e) {}
+
+    if (otherAccounts.length > 0) {
+      // Boshqa akkaunt bor — o'shanga o'tamiz (eng oxirgi ishlatilgan)
+      const nextAccount = otherAccounts[0];
+      const normalized = normalizeUser(nextAccount.user);
+      setUser(normalized);
+      storage.clearAuthSession();
+      storage.setAuth({ user: normalized, token: nextAccount.token });
+      saveAccount(normalized, nextAccount.token);
+    } else {
+      // Boshqa akkaunt yo'q — shunchaki chiqamiz
+      setUser(null);
+      storage.clearAuth();
+      storage.clearAuthSession();
+    }
+  }, [user]);
+
   const removeSavedAccount = useCallback((userId) => {
     removeAccount(userId);
   }, []);
@@ -156,13 +155,14 @@ export function AuthProvider({ children }) {
       isOffline,
       login,
       logout,
+      signOut,
       switchAccount,
       removeSavedAccount,
       getSavedAccounts,
       refreshUser,
       setSession,
     }),
-    [user, loading, isOffline, login, logout, switchAccount, removeSavedAccount, refreshUser, setSession]
+    [user, loading, isOffline, login, logout, signOut, switchAccount, removeSavedAccount, refreshUser, setSession]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

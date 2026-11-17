@@ -33,4 +33,3 @@ game/*.rar
 config/secrets.js
 
 # Personal config with card number (agar siz config.js ni git'ga qo'ymasangiz)
-# src/config/config.local.js

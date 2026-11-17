@@ -84,6 +84,10 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Foydalanuvchi "Change Account" dan kelganini aniqlash
+  // Header.jsx da handleAddAccount da navigate('/login') chaqirilganda state uzatilishi kerak
+  const isChangingAccount = location.state?.changingAccount === true;
+
   const [form, setForm] = useState({ username: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
@@ -138,25 +142,17 @@ export default function LoginPage() {
         setQrUser(res.user);
         setSuccessPhase('verifying');
 
-        // Mode: my_device | fuzz_client | guest | single_use
         const mode = res.mode || 'my_device';
 
         setTimeout(() => {
           if (!isMountedRef.current) return;
 
-          // ==========================================
-          // ASOSIY LOGIKA: Fuzz Client → sessionStorage
-          // ==========================================
           if (mode === 'fuzz_client') {
-            // sessionStorage — brauzer yopilganda avtomatik o'chadi
             storage.clearAuth();
             storage.setAuthSession({ user: res.user, token: res.token });
-            console.log('🔵 [QR] Fuzz Client — sessionStorage');
           } else {
-            // localStorage — doimiy (sign out qilmaguncha)
             storage.clearAuthSession();
             storage.setAuth({ user: res.user, token: res.token });
-            console.log(`🔵 [QR] ${mode} — localStorage`);
           }
 
           setSession(res.user, res.token);
@@ -234,7 +230,7 @@ export default function LoginPage() {
 
   const styles = {
     wrapper: { minHeight: 'calc(100vh - 64px)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#100b0a', padding: '2rem 1rem' },
-    box: { backgroundColor: '#241411', border: '1px solid #48201a', borderRadius: '8px', width: '100%', maxWidth: '800px', boxShadow: '0 10px 40px rgba(0,0,0,0.8)' },
+    box: { backgroundColor: '#241411', border: '1px solid #48201a', borderRadius: '8px', width: '100%', maxWidth: '800px', boxShadow: '0 10px 40px rgba(0,0,0,0.8)', position: 'relative' },
     body: { display: 'flex', flexDirection: isMobile ? 'column' : 'row', padding: '2rem', gap: '2rem' },
     formSide: { flex: '1 1 300px', display: 'flex', flexDirection: 'column' },
     qrSide: { flex: '0 1 280px', borderLeft: isMobile ? 'none' : '1px solid #48201a', borderTop: isMobile ? '1px solid #48201a' : 'none', paddingLeft: isMobile ? '0' : '2rem', paddingTop: isMobile ? '2rem' : '0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
@@ -249,6 +245,35 @@ export default function LoginPage() {
   return (
     <div style={styles.wrapper}>
       <div style={styles.box}>
+        
+        {/* ==========================================
+            YANGI: "Ortga" (Back) tugmasi
+            Faqat "Change Account" orqali kelganda ko'rinadi
+            ========================================== */}
+        {isChangingAccount && (
+          <button
+            onClick={() => navigate(-1)} // Orqaga qaytish
+            style={{
+              position: 'absolute',
+              top: '1rem',
+              left: '1rem',
+              background: 'transparent',
+              border: '1px solid #48201a',
+              color: '#f5eeee',
+              padding: '0.4rem 0.8rem',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontSize: '0.85rem',
+              zIndex: 10
+            }}
+          >
+            <i className="fa-solid fa-arrow-left"></i> Ortga
+          </button>
+        )}
+
         <div style={styles.body}>
 
           <div style={styles.formSide}>

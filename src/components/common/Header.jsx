@@ -49,10 +49,12 @@ export default function Header() {
   };
 
   const handleAddAccount = () => {
-    logout(); // Hozirgi sessiyani yopamiz
-    setIsMenuOpen(false);
-    navigate('/login');
-  };
+  // 1. Sessiyani yopamiz
+  logout();
+  setIsMenuOpen(false);
+  // 2. Login sahifasiga "changingAccount" belgisi bilan o'tamiz
+  navigate('/login', { state: { changingAccount: true } });
+};
 
   const handleSignOut = () => {
     logout();

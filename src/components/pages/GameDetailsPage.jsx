@@ -159,7 +159,7 @@ export default function GameDetailsPage() {
           {inLibrary ? (
             <div style={{ backgroundColor: '#19100e', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', border: '1px solid #43b581', textAlign: 'center' }}>
               <p style={{ color: '#43b581', margin: 0, fontWeight: 'bold' }}>
-                <i className="fa-solid fa-check-circle"></i> Siz bu o'yinni sotib olgansiz
+                <i className="fa-solid fa-check-circle"></i> {t('game.alreadyOwned')}
               </p>
             </div>
           ) : hasDiscount ? (

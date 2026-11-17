@@ -12,8 +12,26 @@ export function CartProvider({ children }) {
 
   const addItem = useCallback((game) => {
     setItems((prev) => {
+      // Agar o'yin allaqachon savatda bo'lsa, uni qayta qo'shmaymiz
       if (prev.some((i) => String(i.id) === String(game.id))) return prev;
-      return [...prev, { id: game.id, title: game.title, price: game.price, image: game.image || game.cover }];
+
+      // Narxlarni hisoblash
+      const discount = Number(game.discount) || 0;
+      const originalPrice = Number(game.price) || 0;
+      const finalPrice = game.finalPrice != null 
+        ? Number(game.finalPrice) 
+        : (discount > 0 ? originalPrice - (originalPrice * discount / 100) : originalPrice);
+
+      return [...prev, {
+        id: game.id,
+        title: game.title,
+        price: originalPrice,
+        discount: discount,
+        finalPrice: finalPrice,
+        image: game.image || game.cover,
+        currency: game.currency || 'USD',
+        isBundle: game.isBundle || false,
+      }];
     });
   }, []);
 
@@ -23,8 +41,9 @@ export function CartProvider({ children }) {
 
   const clear = useCallback(() => setItems([]), []);
 
+  // Subtotal endi finalPrice (chegirmali narx) bo'yicha hisoblanadi
   const subtotal = useMemo(
-    () => items.reduce((s, i) => s + (Number(i.price) || 0), 0),
+    () => items.reduce((sum, i) => sum + (Number(i.finalPrice ?? i.price) || 0), 0),
     [items]
   );
 

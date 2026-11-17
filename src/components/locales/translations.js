@@ -145,6 +145,7 @@ export const translations = {
     },
     game: {
       free: "Bepul",
+        alreadyOwned: "Siz bu o'yinni sotib olgansiz",
       addToCart: "Savatga",
       inCart: "Savatda",
       details: "Batafsil",
@@ -469,6 +470,7 @@ export const translations = {
       free: "Бесплатно",
       addToCart: "В корзину",
       inCart: "В корзине",
+      alreadyOwned: "Вы уже купили эту игру",
       details: "Подробнее",
       unavailable: "Недоступно",
       owned: "Куплено",
@@ -788,6 +790,7 @@ export const translations = {
       followUs: "Follow Us",
     },
     game: {
+      alreadyOwned: "You already own this game",
       free: "Free",
       addToCart: "Add to Cart",
       inCart: "In Cart",

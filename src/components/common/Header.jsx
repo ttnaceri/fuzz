@@ -8,7 +8,7 @@ import SearchBar from './SearchBar.jsx';
 import useToast from '../hooks/useToast.js';
 
 export default function Header() {
-  const { user, isAuthenticated, isAdmin, logout, switchAccount, signOut, getSavedAccounts } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout, switchAccount, getSavedAccounts } = useAuth();
   const { count } = useCart();
   const { lang, setLang, t } = useLanguage();
   const { info } = useToast();
@@ -49,19 +49,17 @@ export default function Header() {
   };
 
   const handleAddAccount = () => {
+  // 1. Sessiyani yopamiz
+  logout();
+  setIsMenuOpen(false);
+  // 2. Login sahifasiga "changingAccount" belgisi bilan o'tamiz
+  navigate('/login', { state: { changingAccount: true } });
+};
+
+  const handleSignOut = () => {
     logout();
     setIsMenuOpen(false);
-    navigate('/login', { state: { changingAccount: true } });
-  };
-
-  const handleSignOut = async () => {
-    await signOut(); // Yangi funksiya — agar 2-akkaunt bo'lsa o'shanga o'tadi
-    setIsMenuOpen(false);
-    // Agar boshqa akkaunt bo'lsa, u allaqachon userga o'rnatildi, yo'naltirish shart emas
-    // Faqat 1 ta akkaunt bo'lsa, login ga o'tamiz
-    if (savedAccounts.length <= 1) {
-      navigate('/login');
-    }
+    navigate('/login');
   };
 
   const otherAccounts = savedAccounts.filter(a => a.user.id !== user?.id);
@@ -93,6 +91,7 @@ export default function Header() {
 
           {isAuthenticated ? (
             <div style={{ position: 'relative' }} ref={menuRef}>
+              {/* Har doim userning ismi ko'rinadi (Agar admin bo'lsa ham) */}
               <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="btn btn-ghost btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <i className={isAdmin ? 'fa-solid fa-shield' : 'fa-solid fa-user'} />
                 <span className="d-none d-md-inline">{user?.username || t('auth.account')}</span>
@@ -102,19 +101,21 @@ export default function Header() {
               {isMenuOpen && (
                 <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '0.5rem', backgroundColor: '#241411', border: '1px solid #48201a', borderRadius: '6px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', minWidth: '240px', zIndex: 1000, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                   
+                  {/* Admin bo'lsa, menyuning eng tepasida Admin Panel chiqadi */}
                   {isAdmin && (
                     <Link to="/admin" onClick={() => setIsMenuOpen(false)} style={{ padding: '0.8rem 1rem', color: '#43b581', textDecoration: 'none', borderBottom: '1px solid #48201a', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold' }}>
-                      <i className="fa-solid fa-shield-halved" style={{ width: '16px' }}></i> {t('admin.dashboard')}
+                      <i className="fa-solid fa-shield-halved" style={{ width: '16px' }}></i> Admin Panel
                     </Link>
                   )}
 
                   <Link to={isAdmin ? '/admin' : '/account'} onClick={() => setIsMenuOpen(false)} style={{ padding: '0.8rem 1rem', color: '#f5eeee', textDecoration: 'none', borderBottom: '1px solid #48201a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <i className="fa-solid fa-id-card" style={{ width: '16px' }}></i> {t('profile.title')}
+                    <i className="fa-solid fa-id-card" style={{ width: '16px' }}></i> Profile
                   </Link>
 
+                  {/* Agar boshqa akkauntlar bo'lsa, ularni ko'rsatamiz */}
                   {otherAccounts.length > 0 && (
                     <div style={{ borderBottom: '1px solid #48201a', padding: '0.5rem 0' }}>
-                      <div style={{ padding: '0 1rem 0.5rem', fontSize: '0.75rem', color: '#6b524e' }}>{t('header.otherAccounts')}</div>
+                      <div style={{ padding: '0 1rem 0.5rem', fontSize: '0.75rem', color: '#6b524e' }}>Boshqa akkauntlar</div>
                       {otherAccounts.map(acc => (
                         <button key={acc.user.id} onClick={() => handleSwitchAccount(acc)} style={{ padding: '0.6rem 1rem', background: 'transparent', border: 'none', color: '#b9a6a2', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
                           <i className="fa-solid fa-user-circle" style={{ width: '16px' }}></i>
@@ -125,11 +126,11 @@ export default function Header() {
                   )}
 
                   <button onClick={handleAddAccount} style={{ padding: '0.8rem 1rem', background: 'transparent', border: 'none', borderBottom: '1px solid #48201a', color: '#43b581', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <i className="fa-solid fa-plus" style={{ width: '16px' }}></i> {otherAccounts.length > 0 ? t('header.addAccount') : t('header.changeAccount')}
+                    <i className="fa-solid fa-plus" style={{ width: '16px' }}></i> {otherAccounts.length > 0 ? 'Add Account' : 'Change Account'}
                   </button>
 
                   <button onClick={handleSignOut} style={{ padding: '0.8rem 1rem', background: 'transparent', border: 'none', color: '#ed5555', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <i className="fa-solid fa-right-from-bracket" style={{ width: '16px' }}></i> {t('auth.logout')}
+                    <i className="fa-solid fa-right-from-bracket" style={{ width: '16px' }}></i> Sign Out
                   </button>
                 </div>
               )}

@@ -14,20 +14,16 @@ export default function AdminLayout() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Admin linklar — to'g'rilangan
+  // Admin linklar — tarjima kalitlari bilan
   const ADMIN_LINKS = [
     { to: '/admin', labelKey: 'admin.dashboard', icon: 'fa-gauge', end: true },
-    
-    // Users sahifalari
     { to: '/admin/users', labelKey: 'admin.users', icon: 'fa-users' },
     { to: '/admin/new-user', labelKey: 'admin.addUser', icon: 'fa-user-plus' },
     { to: '/admin/edit-user', labelKey: 'admin.editUser', icon: 'fa-user-pen' },
-    
-    // Games
+    { to: '/admin/users', labelKey: 'admin.users', icon: 'fa-users' },
+    { to: '/admin/edit-user', labelKey: 'admin.editUser', icon: 'fa-user-pen' },
     { to: '/admin/new-game', labelKey: 'admin.addGame', icon: 'fa-plus' },
     { to: '/admin/all-games', labelKey: 'admin.allGames', icon: 'fa-gamepad' },
-    
-    // Boshqalar
     { to: '/admin/companies', labelKey: 'admin.companies', icon: 'fa-building' },
     { to: '/admin/new-company', labelKey: 'admin.addCompany', icon: 'fa-plus-square' },
     { to: '/admin/events', labelKey: 'admin.events', icon: 'fa-calendar' },
@@ -57,7 +53,10 @@ export default function AdminLayout() {
           <Link to="/" style={{ color: '#8a1200', fontSize: '1.2rem', fontWeight: 'bold', textDecoration: 'none' }}>
             Fuzz Admin
           </Link>
-          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} style={{ background: 'none', border: 'none', color: '#f5eeee', fontSize: '1.5rem' }}>
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            style={{ background: 'none', border: 'none', color: '#f5eeee', fontSize: '1.5rem' }}
+          >
             <i className={`fa-solid ${isMobileMenuOpen ? 'fa-xmark' : 'fa-bars'}`}></i>
           </button>
         </div>

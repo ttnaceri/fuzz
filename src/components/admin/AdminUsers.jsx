@@ -1,127 +1,58 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
 import useToast from '../hooks/useToast.js';
+import { useLanguage } from '../context/useLanguage.js';
+import { Link } from 'react-router-dom';
 
-export default function AdminEditUser() {
-  const [query, setQuery] = useState('');
+export default function AdminUsers() {
   const [users, setUsers] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [form, setForm] = useState({ username: '', email: '', telegram_id: '', balance: '', role: '' });
-  const { success, error: toastError } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const { error: toastError } = useToast();
+  const { t } = useLanguage();
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!query.trim()) return;
+  const loadUsers = () => {
     setLoading(true);
-    try {
-      const res = await api.get(`/api/admin/users/search?q=${encodeURIComponent(query)}`);
-      setUsers(res.users || []);
-      if (res.users?.length === 1) {
-        handleSelect(res.users[0]);
-      }
-    } catch (err) {
-      toastError("Qidiruvda xato");
-    } finally {
-      setLoading(false);
-    }
+    api.get('/api/admin/users')
+      .then(data => { setUsers(data.users || []); setLoading(false); })
+      .catch(() => { toastError("Foydalanuvchilarni yuklashda xato"); setLoading(false); });
   };
 
-  const handleSelect = (user) => {
-    setSelectedUser(user);
-    setForm({
-      username: user.username,
-      email: user.email,
-      telegram_id: user.telegram_id || '',
-      balance: user.balance.toString(),
-      role: user.role
-    });
-    setUsers([]); // Natijalarni yopish
-  };
-
-  const handleSave = async () => {
-    if (!selectedUser) return;
-    try {
-      await api.put(`/api/admin/users/${selectedUser.id}`, form);
-      success("Foydalanuvchi ma'lumotlari yangilandi!");
-      setSelectedUser(null);
-      setQuery('');
-    } catch (err) {
-      toastError(err.message || "Xato");
-    }
-  };
+  useEffect(() => { loadUsers(); }, []);
 
   return (
     <div>
-      <h1 style={{ color: '#f5eeee', marginBottom: '1.5rem' }}>Foydalanuvchini Tahrirlash</h1>
+      <h1 style={{ color: '#f5eeee', marginBottom: '1.5rem' }}>{t('admin.users') || 'Foydalanuvchilar'}</h1>
       
-      <form onSubmit={handleSearch} style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-        <input 
-          type="text" 
-          value={query} 
-          onChange={(e) => setQuery(e.target.value)} 
-          placeholder="Username, Email yoki Telegram ID orqali qidirish..."
-          style={{ flex: 1, padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }}
-        />
-        <button type="submit" disabled={loading} style={{ padding: '0.8rem 1.5rem', backgroundColor: '#8a1200', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
-          {loading ? 'Qidirilmoqda...' : 'Qidirish'}
-        </button>
-      </form>
-
-      {users.length > 0 && !selectedUser && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '2rem' }}>
-          <h3 style={{ color: '#b9a6a2', fontSize: '0.9rem' }}>Natijalar:</h3>
-          {users.map(u => (
-            <div key={u.id} onClick={() => handleSelect(u)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', backgroundColor: '#241411', border: '1px solid #48201a', borderRadius: '8px', cursor: 'pointer' }}>
-              <div>
-                <div style={{ color: '#f5eeee', fontWeight: 'bold' }}>{u.username}</div>
-                <div style={{ color: '#b9a6a2', fontSize: '0.8rem' }}>{u.email} | TG: {u.telegram_id || '—'}</div>
-              </div>
-              <div style={{ color: '#43b581', fontWeight: 'bold' }}>${u.balance}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {selectedUser && (
-        <div style={{ backgroundColor: '#241411', padding: '2rem', borderRadius: '8px', border: '1px solid #48201a', maxWidth: '600px' }}>
-          <h3 style={{ color: '#f5eeee', marginBottom: '1.5rem' }}>Tahrirlash: {selectedUser.username}</h3>
-          
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ color: '#b9a6a2', fontSize: '0.8rem', marginBottom: '0.3rem', display: 'block' }}>Username</label>
-            <input type="text" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
-          </div>
-
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ color: '#b9a6a2', fontSize: '0.8rem', marginBottom: '0.3rem', display: 'block' }}>Email</label>
-            <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
-          </div>
-
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ color: '#b9a6a2', fontSize: '0.8rem', marginBottom: '0.3rem', display: 'block' }}>Telegram ID</label>
-            <input type="text" value={form.telegram_id} onChange={e => setForm({ ...form, telegram_id: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
-            <small style={{ color: '#ed5555', display: 'block', marginTop: '0.3rem' }}>Diqqat: Telegram ID ni o'zgartirsangiz, Stars to'lovlari noto'g'ri ishlashi mumkin.</small>
-          </div>
-
-          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ color: '#b9a6a2', fontSize: '0.8rem', marginBottom: '0.3rem', display: 'block' }}>Balance ($)</label>
-              <input type="number" value={form.balance} onChange={e => setForm({ ...form, balance: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ color: '#b9a6a2', fontSize: '0.8rem', marginBottom: '0.3rem', display: 'block' }}>Role</label>
-              <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#100b0a', border: '1px solid #48201a', color: '#fff', borderRadius: '4px' }}>
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-                <option value="banned">Banned</option>
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '1rem' }}>
-            <button onClick={handleSave} style={{ flex: 1, padding: '0.8rem', backgroundColor: '#43b581', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Saqlash</button>
-            <button onClick={() => setSelectedUser(null)} style={{ flex: 1, padding: '0.8rem', backgroundColor: '#48201a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Bekor qilish</button>
-          </div>
+      {loading ? <p style={{ color: '#b9a6a2' }}>Yuklanmoqda...</p> : (
+        <div style={{ backgroundColor: '#241411', borderRadius: '8px', border: '1px solid #48201a', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead style={{ backgroundColor: '#19100e', color: '#b9a6a2' }}>
+              <tr>
+                <th style={{ padding: '1rem' }}>Username</th>
+                <th style={{ padding: '1rem' }}>Email</th>
+                <th style={{ padding: '1rem' }}>Telegram ID</th>
+                <th style={{ padding: '1rem' }}>Role</th>
+                <th style={{ padding: '1rem' }}>Balance</th>
+                <th style={{ padding: '1rem' }}>Amal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(u => (
+                <tr key={u.id} style={{ borderTop: '1px solid #48201a', color: '#f5eeee' }}>
+                  <td style={{ padding: '1rem' }}>{u.username}</td>
+                  <td style={{ padding: '1rem' }}>{u.email}</td>
+                  <td style={{ padding: '1rem' }}>{u.telegram_id || '—'}</td>
+                  <td style={{ padding: '1rem', color: u.role === 'banned' ? '#ed5555' : (u.role === 'admin' ? '#43b581' : '#f5eeee') }}>{u.role}</td>
+                  <td style={{ padding: '1rem', color: '#43b581' }}>${u.balance}</td>
+                  <td style={{ padding: '1rem' }}>
+                    <Link to="/admin/edit-user" style={{ color: '#f0b44d', textDecoration: 'none' }}>
+                      <i className="fa-solid fa-pen"></i> Tahrirlash
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

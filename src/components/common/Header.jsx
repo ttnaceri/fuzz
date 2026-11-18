@@ -8,7 +8,7 @@ import SearchBar from './SearchBar.jsx';
 import useToast from '../hooks/useToast.js';
 
 export default function Header() {
-  const { user, isAuthenticated, isAdmin, logout, switchAccount, signOut, getSavedAccounts } = useAuth();
+  const { user, isAuthenticated, isAdmin, switchAccount, signOut, getSavedAccounts } = useAuth();
   const { count } = useCart();
   const { lang, setLang, t } = useLanguage();
   const { info } = useToast();
@@ -35,12 +35,13 @@ export default function Header() {
     };
   }, []);
 
+  // Menyu ochilganda YOKI user o'zgarganda ro'yxatni yangilaymiz
   useEffect(() => {
-    if (isMenuOpen) {
+    if (isMenuOpen || user?.id) {
       const accounts = getSavedAccounts() || [];
       setSavedAccounts(accounts);
     }
-  }, [isMenuOpen, getSavedAccounts]);
+  }, [isMenuOpen, user?.id, getSavedAccounts]);
 
   const handleSwitchAccount = (account) => {
     switchAccount(account.user, account.token);
@@ -48,23 +49,38 @@ export default function Header() {
     navigate(account.user.role === 'admin' || account.user.role === 'super_admin' ? '/admin' : '/account');
   };
 
+  /**
+   * Add Account:
+   *  - Joriy akkauntni O'CHIRMAYMIZ (logout chaqirmaymiz).
+   *  - LoginPage'ga previousUserId ni uzatamiz, Back bosilganda tiklash uchun.
+   */
   const handleAddAccount = () => {
-    logout();
     setIsMenuOpen(false);
-    navigate('/login', { state: { changingAccount: true } });
+    navigate('/login', {
+      state: {
+        changingAccount: true,
+        previousUserId: user?.id,
+        from: window.location.pathname + window.location.search,
+      },
+    });
   };
 
+  /**
+   * Sign Out:
+   *  - signOut() joriy akkauntni savedAccounts dan o'chiradi va keyingi akkauntga o'tadi.
+   *  - nextUser qaytsa — navigate qilmaymiz (allaqachon user state yangilangan).
+   *  - null qaytsa — /login ga o'tamiz.
+   */
   const handleSignOut = async () => {
-    await signOut(); // Yangi funksiya — agar 2-akkaunt bo'lsa o'shanga o'tadi
     setIsMenuOpen(false);
-    // Agar boshqa akkaunt bo'lsa, u allaqachon userga o'rnatildi, yo'naltirish shart emas
-    // Faqat 1 ta akkaunt bo'lsa, login ga o'tamiz
-    if (savedAccounts.length <= 1) {
-      navigate('/login');
+    const nextUser = await signOut();
+    if (!nextUser) {
+      navigate('/login', { replace: true });
     }
+    // nextUser bo'lsa — Header avtomatik yangilanadi (user state o'zgargan)
   };
 
-  const otherAccounts = savedAccounts.filter(a => a.user.id !== user?.id);
+  const otherAccounts = savedAccounts.filter(a => a.user?.id !== user?.id);
 
   return (
     <header className="header">

@@ -71,12 +71,14 @@ function QrSuccessOverlay({ phase, username, t }) {
 
 export default function LoginPage() {
   const { success, error: toastError } = useToast();
-  const { login, setSession } = useAuth();
+  const { login, setSession, getSavedAccounts, switchAccount } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
 
   const isChangingAccount = location.state?.changingAccount === true;
+  const previousUserId = location.state?.previousUserId || null;
+  const returnFrom = location.state?.from || '/account';
 
   const [form, setForm] = useState({ username: '', password: '' });
   const [loading, setLoading] = useState(false);
@@ -139,14 +141,14 @@ export default function LoginPage() {
             storage.clearAuthSession();
             storage.setAuth({ user: res.user, token: res.token });
           }
-          setSession(res.user, res.token);
+          setSession(res.user, res.token, mode === 'fuzz_client' ? 'session' : 'local');
           setSuccessPhase('success');
           success(t('common.success'));
 
           setTimeout(() => {
             if (!isMountedRef.current || navigatedRef.current) return;
             navigatedRef.current = true;
-            navigate(location.state?.from || '/account', { replace: true });
+            navigate(returnFrom, { replace: true });
           }, 1500);
         }, 200);
         return;
@@ -168,7 +170,7 @@ export default function LoginPage() {
         return;
       }
     }
-  }, [setSession, success, navigate, location.state, createQrChallenge, t]);
+  }, [setSession, success, navigate, returnFrom, createQrChallenge, t]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -188,6 +190,25 @@ export default function LoginPage() {
     };
   }, []);
 
+  /**
+   * Back (add-account flow):
+   *  - Agar previousUserId berilgan bo'lsa va u savedAccounts da mavjud bo'lsa —
+   *    o'sha akkauntni QAYTA TIKLAYMIZ (switchAccount) va orqaga qaytamiz.
+   *  - Aks holda — oddiy /account (yoki from) ga qaytamiz.
+   */
+  const handleBack = () => {
+    if (isChangingAccount && previousUserId) {
+      const accounts = getSavedAccounts() || [];
+      const prev = accounts.find(a => a.user?.id === previousUserId);
+      if (prev) {
+        switchAccount(prev.user, prev.token);
+        navigate(returnFrom, { replace: true });
+        return;
+      }
+    }
+    navigate(returnFrom || '/account', { replace: true });
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setApiError('');
@@ -199,7 +220,7 @@ export default function LoginPage() {
     try {
       await login(form);
       success(t('common.success'));
-      navigate(location.state?.from || '/account', { replace: true });
+      navigate(returnFrom, { replace: true });
     } catch (err) {
       setApiError(err.message || t('common.error'));
       toastError?.(err.message);
@@ -231,7 +252,9 @@ export default function LoginPage() {
         
         {isChangingAccount && (
           <button
-            onClick={() => navigate('/account')} // Orqaga qaytish (eski akkauntga)
+            onClick={handleBack}
+            aria-label={t('common.back')}
+            title={t('common.back')}
             style={{
               position: 'absolute', top: '1rem', left: '1rem',
               background: 'transparent', border: '1px solid #48201a', color: '#f5eeee',

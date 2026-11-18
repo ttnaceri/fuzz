@@ -59,7 +59,7 @@ export function AuthProvider({ children }) {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [refreshUser]);
 
   const setSession = useCallback((sessionUser, sessionToken, mode = 'local') => {
     if (!sessionUser || !sessionToken) return;
@@ -101,12 +101,15 @@ export function AuthProvider({ children }) {
     return normalized;
   }, []);
 
+  // Faqat joriy sessiyani tozalaydi (logout tugmasi uchun emas — signOut ishlatiladi)
   const logout = useCallback(async () => {
     try { await authService.logout(); } catch (e) {}
+    const currentId = user?.id;
     setUser(null);
     storage.clearAuth();
     storage.clearAuthSession();
-  }, []);
+    if (currentId) removeAccount(currentId);
+  }, [user]);
 
   const switchAccount = useCallback((accountUser, accountToken) => {
     const normalized = normalizeUser(accountUser);
@@ -116,30 +119,43 @@ export function AuthProvider({ children }) {
     saveAccount(normalized, accountToken);
   }, []);
 
-  // YANGI: Sign Out — agar 2-akkaunt bo'lsa, o'shanga o'tadi
+  /**
+   * Sign Out:
+   *  1) Serverdan joriy sessiyani bekor qiladi.
+   *  2) Joriy akkauntni savedAccounts dan O'CHIRADI (phantom bo'lmasin).
+   *  3) Agar boshqa saqlangan akkaunt bo'lsa — o'shanga o'tadi va userni qaytaradi.
+   *  4) Aks holda null qaytaradi.
+   * @returns {Promise<object|null>} nextUser yoki null
+   */
   const signOut = useCallback(async () => {
     const currentUserId = user?.id;
-    const allAccounts = getSavedAccounts() || [];
-    
-    // Joriy akkauntdan boshqa akkauntlarni topish
-    const otherAccounts = allAccounts.filter(a => a.user.id !== currentUserId);
 
     try { await authService.logout(); } catch (e) {}
 
-    if (otherAccounts.length > 0) {
-      // Boshqa akkaunt bor — o'shanga o'tamiz (eng oxirgi ishlatilgan)
-      const nextAccount = otherAccounts[0];
+    // 1) Joriy akkauntni ro'yxatdan olib tashlaymiz
+    if (currentUserId) {
+      removeAccount(currentUserId);
+    }
+
+    // 2) Qolgan akkauntlarni tekshiramiz (endi joriy akkaunt yo'q)
+    const remaining = (getSavedAccounts() || []).filter(a => a.user?.id !== currentUserId);
+
+    if (remaining.length > 0) {
+      // Eng oxirgi ishlatilganini tanlaymiz (saveAccount lastUsed bo'yicha sortlaydi)
+      const nextAccount = remaining[0];
       const normalized = normalizeUser(nextAccount.user);
       setUser(normalized);
       storage.clearAuthSession();
       storage.setAuth({ user: normalized, token: nextAccount.token });
-      saveAccount(normalized, nextAccount.token);
-    } else {
-      // Boshqa akkaunt yo'q — shunchaki chiqamiz
-      setUser(null);
-      storage.clearAuth();
-      storage.clearAuthSession();
+      saveAccount(normalized, nextAccount.token); // lastUsed yangilanadi
+      return normalized;
     }
+
+    // 3) Boshqa akkaunt yo'q — to'liq chiqamiz
+    setUser(null);
+    storage.clearAuth();
+    storage.clearAuthSession();
+    return null;
   }, [user]);
 
   const removeSavedAccount = useCallback((userId) => {

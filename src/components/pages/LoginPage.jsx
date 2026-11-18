@@ -6,19 +6,13 @@ import useAuth from '../hooks/useAuth.js';
 import { api } from '../services/api.js';
 import { config } from '../config/config.js';
 import { storage } from '../utils/storage.js';
+import { useLanguage } from '../context/useLanguage.js';
 
 class QRBoundary extends Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false };
-  }
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
+  constructor(props) { super(props); this.state = { hasError: false }; }
+  static getDerivedStateFromError() { return { hasError: true }; }
   render() {
-    if (this.state.hasError) {
-      return <div style={{ color: '#ed5555', padding: '1rem' }}>QR kodni yuklashda xatolik.</div>;
-    }
+    if (this.state.hasError) return <div style={{ color: '#ed5555', padding: '1rem' }}>QR xatosi</div>;
     return this.props.children;
   }
 }
@@ -51,26 +45,23 @@ if (typeof document !== 'undefined' && !document.getElementById(SUCCESS_ANIM_ID)
   document.head.appendChild(style);
 }
 
-function QrSuccessOverlay({ phase, username }) {
+function QrSuccessOverlay({ phase, username, t }) {
   return (
     <div className="fuzz-qr-success-overlay">
       {phase === 'verifying' && (
         <>
           <div className="fuzz-qr-spinner" />
-          <div className="fuzz-qr-success-text">Tekshirilmoqda...</div>
-          <div className="fuzz-qr-success-sub">Iltimos kuting</div>
+          <div className="fuzz-qr-success-text">{t('common.loading')}</div>
         </>
       )}
       {phase === 'success' && (
         <>
           <div className="fuzz-qr-check-circle">
-            <svg viewBox="0 0 40 40">
-              <path d="M10 20 L17 27 L30 14" />
-            </svg>
+            <svg viewBox="0 0 40 40"><path d="M10 20 L17 27 L30 14" /></svg>
           </div>
-          <div className="fuzz-qr-success-text">Tasdiqlandi</div>
+          <div className="fuzz-qr-success-text">{t('common.success')}</div>
           <div className="fuzz-qr-success-sub">
-            {username ? `${username} sifatida kirilmoqda...` : 'Kirilmoqda...'}
+            {username ? `${username} ${t('game.success')}` : t('game.success')}
           </div>
         </>
       )}
@@ -81,11 +72,10 @@ function QrSuccessOverlay({ phase, username }) {
 export default function LoginPage() {
   const { success, error: toastError } = useToast();
   const { login, setSession } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Foydalanuvchi "Change Account" dan kelganini aniqlash
-  // Header.jsx da handleAddAccount da navigate('/login') chaqirilganda state uzatilishi kerak
   const isChangingAccount = location.state?.changingAccount === true;
 
   const [form, setForm] = useState({ username: '', password: '' });
@@ -118,17 +108,13 @@ export default function LoginPage() {
     try {
       const res = await api.post('/api/auth/qr/create', {});
       if (!isMountedRef.current) return;
-      if (!res?.token) {
-        setQrStatus('error');
-        setQrError('QR kod yaratilmadi');
-        return;
-      }
+      if (!res?.token) { setQrStatus('error'); setQrError('QR xatosi'); return; }
       setQrToken(res.token);
       setQrStatus('pending');
     } catch (err) {
       if (!isMountedRef.current) return;
       setQrStatus('error');
-      setQrError(err?.message || 'QR kodni yaratishda xato');
+      setQrError(err?.message || 'QR xatosi');
     }
   }, []);
 
@@ -146,7 +132,6 @@ export default function LoginPage() {
 
         setTimeout(() => {
           if (!isMountedRef.current) return;
-
           if (mode === 'fuzz_client') {
             storage.clearAuth();
             storage.setAuthSession({ user: res.user, token: res.token });
@@ -154,10 +139,9 @@ export default function LoginPage() {
             storage.clearAuthSession();
             storage.setAuth({ user: res.user, token: res.token });
           }
-
           setSession(res.user, res.token);
           setSuccessPhase('success');
-          success(`Tizimga kirdingiz: ${res.user.username}`);
+          success(t('common.success'));
 
           setTimeout(() => {
             if (!isMountedRef.current || navigatedRef.current) return;
@@ -180,12 +164,11 @@ export default function LoginPage() {
       if (!isMountedRef.current) return;
       if (err?.status === 400) {
         setQrStatus('error');
-        setQrError(err.message || 'QR tokenda xato');
+        setQrError(err.message || 'QR xatosi');
         return;
       }
-      console.warn('QR poll xatosi (davom etadi):', err?.message);
     }
-  }, [setSession, success, navigate, location.state, createQrChallenge]);
+  }, [setSession, success, navigate, location.state, createQrChallenge, t]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -209,16 +192,16 @@ export default function LoginPage() {
     e.preventDefault();
     setApiError('');
     if (!form.username || !form.password) {
-      setApiError("Iltimos, barcha maydonlarni to'ldiring!");
+      setApiError(t('auth.fillAll'));
       return;
     }
     setLoading(true);
     try {
       await login(form);
-      success('Tizimga muvaffaqiyatli kirdingiz!');
+      success(t('common.success'));
       navigate(location.state?.from || '/account', { replace: true });
     } catch (err) {
-      setApiError(err.message || 'Xato yuz berdi');
+      setApiError(err.message || t('common.error'));
       toastError?.(err.message);
     } finally {
       setLoading(false);
@@ -246,28 +229,15 @@ export default function LoginPage() {
     <div style={styles.wrapper}>
       <div style={styles.box}>
         
-        {/* ==========================================
-            YANGI: "Ortga" (Back) tugmasi
-            Faqat "Change Account" orqali kelganda ko'rinadi
-            ========================================== */}
         {isChangingAccount && (
           <button
-            onClick={() => navigate(-1)} // Orqaga qaytish
+            onClick={() => navigate('/account')} // Orqaga qaytish (eski akkauntga)
             style={{
-              position: 'absolute',
-              top: '1rem',
-              left: '1rem',
-              background: 'transparent',
-              border: '1px solid #48201a',
-              color: '#f5eeee',
-              padding: '0.4rem 0.8rem',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              fontSize: '0.85rem',
-              zIndex: 10
+              position: 'absolute', top: '1rem', left: '1rem',
+              background: 'transparent', border: '1px solid #48201a', color: '#f5eeee',
+              padding: '0.4rem 0.8rem', borderRadius: '4px', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              fontSize: '0.85rem', zIndex: 10
             }}
           >
             <i className="fa-solid fa-arrow-left"></i>
@@ -277,33 +247,33 @@ export default function LoginPage() {
         <div style={styles.body}>
 
           <div style={styles.formSide}>
-            <h3 style={styles.title}>SIGN IN WITH ACCOUNT NAME</h3>
+            <h3 style={styles.title}>{t('auth.loginTitle')}</h3>
             {apiError && <div style={styles.errorBox}>{apiError}</div>}
 
             <form onSubmit={handleLogin}>
               <div style={{ marginBottom: '1.2rem' }}>
-                <input type="text" style={styles.input} placeholder="Account Name (Username)" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} autoComplete="username" />
+                <input type="text" style={styles.input} placeholder={t('auth.usernamePlaceholder')} value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} autoComplete="username" />
               </div>
               <div style={{ marginBottom: '1.2rem' }}>
-                <input type="password" style={styles.input} placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} autoComplete="current-password" />
+                <input type="password" style={styles.input} placeholder={t('auth.passwordPlaceholder')} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} autoComplete="current-password" />
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', color: '#b9a6a2', fontSize: '0.85rem' }}>
                 <input type="checkbox" id="remember" style={{ accentColor: '#8a1200' }} />
-                <label htmlFor="remember">Remember me</label>
+                <label htmlFor="remember">{t('auth.rememberMe')}</label>
               </div>
               <button type="submit" style={styles.btnPrimary} disabled={loading}>
-                {loading ? 'Signing in...' : 'Sign in'}
+                {loading ? t('auth.signingIn') : t('auth.signIn')}
               </button>
             </form>
 
             <div style={{ marginTop: '1rem', fontSize: '0.85rem' }}>
-              <Link to="/reset-password" style={{ color: '#b9a6a2', textDecoration: 'underline' }}>Forgot password?</Link>
+              <Link to="/reset-password" style={{ color: '#b9a6a2', textDecoration: 'underline' }}>{t('auth.forgotPassword')}</Link>
             </div>
           </div>
 
           {!isMobile && (
             <div style={styles.qrSide}>
-              <h3 style={styles.title}>OR SIGN IN WITH QR</h3>
+              <h3 style={styles.title}>{t('auth.qrTitle')}</h3>
               <QRBoundary>
                 <div style={styles.qrBox}>
                   {qrStatus === 'pending' && qrUrl && !showSuccessOverlay && (
@@ -316,27 +286,23 @@ export default function LoginPage() {
                   )}
                   {(qrStatus === 'error' || qrStatus === 'expired') && !showSuccessOverlay && (
                     <div style={{ width: 150, height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8a1200', fontSize: '0.75rem', textAlign: 'center', padding: '0.5rem' }}>
-                      {qrStatus === 'expired' ? 'QR kod eskirgan. Yangilanmoqda...' : (qrError || 'QR xatosi')}
+                      {qrStatus === 'expired' ? t('auth.qrExpired') : (qrError || t('common.error'))}
                     </div>
                   )}
                   {showSuccessOverlay && (
-                    <QrSuccessOverlay phase={successPhase} username={qrUser?.username} />
+                    <QrSuccessOverlay phase={successPhase} username={qrUser?.username} t={t} />
                   )}
                 </div>
               </QRBoundary>
               <p style={{ fontSize: '0.8rem', color: '#b9a6a2', textAlign: 'center', lineHeight: 1.4 }}>
-                Open <strong>Fuzz</strong> on your phone, tap the QR button and scan this code.
+                {t('auth.qrInfo')}
               </p>
               {qrStatus === 'pending' && !showSuccessOverlay && (
-                <p style={{ fontSize: '0.7rem', color: '#6b524e', marginTop: '0.5rem' }}>Kod 2 daqiqa amal qiladi</p>
+                <p style={{ fontSize: '0.7rem', color: '#6b524e', marginTop: '0.5rem' }}>{t('auth.qrTtl')}</p>
               )}
               {qrStatus === 'error' && !showSuccessOverlay && (
-                <button
-                  type="button"
-                  onClick={createQrChallenge}
-                  style={{ marginTop: '0.5rem', background: 'transparent', color: '#b9a6a2', border: '1px solid #48201a', padding: '0.4rem 0.8rem', borderRadius: 4, cursor: 'pointer', fontSize: '0.8rem' }}
-                >
-                  Qayta urinish
+                <button type="button" onClick={createQrChallenge} style={{ marginTop: '0.5rem', background: 'transparent', color: '#b9a6a2', border: '1px solid #48201a', padding: '0.4rem 0.8rem', borderRadius: 4, cursor: 'pointer', fontSize: '0.8rem' }}>
+                  {t('common.retry')}
                 </button>
               )}
             </div>
@@ -345,8 +311,8 @@ export default function LoginPage() {
         </div>
 
         <div style={styles.footer}>
-          <span>Don't have an account?</span>
-          <Link to="/register" style={{ color: '#8a1200', fontWeight: '600', textDecoration: 'underline' }}>Create a Free Account</Link>
+          <span>{t('auth.noAccount')}</span>
+          <Link to="/register" style={{ color: '#8a1200', fontWeight: '600', textDecoration: 'underline' }}>{t('auth.createAccount')}</Link>
         </div>
       </div>
     </div>

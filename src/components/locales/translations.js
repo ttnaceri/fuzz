@@ -1,12 +1,13 @@
+// src/components/locales/translations.js
 export const translations = {
   // ==========================================
   // UZBEK
   // ==========================================
   uz: {
-        nav: {
+    nav: {
       home: "Bosh sahifa",
       store: "Do'kon",
-      news: "Yangiliklar", // <-- QO'SHILDI
+      news: "Yangiliklar",
       new: "Yangi",
       offers: "Takliflar",
       free: "Bepul",
@@ -19,26 +20,28 @@ export const translations = {
       qrLogin: "QR Login",
       wishlist: "Wishlist",
     },
-    nav: {
-      home: "Bosh sahifa",
-      store: "Do'kon",
-      new: "Yangi",
-      offers: "Takliflar",
-      free: "Bepul",
-      library: "Kutubxona",
-      wallet: "Hamyon",
-      profile: "Profil",
-      editProfile: "Profilni tahrirlash",
-      security: "Xavfsizlik",
-      menu: "Menyu",
-      qrLogin: "QR Login",
-    },
     auth: {
       login: "Kirish",
       register: "Ro'yxatdan o'tish",
       logout: "Chiqish",
       admin: "Admin Panel",
       account: "Profil",
+      loginTitle: "Fuzz'ga kirish",
+      usernamePlaceholder: "Foydalanuvchi nomi",
+      passwordPlaceholder: "Parol",
+      rememberMe: "Meni eslab qol",
+      signIn: "Kirish",
+      signingIn: "Kirilmoqda...",
+      forgotPassword: "Parolni unutdingizmi?",
+      qrTitle: "QR orqali kirish",
+      qrInfo: "Telefon ilovasidagi QR skaner bilan skanerlang",
+      qrTtl: "QR 2 daqiqa amal qiladi",
+      qrExpired: "QR muddati tugadi",
+      fillAll: "Barcha maydonlarni to'ldiring",
+      noAccount: "Akkauntingiz yo'qmi?",
+      createAccount: "Ro'yxatdan o'tish",
+      back: "Orqaga",
+      backToLogin: "Kirish sahifasiga qaytish",
     },
     home: {
       welcome: "Fuzz'ga xush kelibsiz",
@@ -145,7 +148,7 @@ export const translations = {
     },
     game: {
       free: "Bepul",
-        alreadyOwned: "Siz bu o'yinni sotib olgansiz",
+      alreadyOwned: "Siz bu o'yinni sotib olgansiz",
       addToCart: "Savatga",
       inCart: "Savatda",
       details: "Batafsil",
@@ -165,6 +168,7 @@ export const translations = {
       officialStore: "Rasmiy do'kon",
       inBundles: "Ushbu o'yin kiritilgan Bundle'lar",
       releaseDate: "Chiqarilgan sana",
+      success: "muvaffaqiyatli kirdi",
     },
     library: {
       title: "Kutubxona",
@@ -334,6 +338,9 @@ export const translations = {
     header: {
       download: "Fuzz'ni yuklab olish",
       installHint: "Ilovani o'rnatish uchun brauzer menyusidan foydalaning.",
+      otherAccounts: "Boshqa akkauntlar",
+      addAccount: "Akkaunt qo'shish",
+      changeAccount: "Akkauntni almashtirish",
     },
   },
 
@@ -344,7 +351,8 @@ export const translations = {
     nav: {
       home: "Главная",
       store: "Магазин",
-      news: "Новинки",
+      news: "Новости",
+      new: "Новинки",
       offers: "Скидки",
       free: "Бесплатно",
       library: "Библиотека",
@@ -354,7 +362,7 @@ export const translations = {
       security: "Безопасность",
       menu: "Меню",
       qrLogin: "QR Вход",
-      wishlist: "Wishlist",
+      wishlist: "Список желаемого",
     },
     auth: {
       login: "Войти",
@@ -362,6 +370,22 @@ export const translations = {
       logout: "Выйти",
       admin: "Админ Панель",
       account: "Аккаунт",
+      loginTitle: "Вход в Fuzz",
+      usernamePlaceholder: "Имя пользователя",
+      passwordPlaceholder: "Пароль",
+      rememberMe: "Запомнить меня",
+      signIn: "Войти",
+      signingIn: "Вход...",
+      forgotPassword: "Забыли пароль?",
+      qrTitle: "Вход по QR",
+      qrInfo: "Отсканируйте QR-код в мобильном приложении",
+      qrTtl: "QR действует 2 минуты",
+      qrExpired: "Срок действия QR истёк",
+      fillAll: "Заполните все поля",
+      noAccount: "Нет аккаунта?",
+      createAccount: "Регистрация",
+      back: "Назад",
+      backToLogin: "Вернуться ко входу",
     },
     home: {
       welcome: "Добро пожаловать в Fuzz",
@@ -488,6 +512,7 @@ export const translations = {
       officialStore: "Официальный магазин",
       inBundles: "Наборы с этой игрой",
       releaseDate: "Дата выхода",
+      success: "успешно вошёл",
     },
     library: {
       title: "Библиотека",
@@ -657,6 +682,9 @@ export const translations = {
     header: {
       download: "Скачать Fuzz",
       installHint: "Установите приложение через меню браузера.",
+      otherAccounts: "Другие аккаунты",
+      addAccount: "Добавить аккаунт",
+      changeAccount: "Сменить аккаунт",
     },
   },
 
@@ -668,6 +696,7 @@ export const translations = {
       home: "Home",
       store: "Store",
       news: "News",
+      new: "New",
       offers: "Offers",
       free: "Free",
       library: "Library",
@@ -685,6 +714,22 @@ export const translations = {
       logout: "Logout",
       admin: "Admin Panel",
       account: "Account",
+      loginTitle: "Sign in to Fuzz",
+      usernamePlaceholder: "Username",
+      passwordPlaceholder: "Password",
+      rememberMe: "Remember me",
+      signIn: "Sign In",
+      signingIn: "Signing in...",
+      forgotPassword: "Forgot password?",
+      qrTitle: "Sign in with QR",
+      qrInfo: "Scan with the mobile app QR scanner",
+      qrTtl: "QR expires in 2 minutes",
+      qrExpired: "QR code expired",
+      fillAll: "Please fill in all fields",
+      noAccount: "Don't have an account?",
+      createAccount: "Register",
+      back: "Back",
+      backToLogin: "Back to Login",
     },
     home: {
       welcome: "Welcome to Fuzz",
@@ -811,6 +856,7 @@ export const translations = {
       officialStore: "Official store",
       inBundles: "Bundles containing this game",
       releaseDate: "Release Date",
+      success: "signed in successfully",
     },
     library: {
       title: "Library",
@@ -980,6 +1026,9 @@ export const translations = {
     header: {
       download: "Download Fuzz",
       installHint: "Use the browser menu to install the app.",
+      otherAccounts: "Other accounts",
+      addAccount: "Add account",
+      changeAccount: "Change account",
     },
   },
 };
